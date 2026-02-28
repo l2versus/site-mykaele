@@ -33,12 +33,12 @@ function BeforeAfterCard({ resultado, size = 'normal' }: { resultado: typeof RES
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => { if (isDragging) { e.preventDefault(); updateSlider(e.clientY) } }
-    const onTouchMove = (e: TouchEvent) => { if (isDragging) updateSlider(e.touches[0].clientY) }
+    const onTouchMove = (e: TouchEvent) => { if (isDragging) { e.preventDefault(); updateSlider(e.touches[0].clientY) } }
     const onEnd = () => setIsDragging(false)
     if (isDragging) {
       document.addEventListener('mousemove', onMove)
       document.addEventListener('mouseup', onEnd)
-      document.addEventListener('touchmove', onTouchMove, { passive: true })
+      document.addEventListener('touchmove', onTouchMove, { passive: false })
       document.addEventListener('touchend', onEnd)
     }
     return () => {
