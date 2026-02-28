@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPaymentStatus } from '@/lib/mercadopago'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { sendPurchaseNotification } from '@/lib/whatsapp'
 
 export async function GET(request: NextRequest) {
   try {
@@ -84,6 +85,33 @@ export async function GET(request: NextRequest) {
           category: 'REVENUE',
         },
       })
+    }
+
+    // Notificar Mykaele via WhatsApp sobre a compra
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (user) {
+      const allOptions = []
+      for (const poId of packageOptionIds) {
+        const po = await prisma.packageOption.findUnique({
+          where: { id: poId },
+          include: { service: true },
+        })
+        if (po) allOptions.push(po)
+      }
+      sendPurchaseNotification({
+        clientName: user.name || 'Cliente',
+        clientPhone: user.phone,
+        clientEmail: user.email,
+        items: allOptions.map(po => ({
+          name: `${po.service.name} - ${po.sessions} sessões`,
+          sessions: po.sessions,
+          price: po.price,
+        })),
+        totalAmount: result.amount || 0,
+        paymentMethod: 'Mercado Pago',
+        paymentId: preferenceId,
+        transactionDate: new Date().toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' }),
+      }).catch(() => {})
     }
 
     return NextResponse.json({ 

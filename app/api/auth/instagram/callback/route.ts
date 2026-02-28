@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateToken, hashPassword } from '@/lib/auth'
+import { sendNewRegistrationNotification } from '@/lib/whatsapp'
 
 /**
  * GET /api/auth/instagram/callback
@@ -85,6 +86,13 @@ export async function GET(req: NextRequest) {
             role: 'PATIENT',
           },
         })
+
+        // Notificar Mykaele via WhatsApp sobre novo cadastro
+        sendNewRegistrationNotification({
+          clientName: user.name || 'Sem nome',
+          clientEmail: user.email,
+          provider: 'instagram',
+        }).catch(() => {})
       } else if (!user.instagramId) {
         user = await prisma.user.update({
           where: { id: user.id },

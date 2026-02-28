@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { MercadoPagoConfig, Payment } from 'mercadopago'
 import { createHmac } from 'crypto'
+import { sendPurchaseNotification } from '@/lib/whatsapp'
 
 const mpClient = new MercadoPagoConfig({
   accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN || '',
@@ -184,6 +185,30 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[Webhook] Pagamento aprovado: R$${paidAmount} - ${created.length} pacote(s) para user ${userId}`)
+
+    // Notificar Mykaele via WhatsApp sobre a compra
+    const allOptions = []
+    for (const poId of packageOptionIds) {
+      const po = await prisma.packageOption.findUnique({
+        where: { id: poId },
+        include: { service: true },
+      })
+      if (po) allOptions.push(po)
+    }
+    sendPurchaseNotification({
+      clientName: user.name || 'Cliente',
+      clientPhone: user.phone,
+      clientEmail: user.email,
+      items: allOptions.map(po => ({
+        name: `${po.service.name} - ${po.sessions} sessões`,
+        sessions: po.sessions,
+        price: po.price,
+      })),
+      totalAmount: paidAmount,
+      paymentMethod: 'Mercado Pago',
+      paymentId: String(paymentId),
+      transactionDate: new Date().toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' }),
+    }).catch(() => {})
 
     return NextResponse.json({
       status: 'success',

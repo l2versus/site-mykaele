@@ -219,6 +219,40 @@ export async function sendPurchaseNotification(data: {
   return { sent: false, method: 'logged' }
 }
 
+export async function sendNewRegistrationNotification(data: {
+  clientName: string
+  clientEmail: string
+  clientPhone?: string | null
+  provider: 'email' | 'google' | 'instagram'
+}): Promise<{ sent: boolean; method: string }> {
+  const providerLabel = data.provider === 'google' ? 'Google' : data.provider === 'instagram' ? 'Instagram' : 'Email/Senha'
+  const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })
+  const lines: string[] = [
+    '🆕 *NOVO CADASTRO NO SITE*',
+    '',
+    `👤 *Nome:* ${data.clientName}`,
+    `📧 *Email:* ${data.clientEmail}`,
+  ]
+  if (data.clientPhone) lines.push(`📱 *Telefone:* ${data.clientPhone}`)
+  lines.push(`🔑 *Via:* ${providerLabel}`)
+  lines.push(`📅 *Data:* ${now}`)
+  lines.push('')
+  lines.push('Uma nova cliente se cadastrou! ✨')
+  const message = lines.join('\n')
+
+  if (hasEvolutionApi()) {
+    const ok = await sendViaEvolution(PROFESSIONAL_NUMBER, message)
+    if (ok) return { sent: true, method: 'evolution-api' }
+  }
+  if (hasCallMeBot()) {
+    const ok = await sendViaCallMeBot(message)
+    if (ok) return { sent: true, method: 'callmebot' }
+  }
+
+  console.log('[WhatsApp] Novo cadastro logado:\n', message)
+  return { sent: false, method: 'logged' }
+}
+
 export async function sendCancellationNotification(data: {
   clientName: string
   clientPhone?: string | null

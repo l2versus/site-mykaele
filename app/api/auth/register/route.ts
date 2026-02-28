@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, generateToken } from '@/lib/auth'
 import { registerSchema } from '@/utils/validation'
+import { sendNewRegistrationNotification } from '@/lib/whatsapp'
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,6 +50,13 @@ export async function POST(request: NextRequest) {
 
     // Gerar token
     const token = generateToken(user.id, user.email, user.role)
+
+    // Notificar Mykaele via WhatsApp
+    sendNewRegistrationNotification({
+      clientName: user.name || 'Sem nome',
+      clientEmail: user.email,
+      provider: 'email',
+    }).catch(() => {}) // fire-and-forget
 
     return NextResponse.json(
       {
