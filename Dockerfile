@@ -15,8 +15,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Gerar Prisma Client (DATABASE_URL necessário para o schema)
-ENV DATABASE_URL="file:./dev.db"
+# Gerar Prisma Client
 RUN npx prisma generate
 
 # Build Next.js (NEXT_PUBLIC vars precisam estar no build)
@@ -48,6 +47,8 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
+COPY --from=builder /app/node_modules/@libsql ./node_modules/@libsql
+COPY --from=builder /app/node_modules/libsql ./node_modules/libsql
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 # Script de inicialização e banco de dados
