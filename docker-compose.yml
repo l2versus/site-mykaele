@@ -1,0 +1,56 @@
+# docker-compose.yml — Mykaele Home Spa
+# Use com Coolify ou standalone
+
+services:
+  # --- Aplicação Next.js ---
+  app:
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://mykaele:${DB_PASSWORD}@db:5432/mykaele_db
+      - JWT_SECRET=${JWT_SECRET}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - MERCADO_PAGO_ACCESS_TOKEN=${MERCADO_PAGO_ACCESS_TOKEN}
+      - NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=${NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - INSTAGRAM_CLIENT_ID=${INSTAGRAM_CLIENT_ID}
+      - INSTAGRAM_CLIENT_SECRET=${INSTAGRAM_CLIENT_SECRET}
+      - CALLMEBOT_API_KEY=${CALLMEBOT_API_KEY}
+      - CALLMEBOT_PHONE=${CALLMEBOT_PHONE}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - mykaele-net
+
+  # --- Banco de Dados PostgreSQL ---
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: mykaele_db
+      POSTGRES_USER: mykaele
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mykaele -d mykaele_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mykaele-net
+
+volumes:
+  pgdata:
+
+networks:
+  mykaele-net:
+    driver: bridge

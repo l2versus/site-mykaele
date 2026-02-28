@@ -1,0 +1,290 @@
+// prisma/schema.prisma — Mykaele Procópio Home Spa
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id                  String   @id @default(cuid())
+  email               String   @unique
+  password            String
+  name                String
+  phone               String?
+  cpfRg               String?
+  address             String?
+  addressCep          String?
+  addressStreet       String?
+  addressNumber       String?
+  addressComp         String?
+  addressNeighborhood String?
+  addressCity         String?
+  addressState        String?
+  addressLat          Float?
+  addressLng          Float?
+  googleId            String?  @unique
+  instagramId         String?  @unique
+  role                String   @default("PATIENT")
+  avatar              String?
+  balance             Float    @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  appointments Appointment[]
+  packages     Package[]
+  payments     Payment[]
+}
+
+model Service {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  duration    Int     @default(60)
+  price       Float
+  priceReturn Float?
+  active      Boolean @default(true)
+  isAddon     Boolean @default(false)
+  travelFee   String?
+
+  packageOptions PackageOption[]
+  appointments   Appointment[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model PackageOption {
+  id        String  @id @default(cuid())
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  name      String
+  sessions  Int
+  price     Float
+  active    Boolean @default(true)
+
+  packages  Package[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Package {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packageOptionId String
+  packageOption   PackageOption @relation(fields: [packageOptionId], references: [id])
+  totalSessions   Int
+  usedSessions    Int           @default(0)
+  status          String        @default("ACTIVE")
+  purchaseDate    DateTime      @default(now())
+  expirationDate  DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([packageOptionId])
+}
+
+model Appointment {
+  id                 String    @id @default(cuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceId          String
+  service            Service   @relation(fields: [serviceId], references: [id])
+  scheduledAt        DateTime
+  endAt              DateTime
+  type               String    @default("FIRST")
+  status             String    @default("PENDING")
+  location           String    @default("HOME_SPA")
+  address            String?
+  notes              String?
+  cancellationReason String?
+  cancelledAt        DateTime?
+  addons             String?
+  travelFee          Float     @default(0)
+  price              Float     @default(0)
+  paidFromBalance    Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([scheduledAt])
+  @@index([status])
+}
+
+model Schedule {
+  id           String  @id @default(cuid())
+  dayOfWeek    Int     @unique
+  startTime    String
+  endTime      String
+  slotDuration Int     @default(60)
+  breakStart   String?
+  breakEnd     String?
+  active       Boolean @default(true)
+}
+
+model BlockedDate {
+  id     String   @id @default(cuid())
+  date   DateTime @unique
+  reason String?
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Float
+  method      String
+  description String?
+  status      String   @default("APPROVED")
+  category    String   @default("REVENUE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  category    String
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([date])
+}
+
+// ═══ Body Measurements ═══
+model BodyMeasurement {
+  id     String   @id @default(cuid())
+  userId String
+  date   DateTime @default(now())
+
+  // Anthropometric
+  weight     Float? // kg
+  height     Float? // cm
+  bodyFat    Float? // %
+  muscleMass Float? // %
+  bmi        Float? // auto-calculated
+
+  // Circumferences (cm)
+  bust       Float? // busto / tórax
+  waist      Float? // cintura
+  abdomen    Float? // abdômen
+  hip        Float? // quadril
+  armLeft    Float? // braço esquerdo
+  armRight   Float? // braço direito
+  thighLeft  Float? // coxa esquerda
+  thighRight Float? // coxa direita
+  calfLeft   Float? // panturrilha esquerda
+  calfRight  Float? // panturrilha direita
+
+  // Goals
+  goalWeight  Float?
+  goalWaist   Float?
+  goalHip     Float?
+  goalBodyFat Float?
+
+  // Meta
+  notes      String?
+  measuredBy String? // Name of professional
+  sessionId  String? // optional link to appointment
+  photoFront String?
+  photoSide  String?
+  photoBack  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([date])
+}
+
+// ═══ Session Satisfaction (NPS) ═══
+model SessionFeedback {
+  id            String   @id @default(cuid())
+  userId        String
+  appointmentId String   @unique
+  score         Int // 1-10
+  comment       String?
+  categories    String? // JSON: ["atendimento","resultado","conforto"]
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ═══ Post-Session Care Guidelines ═══
+model CareGuideline {
+  id          String  @id @default(cuid())
+  serviceId   String?
+  title       String
+  description String
+  timing      String  @default("24h") // "imediato","24h","48h","7d"
+  priority    Int     @default(0) // 0=normal,1=important,2=critical
+  active      Boolean @default(true)
+}
+
+// ═══ Anamnese (Ficha do Paciente) ═══
+model Anamnese {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Dados Pessoais
+  birthDate  String?
+  gender     String?
+  bloodType  String?
+  weight     Float?
+  height     Float?
+  occupation String?
+
+  // Condições de Saúde
+  allergies         String?
+  medications       String?
+  chronicConditions String?
+  surgeries         String?
+  healthNotes       String?
+
+  // Flags booleanas
+  hasAllergies       Boolean @default(false)
+  hasDiabetes        Boolean @default(false)
+  hasHypertension    Boolean @default(false)
+  hasHeartCondition  Boolean @default(false)
+  hasCirculatory     Boolean @default(false)
+  hasProsthetics     Boolean @default(false)
+  hasThyroid         Boolean @default(false)
+  isPregnant         Boolean @default(false)
+  isBreastfeeding    Boolean @default(false)
+  hasSkinSensitivity Boolean @default(false)
+  hasVaricoseVeins   Boolean @default(false)
+  hasRecentSurgery   Boolean @default(false)
+
+  // Estilo de Vida
+  smokingStatus   String?
+  alcoholUse      String?
+  exerciseLevel   String?
+  sleepQuality    String?
+  waterIntake     String?
+  dietDescription String?
+
+  // Metas e Expectativas
+  mainGoals          String?
+  bodyAreas          String?
+  previousTreatments String?
+  expectations       String?
+
+  // Consentimento
+  consentGiven Boolean   @default(false)
+  completedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

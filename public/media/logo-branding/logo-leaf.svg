@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 320" fill="none">
+  <path d="M100 10 C60 80, 30 150, 40 230 C50 290, 85 310, 100 310 C80 260, 75 210, 90 165 C105 120, 130 90, 100 10Z" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M100 310 C115 310, 150 290, 160 230 C170 170, 145 110, 100 10" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>
+  <path d="M90 165 C105 155, 130 160, 148 190 C158 210, 155 235, 140 260 C125 280, 110 300, 100 310" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
