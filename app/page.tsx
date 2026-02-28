@@ -1,5 +1,3 @@
-'use client'
-
 import { Header } from '@/components/Header'
 import { HeroSection } from '@/components/HeroSection'
 import { ServicesSection } from '@/components/ServicesSection'
@@ -12,15 +10,21 @@ import GaleriaVideos from '@/components/GaleriaVideos'
 import AboutMykaele from '@/components/AboutMykaele'
 import AgendamentoSection from '@/components/AgendamentoSection'
 import { SectionNav } from '@/components/SectionNav'
-import { useScrollReveal, useParallax, useCounterAnimation } from '@/hooks/useScrollAnimation'
+import HomeAnimations from '@/components/HomeAnimations'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Mykaele Procópio | Estética Avançada & Arquitetura Corporal em Fortaleza',
+  description: 'Fisioterapeuta Dermatofuncional especializada em Arquitetura Corporal. Drenagem linfática, limpeza de pele, peeling, microagulhamento, massagem modeladora. Resultados reais, protocolos personalizados. Atendimento premium em Fortaleza-CE e domicílio (Home Spa). Agende online.',
+  alternates: {
+    canonical: 'https://mykaprocopio.com.br',
+  },
+}
 
 export default function Home() {
-  useScrollReveal()
-  useParallax()
-  useCounterAnimation()
-
   return (
     <div className="min-h-screen bg-[#faf9f7]">
+      <HomeAnimations />
       <Header />
       <SectionNav />
       <HeroSection />
