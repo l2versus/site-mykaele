@@ -31,6 +31,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Instalar sqlite3 para inicialização do banco
+RUN apk add --no-cache sqlite
+
 # Criar usuário não-root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -46,7 +49,9 @@ COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
-# Script de inicialização
+# Script de inicialização e banco de dados
+COPY init.sql ./init.sql
+COPY seed-prod.mjs ./seed-prod.mjs
 COPY start.sh ./start.sh
 RUN chmod +x ./start.sh
 
