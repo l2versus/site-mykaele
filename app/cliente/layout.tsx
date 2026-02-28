@@ -626,6 +626,19 @@ export default function ClienteLayout({ children }: { children: ReactNode }) {
     setToken(newToken); setUser(newUser)
     localStorage.setItem('client_token', newToken)
     localStorage.setItem('client_user', JSON.stringify(newUser))
+    // Buscar perfil completo do servidor (avatar, endereço, etc.)
+    setTimeout(async () => {
+      try {
+        const res = await fetch('/api/patient/profile', {
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${newToken}` },
+        })
+        if (res.ok) {
+          const raw = await res.json()
+          const data = raw.profile || raw
+          setUser(data); localStorage.setItem('client_user', JSON.stringify(data))
+        }
+      } catch { /* silently ignore */ }
+    }, 500)
   }
 
   const logout = () => {

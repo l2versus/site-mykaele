@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 
 interface Message {
   id: string
@@ -24,6 +25,12 @@ const QUICK_REPLIES = [
 ]
 
 export default function FloatingWhatsApp() {
+  const pathname = usePathname()
+
+  // Não renderizar nas rotas /cliente (já tem botão próprio) e /admin
+  if (pathname?.startsWith('/cliente') || pathname?.startsWith('/admin')) {
+    return null
+  }
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE])
   const [input, setInput] = useState('')

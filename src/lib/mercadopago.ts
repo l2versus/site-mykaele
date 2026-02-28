@@ -131,8 +131,9 @@ export async function validateWebhookSignature(
   signature: string,
   timestamp: string
 ): Promise<boolean> {
-  // Validar assinatura do webhook (opcional mas recomendado)
-  // Por enquanto vamos aceitar o webhook como válido
+  // Validação agora implementada diretamente no webhook route (app/api/payments/webhook/route.ts)
+  // usando HMAC-SHA256 com MERCADO_PAGO_WEBHOOK_SECRET
+  console.warn('validateWebhookSignature deprecated - use verifyWebhookSignature in webhook route')
   return true
 }
 

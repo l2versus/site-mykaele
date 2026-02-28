@@ -72,11 +72,17 @@ export async function GET(req: NextRequest) {
     })
 
     if (user) {
-      // Atualizar googleId se ainda não estava vinculado
-      if (!user.googleId) {
+      // Sempre atualizar avatar do Google e vincular googleId
+      const updateData: Record<string, unknown> = {}
+      if (!user.googleId) updateData.googleId = profile.id
+      if (profile.picture) updateData.avatar = profile.picture
+      // Preencher nome se estava vazio
+      if (!user.name && profile.name) updateData.name = profile.name
+
+      if (Object.keys(updateData).length > 0) {
         user = await prisma.user.update({
           where: { id: user.id },
-          data: { googleId: profile.id, avatar: user.avatar || profile.picture || null },
+          data: updateData,
         })
       }
     } else {
