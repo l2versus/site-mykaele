@@ -45,7 +45,7 @@ export async function PUT(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   try {
-    const { id, status, cancellationReason } = await req.json()
+    const { id, status, cancellationReason, paymentMethod, confirmPayment } = await req.json()
     if (!id || !status) return NextResponse.json({ error: 'id e status são obrigatórios' }, { status: 400 })
 
     // Validar transições de status permitidas
@@ -57,7 +57,11 @@ export async function PUT(req: NextRequest) {
       NO_SHOW: [],
     }
 
-    const current = await prisma.appointment.findUnique({ where: { id }, select: { status: true } })
+    const current = await prisma.appointment.findUnique({
+      where: { id },
+      select: { status: true, price: true, travelFee: true, userId: true, paidFromBalance: true, paymentStatus: true },
+      include: { service: { select: { name: true } } },
+    } as any)
     if (!current) return NextResponse.json({ error: 'Agendamento não encontrado' }, { status: 404 })
 
     const allowed = VALID_TRANSITIONS[current.status] || []
@@ -71,9 +75,92 @@ export async function PUT(req: NextRequest) {
     if (cancellationReason) data.cancellationReason = cancellationReason
     if (status === 'CANCELLED') data.cancelledAt = new Date()
 
+    // ═══ Dar baixa de pagamento presencial ═══
+    // Quando admin marca COMPLETED + confirmPayment, registra o pagamento
+    if (status === 'COMPLETED' && confirmPayment && paymentMethod) {
+      const totalAmount = (current.price || 0) + (current.travelFee || 0)
+
+      // Criar registro de Payment (receita real)
+      const payment = await prisma.payment.create({
+        data: {
+          userId: current.userId,
+          appointmentId: id,
+          amount: totalAmount,
+          method: paymentMethod, // PIX, CASH, CARD
+          description: `Atendimento: ${(current as any).service?.name || 'Serviço'} — Pagamento presencial`,
+          category: 'REVENUE',
+          status: 'APPROVED',
+        },
+      })
+
+      data.paymentStatus = 'PAID_IN_PERSON'
+      data.paymentMethod = paymentMethod
+      data.paymentId = payment.id
+    } else if (status === 'COMPLETED' && !confirmPayment) {
+      // Se marcou como realizado SEM confirmar pagamento, fica como UNPAID
+      // Receita NÃO é contabilizada até o admin confirmar
+      if (current.paymentStatus !== 'PAID_ONLINE') {
+        data.paymentStatus = 'UNPAID'
+      }
+    }
+
     const appointment = await prisma.appointment.update({ where: { id }, data })
     return NextResponse.json({ appointment })
   } catch (error) {
+    console.error('Admin appointments PUT error:', error)
     return NextResponse.json({ error: 'Erro ao atualizar agendamento' }, { status: 500 })
+  }
+}
+
+// ═══ PATCH: Dar baixa em pagamento de appointment já completado ═══
+export async function PATCH(req: NextRequest) {
+  const admin = getAdmin(req)
+  if (!admin) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  try {
+    const { id, paymentMethod } = await req.json()
+    if (!id || !paymentMethod) {
+      return NextResponse.json({ error: 'id e paymentMethod são obrigatórios' }, { status: 400 })
+    }
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: { service: { select: { name: true } } },
+    })
+    if (!appointment) return NextResponse.json({ error: 'Agendamento não encontrado' }, { status: 404 })
+
+    if (appointment.paymentStatus === 'PAID_ONLINE' || appointment.paymentStatus === 'PAID_IN_PERSON') {
+      return NextResponse.json({ error: 'Pagamento já registrado' }, { status: 400 })
+    }
+
+    const totalAmount = (appointment.price || 0) + (appointment.travelFee || 0)
+
+    // Criar registro de Payment
+    const payment = await prisma.payment.create({
+      data: {
+        userId: appointment.userId,
+        appointmentId: id,
+        amount: totalAmount,
+        method: paymentMethod,
+        description: `Atendimento: ${appointment.service?.name || 'Serviço'} — Baixa manual`,
+        category: 'REVENUE',
+        status: 'APPROVED',
+      },
+    })
+
+    // Atualizar appointment com status de pagamento
+    const updated = await prisma.appointment.update({
+      where: { id },
+      data: {
+        paymentStatus: 'PAID_IN_PERSON',
+        paymentMethod,
+        paymentId: payment.id,
+      },
+    })
+
+    return NextResponse.json({ appointment: updated, payment })
+  } catch (error) {
+    console.error('Admin appointments PATCH error:', error)
+    return NextResponse.json({ error: 'Erro ao dar baixa no pagamento' }, { status: 500 })
   }
 }

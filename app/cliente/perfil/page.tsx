@@ -41,6 +41,10 @@ export default function PerfilPage() {
   const [message, setMessage] = useState('')
   const [msgType, setMsgType] = useState<'success' | 'error'>('success')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [settingsModal, setSettingsModal] = useState<'whatsapp' | 'privacy' | 'help' | null>(null)
+  const [wppNotif, setWppNotif] = useState(true)
+  const [wppReminder24h, setWppReminder24h] = useState(true)
+  const [wppPromo, setWppPromo] = useState(false)
 
   const save = async () => {
     if (!form.name.trim()) { setMessage('Nome obrigatorio'); setMsgType('error'); return }
@@ -267,14 +271,14 @@ export default function PerfilPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01]" />
         <div className="relative border border-white/[0.05] rounded-3xl overflow-hidden">
           <div className="px-5 py-3 border-b border-white/[0.03]">
-            <span className="text-white/15 text-[9px] font-bold uppercase tracking-[0.2em]">Configuracoes</span>
+            <span className="text-white/15 text-[9px] font-bold uppercase tracking-[0.2em]">Configurações</span>
           </div>
-          {[
-            { label: 'Notificacoes WhatsApp', desc: 'Lembretes de sessoes', icon: '\uD83D\uDD14', iconColor: 'text-amber-400' },
-            { label: 'Privacidade', desc: 'Seus dados pessoais', icon: '\uD83D\uDD12', iconColor: 'text-blue-400' },
-            { label: 'Ajuda e Suporte', desc: 'Duvidas ou problemas', icon: '\u2753', iconColor: 'text-purple-400' },
-          ].map(item => (
-            <div key={item.label} className="flex items-center gap-3.5 px-5 py-4 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02] transition-colors cursor-pointer">
+          {([
+            { key: 'whatsapp' as const, label: 'Notificações WhatsApp', desc: 'Lembretes de sessões', icon: '🔔', iconColor: 'text-amber-400' },
+            { key: 'privacy' as const, label: 'Privacidade', desc: 'Seus dados pessoais', icon: '🔒', iconColor: 'text-blue-400' },
+            { key: 'help' as const, label: 'Ajuda e Suporte', desc: 'Dúvidas ou problemas', icon: '❓', iconColor: 'text-purple-400' },
+          ]).map(item => (
+            <div key={item.key} onClick={() => setSettingsModal(item.key)} className="flex items-center gap-3.5 px-5 py-4 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02] transition-colors cursor-pointer active:bg-white/[0.04]">
               <span className={`text-base ${item.iconColor} opacity-50`}>{item.icon}</span>
               <div className="flex-1 min-w-0">
                 <div className="text-white/50 text-xs font-medium">{item.label}</div>
@@ -285,6 +289,197 @@ export default function PerfilPage() {
           ))}
         </div>
       </div>
+
+      {/* ═══ Settings Modal ═══ */}
+      {settingsModal && (
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setSettingsModal(null)}>
+          <div className="w-full sm:max-w-md bg-[#1a1a2e] border border-white/[0.08] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {/* Handle bar mobile */}
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-white/10" />
+            </div>
+
+            {settingsModal === 'whatsapp' && (
+              <div className="p-6 space-y-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white/80 text-sm font-semibold flex items-center gap-2">🔔 Notificações WhatsApp</h3>
+                    <p className="text-white/20 text-[11px] mt-1">Gerencie seus lembretes e alertas</p>
+                  </div>
+                  <button onClick={() => setSettingsModal(null)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/20">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Toggle: Lembretes de sessão */}
+                  <div className="flex items-center justify-between p-4 bg-white/[0.03] rounded-2xl border border-white/[0.05]">
+                    <div>
+                      <div className="text-white/60 text-xs font-medium">Lembretes de sessão</div>
+                      <div className="text-white/15 text-[10px] mt-0.5">Receba aviso antes do horário agendado</div>
+                    </div>
+                    <button onClick={() => setWppNotif(!wppNotif)}
+                      className={`relative w-11 h-6 rounded-full transition-all ${wppNotif ? 'bg-[#b76e79]' : 'bg-white/10'}`}>
+                      <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${wppNotif ? 'left-[22px]' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+
+                  {/* Toggle: 24h antes */}
+                  <div className="flex items-center justify-between p-4 bg-white/[0.03] rounded-2xl border border-white/[0.05]">
+                    <div>
+                      <div className="text-white/60 text-xs font-medium">Lembrete 24h antes</div>
+                      <div className="text-white/15 text-[10px] mt-0.5">Confirmação de presença um dia antes</div>
+                    </div>
+                    <button onClick={() => setWppReminder24h(!wppReminder24h)}
+                      className={`relative w-11 h-6 rounded-full transition-all ${wppReminder24h ? 'bg-[#b76e79]' : 'bg-white/10'}`}>
+                      <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${wppReminder24h ? 'left-[22px]' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+
+                  {/* Toggle: Promoções */}
+                  <div className="flex items-center justify-between p-4 bg-white/[0.03] rounded-2xl border border-white/[0.05]">
+                    <div>
+                      <div className="text-white/60 text-xs font-medium">Promoções e novidades</div>
+                      <div className="text-white/15 text-[10px] mt-0.5">Descontos exclusivos e lançamentos</div>
+                    </div>
+                    <button onClick={() => setWppPromo(!wppPromo)}
+                      className={`relative w-11 h-6 rounded-full transition-all ${wppPromo ? 'bg-[#b76e79]' : 'bg-white/10'}`}>
+                      <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${wppPromo ? 'left-[22px]' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
+                  <p className="text-emerald-400/50 text-[10px]">📱 As notificações são enviadas para o WhatsApp cadastrado no seu perfil: <span className="font-semibold text-emerald-400/70">{user?.phone || 'Não informado'}</span></p>
+                </div>
+
+                <button onClick={() => setSettingsModal(null)} className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#b76e79] to-[#c28a93] text-white text-xs font-medium">
+                  Salvar preferências
+                </button>
+              </div>
+            )}
+
+            {settingsModal === 'privacy' && (
+              <div className="p-6 space-y-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white/80 text-sm font-semibold flex items-center gap-2">🔒 Privacidade</h3>
+                    <p className="text-white/20 text-[11px] mt-1">Como tratamos seus dados</p>
+                  </div>
+                  <button onClick={() => setSettingsModal(null)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/20">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="p-4 bg-white/[0.03] rounded-2xl border border-white/[0.05] space-y-3">
+                    <div className="flex items-start gap-3">
+                      <span className="text-blue-400/40 text-sm mt-0.5">🛡️</span>
+                      <div>
+                        <div className="text-white/50 text-xs font-medium">Dados protegidos</div>
+                        <p className="text-white/20 text-[10px] mt-1 leading-relaxed">Seus dados pessoais (nome, telefone, CPF, endereço) são armazenados com segurança e utilizados exclusivamente para prestação de serviços.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-white/[0.03] rounded-2xl border border-white/[0.05] space-y-3">
+                    <div className="flex items-start gap-3">
+                      <span className="text-violet-400/40 text-sm mt-0.5">📋</span>
+                      <div>
+                        <div className="text-white/50 text-xs font-medium">Registros médicos</div>
+                        <p className="text-white/20 text-[10px] mt-1 leading-relaxed">Suas medidas corporais, anamnese e fotos de evolução são confidenciais e de acesso exclusivo seu e da profissional responsável.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-white/[0.03] rounded-2xl border border-white/[0.05] space-y-3">
+                    <div className="flex items-start gap-3">
+                      <span className="text-amber-400/40 text-sm mt-0.5">💳</span>
+                      <div>
+                        <div className="text-white/50 text-xs font-medium">Pagamentos</div>
+                        <p className="text-white/20 text-[10px] mt-1 leading-relaxed">Pagamentos online são processados pelo Mercado Pago. Não armazenamos dados de cartão de crédito.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-red-500/5 rounded-2xl border border-red-500/10">
+                    <div className="flex items-start gap-3">
+                      <span className="text-red-400/40 text-sm mt-0.5">🗑️</span>
+                      <div>
+                        <div className="text-white/50 text-xs font-medium">Excluir minha conta</div>
+                        <p className="text-white/20 text-[10px] mt-1 leading-relaxed">Para solicitar exclusão dos seus dados, entre em contato pelo WhatsApp.</p>
+                        <a href="https://wa.me/5585999086924?text=Ol%C3%A1%2C%20gostaria%20de%20solicitar%20a%20exclus%C3%A3o%20dos%20meus%20dados." target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 mt-2 text-[10px] text-red-400/50 hover:text-red-400/80 transition-colors font-medium">
+                          <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+                          Solicitar exclusão
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <button onClick={() => setSettingsModal(null)} className="w-full py-3 rounded-2xl border border-white/[0.06] text-white/30 text-xs font-medium hover:text-white/50 transition-all">
+                  Fechar
+                </button>
+              </div>
+            )}
+
+            {settingsModal === 'help' && (
+              <div className="p-6 space-y-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white/80 text-sm font-semibold flex items-center gap-2">❓ Ajuda e Suporte</h3>
+                    <p className="text-white/20 text-[11px] mt-1">Estamos aqui para ajudar</p>
+                  </div>
+                  <button onClick={() => setSettingsModal(null)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/20">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {/* FAQ rápido */}
+                  {[
+                    { q: 'Como agendo uma sessão?', a: 'Acesse "Agendar" no menu inferior, escolha o serviço, data e horário disponível.' },
+                    { q: 'Como cancelar um agendamento?', a: 'Vá em "Agendamentos", toque na sessão e clique em "Cancelar". Cancelamentos devem ser feitos com 24h de antecedência.' },
+                    { q: 'Como funciona o pagamento?', a: 'Aceitamos PIX, cartão de crédito (até 12x) e dinheiro. O pagamento online é processado pelo Mercado Pago.' },
+                    { q: 'Onde vejo minha evolução?', a: 'Na aba "Evolução" do menu, você acompanha suas medidas corporais registradas pela profissional.' },
+                    { q: 'E os pacotes?', a: 'Em "Pacotes" você visualiza seus pacotes ativos e quantidade de sessões disponíveis.' },
+                  ].map((item, i) => (
+                    <details key={i} className="group">
+                      <summary className="flex items-center gap-3 p-4 bg-white/[0.03] rounded-2xl border border-white/[0.05] cursor-pointer hover:bg-white/[0.05] transition-colors list-none">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-[#b76e79]/40 shrink-0 transition-transform group-open:rotate-90"><polyline points="9 18 15 12 9 6"/></svg>
+                        <span className="text-white/50 text-xs font-medium">{item.q}</span>
+                      </summary>
+                      <div className="px-11 pb-3 pt-1">
+                        <p className="text-white/25 text-[11px] leading-relaxed">{item.a}</p>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+
+                {/* Contato direto */}
+                <div className="p-4 bg-[#b76e79]/5 rounded-2xl border border-[#b76e79]/10 space-y-3">
+                  <div className="text-white/50 text-xs font-medium">Precisa de mais ajuda?</div>
+                  <div className="flex gap-2">
+                    <a href="https://wa.me/5585999086924?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20com%20o%20app" target="_blank" rel="noopener noreferrer"
+                      className="flex-1 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/15 text-emerald-400/70 text-[11px] font-medium text-center hover:bg-emerald-500/20 transition-all">
+                      💬 WhatsApp
+                    </a>
+                    <a href="tel:+5585999086924"
+                      className="flex-1 py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/15 text-blue-400/70 text-[11px] font-medium text-center hover:bg-blue-500/20 transition-all">
+                      📞 Ligar
+                    </a>
+                  </div>
+                </div>
+
+                <button onClick={() => setSettingsModal(null)} className="w-full py-3 rounded-2xl border border-white/[0.06] text-white/30 text-xs font-medium hover:text-white/50 transition-all">
+                  Fechar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ═══ Logout ═══ */}
       <button onClick={logout}

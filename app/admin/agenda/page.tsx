@@ -6,6 +6,7 @@ import { useAdmin } from '../AdminContext'
 interface Appointment {
   id: string; scheduledAt: string; endAt: string; status: string; type: string
   price: number; travelFee: number; location: string; notes?: string; addons?: string
+  paymentStatus?: string; paymentMethod?: string
   user: { name: string; phone?: string; email: string }
   service: { name: string; duration: number }
 }
@@ -80,6 +81,8 @@ export default function AgendaPage() {
   const [filter, setFilter] = useState('ALL')
   const [updating, setUpdating] = useState<string | null>(null)
   const [selectedApp, setSelectedApp] = useState<Appointment | null>(null)
+  const [paymentModal, setPaymentModal] = useState<{ app: Appointment; mode: 'complete' | 'baixa' } | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<string>('PIX')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -96,13 +99,30 @@ export default function AgendaPage() {
 
   useEffect(() => { load() }, [load])
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, status: string, opts?: { confirmPayment?: boolean; paymentMethod?: string }) => {
     setUpdating(id)
     try {
-      const res = await fetchWithAuth('/api/admin/appointments', { method: 'PUT', body: JSON.stringify({ id, status }) })
+      const body: Record<string, unknown> = { id, status }
+      if (opts?.confirmPayment) body.confirmPayment = true
+      if (opts?.paymentMethod) body.paymentMethod = opts.paymentMethod
+      const res = await fetchWithAuth('/api/admin/appointments', { method: 'PUT', body: JSON.stringify(body) })
       if (res.ok) load()
     } catch {}
     setUpdating(null)
+  }
+
+  // Dar baixa em pagamento de agendamento já completado (PATCH)
+  const confirmPaymentBaixa = async (id: string, method: string) => {
+    setUpdating(id)
+    try {
+      const res = await fetchWithAuth('/api/admin/appointments', {
+        method: 'PATCH',
+        body: JSON.stringify({ id, paymentMethod: method }),
+      })
+      if (res.ok) load()
+    } catch {}
+    setUpdating(null)
+    setPaymentModal(null)
   }
 
   const filtered = filter === 'ALL' ? appointments : appointments.filter(a => a.status === filter)

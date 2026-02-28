@@ -500,9 +500,6 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
             </div>
             <div className="flex items-center gap-2.5">
               <LeafLogo className="w-3 h-4.5 text-[#b76e79]/25" />
-              <button className="w-9 h-9 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-white/25 hover:text-[#d4a0a7] hover:border-[#b76e79]/20 hover:bg-[#b76e79]/5 transition-all">
-                {Icons.bell}
-              </button>
             </div>
           </div>
         </header>
@@ -511,12 +508,6 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
         <main className="px-5 py-6 max-w-lg mx-auto lg:max-w-2xl relative z-10">
           {children}
         </main>
-
-        {/* ─── WhatsApp Float (mobile) ─── */}
-        <a href="https://wa.me/5585999086924" target="_blank" rel="noopener noreferrer"
-          className="lg:hidden fixed bottom-28 right-5 z-50 w-[52px] h-[52px] rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white shadow-2xl shadow-[#25D366]/25 hover:scale-105 active:scale-95 transition-all">
-          {Icons.whatsapp}
-        </a>
 
         {/* ─── Bottom Nav (mobile) ─── */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)' }}>

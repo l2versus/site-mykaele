@@ -108,12 +108,16 @@ model Appointment {
   travelFee          Float     @default(0)
   price              Float     @default(0)
   paidFromBalance    Boolean   @default(false)
+  paymentStatus      String    @default("PENDING_PAYMENT") // PENDING_PAYMENT, PAID_ONLINE, PAID_IN_PERSON, UNPAID
+  paymentMethod      String? // MERCADO_PAGO, PIX, CASH, CARD, PACKAGE
+  paymentId          String? // link to Payment record when paid
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
   @@index([userId])
   @@index([scheduledAt])
   @@index([status])
+  @@index([paymentStatus])
 }
 
 model Schedule {
@@ -134,20 +138,22 @@ model BlockedDate {
 }
 
 model Payment {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount      Float
-  method      String
-  description String?
-  status      String   @default("APPROVED")
-  category    String   @default("REVENUE")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointmentId String? // link to appointment if payment is for a specific session
+  amount        Float
+  method        String
+  description   String?
+  status        String   @default("APPROVED")
+  category      String   @default("REVENUE")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([userId])
   @@index([category])
   @@index([createdAt])
+  @@index([appointmentId])
 }
 
 model Expense {
