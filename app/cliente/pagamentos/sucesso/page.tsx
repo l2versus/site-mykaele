@@ -22,9 +22,14 @@ export default function PaymentSuccessPage() {
           return
         }
 
+        const token = localStorage.getItem('token')
         const response = await fetch(
           `/api/payments/success?preference_id=${encodeURIComponent(preferenceId)}`,
-          { method: 'GET', credentials: 'include' }
+          { 
+            method: 'GET', 
+            credentials: 'include',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          }
         )
 
         if (response.ok) {

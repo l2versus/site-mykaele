@@ -6,7 +6,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # --- Stage 2: Build da aplicação ---
 FROM node:20-alpine AS builder
@@ -18,8 +18,10 @@ COPY . .
 # Gerar Prisma Client
 RUN npx prisma generate
 
-# Build Next.js
+# Build Next.js (NEXT_PUBLIC vars precisam estar no build)
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_APP_URL=https://mykaprocopio.com.br
+ENV NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=APP_USR-2947efe4-78be-4858-adc7-b62a8393a78f
 RUN npm run build
 
 # --- Stage 3: Imagem de produção ---
