@@ -15,7 +15,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Gerar Prisma Client
+# Gerar Prisma Client (DATABASE_URL necessário para o schema)
+ENV DATABASE_URL="file:./dev.db"
 RUN npx prisma generate
 
 # Build Next.js (NEXT_PUBLIC vars precisam estar no build)
