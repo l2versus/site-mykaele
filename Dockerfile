@@ -42,6 +42,13 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+
+# Script de inicialização
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
 
 # Criar diretório persistente para banco de dados SQLite
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app
@@ -52,4 +59,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["sh", "./start.sh"]
