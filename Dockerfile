@@ -41,8 +41,8 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-# Criar diretório para o banco SQLite (se usar)
-RUN mkdir -p /app/prisma && chown -R nextjs:nodejs /app
+# Criar diretório persistente para banco de dados SQLite
+RUN mkdir -p /app/data && chown -R nextjs:nodejs /app
 
 USER nextjs
 
