@@ -9,50 +9,67 @@ async function main() {
     const dbUrl = process.env.DATABASE_URL || 'file:/app/data/mykaele.db';
     const client = createClient({ url: dbUrl });
 
+    const now = new Date().toISOString();
+
     // Verificar se admin já existe
+    let adminExists = false;
     try {
-        const result = await client.execute('SELECT COUNT(*) as count FROM "User"');
-        const count = Number(result.rows[0].count);
-        if (count > 0) {
-            console.log(`Banco já tem ${count} usuário(s). Seed não necessário.`);
-            return;
-        }
+        const result = await client.execute('SELECT COUNT(*) as count FROM "User" WHERE role = \'ADMIN\'');
+        adminExists = Number(result.rows[0].count) > 0;
     } catch (e) {
         console.log('Tabela User não encontrada ou erro:', e.message);
         return;
     }
 
-    const now = new Date().toISOString();
-    const hash = bcrypt.default ? bcrypt.default.hashSync('admin123', 10) : bcrypt.hashSync('admin123', 10);
+    if (!adminExists) {
+        const hash = bcrypt.default ? bcrypt.default.hashSync('admin123', 10) : bcrypt.hashSync('admin123', 10);
+        await client.execute({
+            sql: `INSERT INTO "User" ("id", "email", "password", "name", "role", "phone", "balance", "createdAt", "updatedAt")
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: ['admin-myka-001', 'admin@mykaele.com', hash, 'Mykaele Procópio', 'ADMIN', '(85) 99908-6924', 0, now, now]
+        });
+        console.log('Admin criado: admin@mykaele.com / admin123');
+    } else {
+        console.log('Admin já existe, pulando criação.');
+    }
 
-    // Criar admin
-    await client.execute({
-        sql: `INSERT INTO "User" ("id", "email", "password", "name", "role", "phone", "balance", "createdAt", "updatedAt")
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: ['admin-myka-001', 'admin@mykaele.com', hash, 'Mykaele Procópio', 'ADMIN', '(85) 99908-6924', 0, now, now]
-    });
-    console.log('Admin criado: admin@mykaele.com / admin123');
+    // Limpar serviços e pacotes antigos para garantir dados atualizados
+    await client.execute('DELETE FROM "PackageOption"');
+    await client.execute('DELETE FROM "Service"');
+    console.log('Serviços antigos removidos.');
 
     // Criar serviços
     const servicos = [
-        { id: 'svc-001', name: 'Limpeza de Pele', description: 'Limpeza profunda com extração e hidratação', price: 150, duration: 60, category: 'facial' },
-        { id: 'svc-002', name: 'Peeling de Diamante', description: 'Esfoliação profunda para renovação celular', price: 180, duration: 45, category: 'facial' },
-        { id: 'svc-003', name: 'Drenagem Linfática', description: 'Massagem para redução de inchaço e toxinas', price: 200, duration: 60, category: 'corporal' },
-        { id: 'svc-004', name: 'Massagem Relaxante', description: 'Massagem completa para alívio do estresse', price: 180, duration: 60, category: 'corporal' },
-        { id: 'svc-005', name: 'Radiofrequência Facial', description: 'Tratamento para firmeza e rejuvenescimento', price: 250, duration: 45, category: 'tecnologias' },
-        { id: 'svc-006', name: 'Criolipólise', description: 'Redução de gordura localizada por congelamento', price: 350, duration: 50, category: 'tecnologias' },
-        { id: 'svc-007', name: 'Design de Sobrancelhas', description: 'Modelagem profissional com henna', price: 80, duration: 30, category: 'facial' },
-        { id: 'svc-008', name: 'Protocolo Anti-Acne', description: 'Tratamento completo para peles acneicas', price: 200, duration: 60, category: 'facial' },
+        { id: 'svc-001', name: 'Método Mykaele Procópio', description: 'Protocolo exclusivo de remodelação corporal de alta performance. Resultados visíveis desde a primeira sessão.', price: 330, priceReturn: 330, duration: 90, isAddon: 0, travelFee: 'Taxa de deslocamento conforme distância' },
+        { id: 'svc-002', name: 'Massagem Relaxante', description: 'Massagem terapêutica de relaxamento profundo para alívio de tensões e bem-estar completo.', price: 280, priceReturn: 280, duration: 90, isAddon: 0, travelFee: 'Taxa de deslocamento conforme distância' },
+        { id: 'svc-003', name: 'Manta Térmica (Adicional)', description: 'Potencialize seu tratamento com 30 minutos de manta térmica para resultados intensificados.', price: 80, priceReturn: 80, duration: 30, isAddon: 1, travelFee: null },
     ];
 
     for (const s of servicos) {
         await client.execute({
-            sql: `INSERT OR IGNORE INTO "Service" ("id", "name", "description", "price", "duration", "active", "isAddon", "createdAt", "updatedAt")
-            VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?)`,
-            args: [s.id, s.name, s.description, s.price, s.duration, now, now]
+            sql: `INSERT INTO "Service" ("id", "name", "description", "price", "priceReturn", "duration", "active", "isAddon", "travelFee", "createdAt", "updatedAt")
+            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)`,
+            args: [s.id, s.name, s.description, s.price, s.priceReturn, s.duration, s.isAddon, s.travelFee, now, now]
         });
     }
     console.log(`${servicos.length} serviços criados!`);
+
+    // Criar opções de pacote
+    const pacotes = [
+        { id: 'pkg-001', serviceId: 'svc-001', name: 'Pacote 5 sessões', sessions: 5, price: 1500 },
+        { id: 'pkg-002', serviceId: 'svc-001', name: 'Pacote 10 sessões', sessions: 10, price: 2800 },
+        { id: 'pkg-003', serviceId: 'svc-002', name: 'Pacote 5 sessões', sessions: 5, price: 1300 },
+        { id: 'pkg-004', serviceId: 'svc-002', name: 'Pacote 10 sessões', sessions: 10, price: 2500 },
+    ];
+
+    for (const p of pacotes) {
+        await client.execute({
+            sql: `INSERT INTO "PackageOption" ("id", "serviceId", "name", "sessions", "price", "active", "createdAt", "updatedAt")
+            VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+            args: [p.id, p.serviceId, p.name, p.sessions, p.price, now, now]
+        });
+    }
+    console.log(`${pacotes.length} opções de pacote criadas!`);
 
     // Criar horários padrão (seg-sáb)
     const schedules = [
