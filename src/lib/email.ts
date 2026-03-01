@@ -1,10 +1,17 @@
 // src/lib/email.ts — Envio de emails com Resend
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 const FROM_EMAIL = 'Mykaele Procópio <contato@mykaprocopio.com.br>'
 const FALLBACK_FROM = 'onboarding@resend.dev' // Usar enquanto domínio não verificado
+
+// Lazy initialization - só instancia quando usado
+let resendInstance: Resend | null = null
+function getResend(): Resend {
+  if (!resendInstance) {
+    resendInstance = new Resend(process.env.RESEND_API_KEY)
+  }
+  return resendInstance
+}
 
 interface EmailOptions {
   to: string
@@ -22,6 +29,7 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
 
   try {
     const from = process.env.RESEND_VERIFIED_DOMAIN ? FROM_EMAIL : FALLBACK_FROM
+    const resend = getResend()
 
     const { data, error } = await resend.emails.send({
       from,
