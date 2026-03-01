@@ -1,12 +1,11 @@
 // seed-rewards.mjs — Seed de recompensas padrão do programa de fidelidade
 // Rodar: node seed-rewards.mjs
 
-import { PrismaClient } from './.prisma/client/index.js'
-import { createClient } from '@libsql/client'
-import { PrismaLibSQL } from '@prisma/adapter-libsql'
+import { PrismaClient } from '@prisma/client'
+import { PrismaLibSql } from '@prisma/adapter-libsql'
 
-const libsql = createClient({ url: process.env.TURSO_DATABASE_URL ?? 'file:./prisma/dev.db' })
-const adapter = new PrismaLibSQL(libsql)
+const dbUrl = process.env.DATABASE_URL || 'file:./dev.db'
+const adapter = new PrismaLibSql({ url: dbUrl })
 const prisma = new PrismaClient({ adapter })
 
 const defaultRewards = [

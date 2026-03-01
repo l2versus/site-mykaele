@@ -90,6 +90,30 @@ async function main() {
     }
     console.log('Horários de atendimento configurados!');
 
+    // Criar recompensas do programa de fidelidade
+    const rewards = [
+        { id: 'rwd-001', name: 'Desconto de R$30', description: 'Válido para qualquer sessão avulsa', pointsCost: 300, type: 'DISCOUNT', value: 30, imageEmoji: '💰' },
+        { id: 'rwd-002', name: 'Desconto de R$50', description: 'Válido para qualquer sessão avulsa', pointsCost: 500, type: 'DISCOUNT', value: 50, imageEmoji: '💎' },
+        { id: 'rwd-003', name: 'Desconto de R$100', description: 'Válido para qualquer serviço ou pacote', pointsCost: 900, type: 'DISCOUNT', value: 100, imageEmoji: '🌟' },
+        { id: 'rwd-004', name: 'Manta Térmica Grátis', description: 'Add-on de Manta Térmica (30min) grátis na próxima sessão', pointsCost: 400, type: 'FREE_ADDON', value: 80, imageEmoji: '🔥' },
+        { id: 'rwd-005', name: 'Massagem Relaxante Grátis', description: 'Uma sessão completa de Massagem Relaxante (90min)', pointsCost: 1400, type: 'FREE_SESSION', value: 280, imageEmoji: '💆' },
+        { id: 'rwd-006', name: 'Método Mykaele Procópio Grátis', description: 'Uma sessão completa do Método exclusivo (90min)', pointsCost: 1650, type: 'FREE_SESSION', value: 330, imageEmoji: '👑' },
+        { id: 'rwd-007', name: 'Upgrade para Método Premium', description: 'Transforme qualquer sessão em Método Mykaele Procópio', pointsCost: 600, type: 'UPGRADE', value: 120, imageEmoji: '✨' },
+    ];
+
+    for (const r of rewards) {
+        try {
+            await client.execute({
+                sql: `INSERT OR IGNORE INTO "LoyaltyReward" ("id", "name", "description", "pointsCost", "type", "value", "active", "imageEmoji", "createdAt", "updatedAt")
+                VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
+                args: [r.id, r.name, r.description, r.pointsCost, r.type, r.value, r.imageEmoji, now, now]
+            });
+        } catch (e) {
+            // Tabela pode não existir em bancos muito antigos
+        }
+    }
+    console.log(`${rewards.length} recompensas de fidelidade configuradas!`);
+
     console.log('=== Seed completo! ===');
 }
 

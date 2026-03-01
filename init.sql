@@ -248,3 +248,64 @@ CREATE TABLE IF NOT EXISTS "Anamnese" (
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "Anamnese_userId_key" ON "Anamnese"("userId");
+
+-- ═══════════════════════════════════════════
+-- PROGRAMA DE FIDELIDADE & INDICAÇÃO
+-- ═══════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS "ReferralCode" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "userId" TEXT NOT NULL UNIQUE,
+    "code" TEXT NOT NULL UNIQUE,
+    "usageCount" INTEGER NOT NULL DEFAULT 0,
+    "active" INTEGER NOT NULL DEFAULT 1,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "Referral" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "referrerId" TEXT NOT NULL,
+    "referredUserId" TEXT NOT NULL UNIQUE,
+    "referralCodeId" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "rewardedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "Referral_referrerId_idx" ON "Referral"("referrerId");
+
+CREATE TABLE IF NOT EXISTS "LoyaltyPoints" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "userId" TEXT NOT NULL UNIQUE,
+    "points" INTEGER NOT NULL DEFAULT 0,
+    "totalEarned" INTEGER NOT NULL DEFAULT 0,
+    "totalSpent" INTEGER NOT NULL DEFAULT 0,
+    "tier" TEXT NOT NULL DEFAULT 'BRONZE',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "LoyaltyTransaction" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "userId" TEXT NOT NULL,
+    "points" INTEGER NOT NULL,
+    "type" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "referenceId" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "LoyaltyTransaction_userId_idx" ON "LoyaltyTransaction"("userId");
+CREATE INDEX IF NOT EXISTS "LoyaltyTransaction_createdAt_idx" ON "LoyaltyTransaction"("createdAt");
+
+CREATE TABLE IF NOT EXISTS "LoyaltyReward" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "pointsCost" INTEGER NOT NULL,
+    "type" TEXT NOT NULL,
+    "value" REAL NOT NULL,
+    "active" INTEGER NOT NULL DEFAULT 1,
+    "stock" INTEGER,
+    "imageEmoji" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
