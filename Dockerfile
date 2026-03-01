@@ -12,6 +12,7 @@ RUN npm ci && npm cache clean --force
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Cache bust: 2026-03-01
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
