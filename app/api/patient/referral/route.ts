@@ -1,4 +1,4 @@
-// app/api/patient/referral/route.ts — Sistema de Indicação
+// app/api/patient/referral/route.ts — Sistema de Indicação + Link Personalizado + Desconto
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
@@ -17,6 +17,32 @@ const POINTS_CONFIG = {
   REVIEW_BONUS: 30,           // Por avaliação feita
   BIRTHDAY_BONUS: 150,        // Bônus de aniversário
   FIRST_SESSION_BONUS: 100,   // Primeira sessão
+}
+
+// ═══ DISCOUNT TIERS — baseado em indicações confirmadas ═══
+// Teto máximo: 15% para não perder dinheiro
+const DISCOUNT_TIERS = [
+  { min: 1,  max: 2,  discount: 3,  label: 'Iniciante' },
+  { min: 3,  max: 5,  discount: 5,  label: 'Conectada' },
+  { min: 6,  max: 9,  discount: 8,  label: 'Influenciadora' },
+  { min: 10, max: 19, discount: 12, label: 'Embaixadora' },
+  { min: 20, max: 999, discount: 15, label: 'Embaixadora VIP' },
+]
+const MAX_DISCOUNT_PERCENT = 15 // Teto absoluto
+
+function getDiscountInfo(confirmedReferrals: number) {
+  if (confirmedReferrals === 0) return { discount: 0, label: 'Sem indicações', nextTier: DISCOUNT_TIERS[0], remaining: 1 }
+  
+  const current = DISCOUNT_TIERS.find(t => confirmedReferrals >= t.min && confirmedReferrals <= t.max)
+  const currentIdx = current ? DISCOUNT_TIERS.indexOf(current) : -1
+  const nextTier = currentIdx < DISCOUNT_TIERS.length - 1 ? DISCOUNT_TIERS[currentIdx + 1] : null
+  
+  return {
+    discount: Math.min(current?.discount || 0, MAX_DISCOUNT_PERCENT),
+    label: current?.label || 'Iniciante',
+    nextTier,
+    remaining: nextTier ? nextTier.min - confirmedReferrals : 0,
+  }
 }
 
 // Tier thresholds
@@ -80,7 +106,7 @@ async function awardPoints(userId: string, points: number, type: string, descrip
   return { points, newTier, tierChanged: newTier !== loyalty.tier }
 }
 
-// ═══ GET — Buscar código de indicação ═══
+// ═══ GET — Buscar código de indicação + desconto + ranking ═══
 export async function GET(req: NextRequest) {
   const user = getUser(req)
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -99,7 +125,6 @@ export async function GET(req: NextRequest) {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .substring(0, 8)
-      const year = new Date().getFullYear()
       const rand = Math.random().toString(36).substring(2, 5).toUpperCase()
       const code = `MYKA-${namePart}${rand}`
 
@@ -114,12 +139,14 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
+    const confirmedCount = referrals.filter(r => r.status === 'CONFIRMED' || r.status === 'REWARDED').length
+
     // Get names of referred users
     const referredIds = referrals.map(r => r.referredUserId)
-    const referredUsers = await prisma.user.findMany({
+    const referredUsers = referredIds.length > 0 ? await prisma.user.findMany({
       where: { id: { in: referredIds } },
       select: { id: true, name: true },
-    })
+    }) : []
     const nameMap = Object.fromEntries(referredUsers.map(u => [u.id, u.name]))
 
     const referralList = referrals.map(r => ({
@@ -130,11 +157,52 @@ export async function GET(req: NextRequest) {
       rewardedAt: r.rewardedAt,
     }))
 
+    // ═══ Discount info ═══
+    const discountInfo = getDiscountInfo(confirmedCount)
+
+    // ═══ Ranking de indicações (top 10 + posição do user) ═══
+    const allCodes = await prisma.referralCode.findMany({
+      where: { usageCount: { gt: 0 } },
+      orderBy: { usageCount: 'desc' },
+      take: 20,
+    })
+    const rankUserIds = allCodes.map(c => c.userId)
+    const rankUsers = rankUserIds.length > 0 ? await prisma.user.findMany({
+      where: { id: { in: rankUserIds } },
+      select: { id: true, name: true },
+    }) : []
+    const rankNameMap = Object.fromEntries(rankUsers.map(u => [u.id, u.name]))
+
+    const ranking = allCodes.slice(0, 10).map((c, i) => ({
+      position: i + 1,
+      displayName: rankNameMap[c.userId]?.split(' ')[0] || 'Cliente',
+      referralCount: c.usageCount,
+      isCurrentUser: c.userId === user.userId,
+    }))
+
+    // Posição do usuário se não está no top 10
+    let myPosition = ranking.find(r => r.isCurrentUser)?.position || null
+    if (!myPosition && referralCode.usageCount > 0) {
+      const countAbove = allCodes.filter(c => c.usageCount > referralCode!.usageCount).length
+      myPosition = countAbove + 1
+    }
+
+    // Link promocional personalizado
+    const promoLink = `https://mykaprocopio.com.br/ref/${referralCode.code}`
+
     return NextResponse.json({
       code: referralCode.code,
       usageCount: referralCode.usageCount,
       referrals: referralList,
+      confirmedCount,
       pointsPerReferral: POINTS_CONFIG.REFERRAL_BONUS,
+      // Novo: desconto e ranking
+      discount: discountInfo,
+      discountTiers: DISCOUNT_TIERS,
+      maxDiscount: MAX_DISCOUNT_PERCENT,
+      ranking,
+      myPosition,
+      promoLink,
     })
   } catch (error) {
     console.error('Referral GET error:', error)
@@ -142,13 +210,53 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ═══ POST — Aplicar código de indicação (no signup/primeiro acesso) ═══
+// ═══ POST — Aplicar código / Personalizar link / Award session ═══
 export async function POST(req: NextRequest) {
   const user = getUser(req)
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   try {
-    const { action, referralCode, appointmentId } = await req.json()
+    const { action, referralCode, appointmentId, customCode } = await req.json()
+
+    // ─── CUSTOMIZE REFERRAL CODE (10 chars) ───
+    if (action === 'customize_code') {
+      if (!customCode || typeof customCode !== 'string') {
+        return NextResponse.json({ error: 'Código obrigatório' }, { status: 400 })
+      }
+
+      const cleaned = customCode.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10)
+      if (cleaned.length < 3) {
+        return NextResponse.json({ error: 'Código deve ter pelo menos 3 caracteres (letras e números)' }, { status: 400 })
+      }
+      if (cleaned.length > 10) {
+        return NextResponse.json({ error: 'Código deve ter no máximo 10 caracteres' }, { status: 400 })
+      }
+
+      // Check if code already taken
+      const existing = await prisma.referralCode.findUnique({ where: { code: cleaned } })
+      if (existing && existing.userId !== user.userId) {
+        return NextResponse.json({ error: 'Este código já está em uso. Tente outro!' }, { status: 409 })
+      }
+
+      // Update or create
+      const current = await prisma.referralCode.findUnique({ where: { userId: user.userId } })
+      if (current) {
+        await prisma.referralCode.update({
+          where: { userId: user.userId },
+          data: { code: cleaned },
+        })
+      } else {
+        await prisma.referralCode.create({
+          data: { userId: user.userId, code: cleaned, active: true },
+        })
+      }
+
+      return NextResponse.json({
+        message: `Código personalizado! Seu novo link: mykaprocopio.com.br/ref/${cleaned}`,
+        code: cleaned,
+        promoLink: `https://mykaprocopio.com.br/ref/${cleaned}`,
+      })
+    }
 
     // ─── APPLY REFERRAL CODE ───
     if (action === 'apply_code') {

@@ -50,6 +50,18 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
   const [loading, setLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState<string | null>(null)
 
+  // Auto-fill referral code from URL ?ref=XXX
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const refCode = params.get('ref')
+    if (refCode) {
+      setForm(prev => ({ ...prev, referralCode: refCode.toUpperCase() }))
+      setMode('register')
+      // Clean URL
+      window.history.replaceState({}, '', '/cliente')
+    }
+  }, [])
+
   // ═══ Biometric / Passkey state ═══
   const [biometricAvailable, setBiometricAvailable] = useState(false)
   const [biometricLoading, setBiometricLoading] = useState(false)

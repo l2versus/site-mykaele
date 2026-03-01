@@ -110,6 +110,108 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ referrals: list })
     }
 
+    // ─── REFERRAL STATS (Dashboard completo de indicações) ───
+    if (section === 'referral_stats') {
+      const DISCOUNT_TIERS = [
+        { min: 1, max: 2, discount: 3, label: 'Iniciante' },
+        { min: 3, max: 5, discount: 5, label: 'Engajado' },
+        { min: 6, max: 9, discount: 8, label: 'Influenciador' },
+        { min: 10, max: 19, discount: 12, label: 'Embaixador' },
+        { min: 20, max: 999, discount: 15, label: 'VIP Máximo' },
+      ]
+      const MAX_DISCOUNT_PERCENT = 15
+
+      // all referral codes
+      const allCodes = await prisma.referralCode.findMany({
+        orderBy: { usageCount: 'desc' },
+      })
+
+      // all referrals
+      const allReferrals = await prisma.referral.findMany({
+        orderBy: { createdAt: 'desc' },
+      })
+
+      // users
+      const allCodeOwnerIds = allCodes.map(c => c.userId)
+      const allRefUserIds = [...new Set(allReferrals.flatMap(r => [r.referrerId, r.referredUserId]))]
+      const uniqueUserIds = [...new Set([...allCodeOwnerIds, ...allRefUserIds])]
+      const users = await prisma.user.findMany({
+        where: { id: { in: uniqueUserIds } },
+        select: { id: true, name: true, email: true, phone: true },
+      })
+      const userMap = Object.fromEntries(users.map(u => [u.id, u]))
+
+      // ranking by confirmed referrals (CONFIRMED + REWARDED)
+      const confirmedByUser: Record<string, number> = {}
+      for (const ref of allReferrals) {
+        if (ref.status === 'CONFIRMED' || ref.status === 'REWARDED') {
+          confirmedByUser[ref.referrerId] = (confirmedByUser[ref.referrerId] || 0) + 1
+        }
+      }
+
+      const ranking = Object.entries(confirmedByUser)
+        .sort(([, a], [, b]) => b - a)
+        .map(([userId, count], i) => {
+          const confirmed = count
+          const tier = DISCOUNT_TIERS.find(t => confirmed >= t.min && confirmed <= t.max)
+          const discount = tier ? tier.discount : confirmed >= 20 ? MAX_DISCOUNT_PERCENT : 0
+          return {
+            position: i + 1,
+            userId,
+            user: userMap[userId] || null,
+            confirmedReferrals: confirmed,
+            discount,
+            tierLabel: tier?.label || 'Sem tier',
+            code: allCodes.find(c => c.userId === userId)?.code || '-',
+          }
+        })
+
+      // referral details
+      const referralList = allReferrals.map(r => ({
+        id: r.id,
+        referrer: userMap[r.referrerId] || null,
+        referred: userMap[r.referredUserId] || null,
+        status: r.status,
+        createdAt: r.createdAt,
+        rewardedAt: r.rewardedAt,
+      }))
+
+      // stats
+      const totalCodes = allCodes.length
+      const totalReferrals = allReferrals.length
+      const confirmedReferrals = allReferrals.filter(r => r.status === 'CONFIRMED' || r.status === 'REWARDED').length
+      const pendingReferrals = allReferrals.filter(r => r.status === 'PENDING').length
+      const usersWithDiscount = ranking.filter(r => r.discount > 0).length
+      const avgDiscount = usersWithDiscount > 0 ? (ranking.reduce((s, r) => s + r.discount, 0) / ranking.length).toFixed(1) : '0'
+      const maxDiscountGiven = ranking.length > 0 ? Math.max(...ranking.map(r => r.discount)) : 0
+
+      // code details
+      const codeDetails = allCodes.map(c => ({
+        code: c.code,
+        userId: c.userId,
+        user: userMap[c.userId] || null,
+        usageCount: c.usageCount,
+        createdAt: c.createdAt,
+      }))
+
+      return NextResponse.json({
+        stats: {
+          totalCodes,
+          totalReferrals,
+          confirmedReferrals,
+          pendingReferrals,
+          usersWithDiscount,
+          avgDiscount: parseFloat(avgDiscount),
+          maxDiscountGiven,
+          maxDiscountAllowed: MAX_DISCOUNT_PERCENT,
+        },
+        ranking,
+        referrals: referralList,
+        codes: codeDetails,
+        discountTiers: DISCOUNT_TIERS,
+      })
+    }
+
     return NextResponse.json({ error: 'Seção inválida' }, { status: 400 })
   } catch (error) {
     console.error('Admin Loyalty GET error:', error)

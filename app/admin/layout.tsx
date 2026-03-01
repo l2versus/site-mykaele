@@ -18,6 +18,8 @@ const I = {
   left: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>,
   diamond: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>,
   upload: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><path d="M16 16l-4-4-4 4"/></svg>,
+  megaphone: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+  share: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
 }
 
 const NAV = [
@@ -26,6 +28,8 @@ const NAV = [
   { href: '/admin/servicos', label: 'Serviços', icon: I.heart },
   { href: '/admin/clientes', label: 'Clientes', icon: I.users },
   { href: '/admin/importar-clientes', label: 'Importar', icon: I.upload },
+  { href: '/admin/mensagens', label: 'Mensagens', icon: I.megaphone },
+  { href: '/admin/indicacoes', label: 'Indicações', icon: I.share },
   { href: '/admin/financeiro', label: 'Financeiro', icon: I.dollar },
   { href: '/admin/fidelidade', label: 'Fidelidade', icon: I.diamond },
   { href: '/admin/configuracoes', label: 'Configurações', icon: I.gear },

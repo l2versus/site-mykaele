@@ -1,9 +1,9 @@
-'use client'
+﻿'use client'
 
 import { useClient } from '../ClientContext'
 import { useState, useEffect, useCallback } from 'react'
 
-// ═══ Types ═══
+// â•â•â• Types â•â•â•
 interface LoyaltyOverview {
   loyalty: {
     points: number
@@ -56,7 +56,41 @@ interface ReferralEntry {
   rewardedAt: string | null
 }
 
-// ═══ Constants ═══
+interface DiscountInfo {
+  discount: number
+  label: string
+  nextTier: { min: number; max: number; discount: number; label: string } | null
+  remaining: number
+}
+
+interface DiscountTier {
+  min: number
+  max: number
+  discount: number
+  label: string
+}
+
+interface ReferralRankEntry {
+  position: number
+  displayName: string
+  referralCount: number
+  isCurrentUser: boolean
+}
+
+interface ReferralData {
+  code: string
+  usageCount: number
+  referrals: ReferralEntry[]
+  confirmedCount: number
+  discount: DiscountInfo
+  discountTiers: DiscountTier[]
+  maxDiscount: number
+  ranking: ReferralRankEntry[]
+  myPosition: number | null
+  promoLink: string
+}
+
+// â•â•â• Constants â•â•â•
 const TIER_CONFIG = {
   BRONZE: {
     name: 'Bronze',
@@ -64,9 +98,9 @@ const TIER_CONFIG = {
     textColor: 'text-amber-700',
     bgColor: 'bg-amber-50',
     borderColor: 'border-amber-200',
-    icon: '🥉',
-    emoji: '✨',
-    benefits: ['Acúmulo de pontos básico', 'Acesso ao programa de indicação'],
+    icon: 'ðŸ¥‰',
+    emoji: 'âœ¨',
+    benefits: ['AcÃºmulo de pontos bÃ¡sico', 'Acesso ao programa de indicaÃ§Ã£o'],
   },
   SILVER: {
     name: 'Prata',
@@ -74,9 +108,9 @@ const TIER_CONFIG = {
     textColor: 'text-gray-500',
     bgColor: 'bg-gray-50',
     borderColor: 'border-gray-200',
-    icon: '🥈',
-    emoji: '💫',
-    benefits: ['Pontos 1.5x em sessões', 'Acesso antecipado a novidades', 'Prioridade no agendamento'],
+    icon: 'ðŸ¥ˆ',
+    emoji: 'ðŸ’«',
+    benefits: ['Pontos 1.5x em sessÃµes', 'Acesso antecipado a novidades', 'Prioridade no agendamento'],
   },
   GOLD: {
     name: 'Ouro',
@@ -84,9 +118,9 @@ const TIER_CONFIG = {
     textColor: 'text-yellow-600',
     bgColor: 'bg-yellow-50',
     borderColor: 'border-yellow-200',
-    icon: '🥇',
-    emoji: '👑',
-    benefits: ['Pontos 2x em sessões', 'Recompensas exclusivas', 'Sessão de bônus no aniversário', 'Atendimento VIP'],
+    icon: 'ðŸ¥‡',
+    emoji: 'ðŸ‘‘',
+    benefits: ['Pontos 2x em sessÃµes', 'Recompensas exclusivas', 'SessÃ£o de bÃ´nus no aniversÃ¡rio', 'Atendimento VIP'],
   },
   DIAMOND: {
     name: 'Diamante',
@@ -94,22 +128,22 @@ const TIER_CONFIG = {
     textColor: 'text-blue-500',
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-200',
-    icon: '💎',
-    emoji: '🌟',
-    benefits: ['Pontos 3x em sessões', 'Todas as recompensas disponíveis', 'Convites para eventos exclusivos', 'Protocolo personalizado', 'Concierge dedicado'],
+    icon: 'ðŸ’Ž',
+    emoji: 'ðŸŒŸ',
+    benefits: ['Pontos 3x em sessÃµes', 'Todas as recompensas disponÃ­veis', 'Convites para eventos exclusivos', 'Protocolo personalizado', 'Concierge dedicado'],
   },
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  REFERRAL_BONUS: '🤝 Indicação',
-  REFERRED_BONUS: '🎁 Boas-vindas',
-  SESSION_COMPLETE: '💆 Sessão',
-  REVIEW_BONUS: '⭐ Avaliação',
-  BIRTHDAY_BONUS: '🎂 Aniversário',
-  TIER_BONUS: '🏆 Promoção de Tier',
-  REDEMPTION: '🎯 Resgate',
-  ADMIN_ADJUSTMENT: '⚙️ Ajuste',
-  FIRST_SESSION_BONUS: '🌟 Primeira Sessão',
+  REFERRAL_BONUS: 'ðŸ¤ IndicaÃ§Ã£o',
+  REFERRED_BONUS: 'ðŸŽ Boas-vindas',
+  SESSION_COMPLETE: 'ðŸ’† SessÃ£o',
+  REVIEW_BONUS: 'â­ AvaliaÃ§Ã£o',
+  BIRTHDAY_BONUS: 'ðŸŽ‚ AniversÃ¡rio',
+  TIER_BONUS: 'ðŸ† PromoÃ§Ã£o de Tier',
+  REDEMPTION: 'ðŸŽ¯ Resgate',
+  ADMIN_ADJUSTMENT: 'âš™ï¸ Ajuste',
+  FIRST_SESSION_BONUS: 'ðŸŒŸ Primeira SessÃ£o',
 }
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -124,13 +158,16 @@ export default function FidelidadePage() {
   const [ranking, setRanking] = useState<RankingEntry[]>([])
   const [myRank, setMyRank] = useState<RankingEntry | null>(null)
   const [rewards, setRewards] = useState<Reward[]>([])
-  const [referralData, setReferralData] = useState<{ code: string; usageCount: number; referrals: ReferralEntry[] } | null>(null)
+  const [referralData, setReferralData] = useState<ReferralData | null>(null)
   const [redeemingId, setRedeemingId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [referralInput, setReferralInput] = useState('')
   const [applyingCode, setApplyingCode] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [showConfetti, setShowConfetti] = useState(false)
+  const [customCodeInput, setCustomCodeInput] = useState('')
+  const [savingCustomCode, setSavingCustomCode] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
 
   const loadOverview = useCallback(async () => {
     try {
@@ -205,14 +242,49 @@ export default function FidelidadePage() {
 
   const shareCode = async () => {
     if (!referralData?.code) return
-    const text = `💎 Venha experimentar o melhor da estética com a Mykaele Procópio! Use meu código ${referralData.code} no cadastro e ganhe pontos de boas-vindas no programa de fidelidade exclusivo!\n\nhttps://mykaprocopio.com.br/cliente`
+    const link = referralData.promoLink || `https://mykaprocopio.com.br/ref/${referralData.code}`
+    const text = `ðŸ’Ž Venha experimentar o melhor da estÃ©tica com a Mykaele ProcÃ³pio!\n\nUse meu link exclusivo e ganhe pontos de boas-vindas no programa de fidelidade!\n\n${link}`
     if (navigator.share) {
-      try { await navigator.share({ title: 'Mykaele Procópio - Indicação VIP', text }) } catch {}
+      try { await navigator.share({ title: 'Mykaele ProcÃ³pio - IndicaÃ§Ã£o VIP', text }) } catch {}
     } else {
       try { await navigator.clipboard.writeText(text) } catch {}
       setCopied(true)
       setTimeout(() => setCopied(false), 2500)
     }
+  }
+
+  const copyLink = async () => {
+    if (!referralData) return
+    const link = referralData.promoLink || `https://mykaprocopio.com.br/ref/${referralData.code}`
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopiedLink(true)
+      setTimeout(() => setCopiedLink(false), 2500)
+    } catch {}
+  }
+
+  const saveCustomCode = async () => {
+    if (!customCodeInput.trim()) return
+    setSavingCustomCode(true)
+    setMessage(null)
+    try {
+      const res = await fetchWithAuth('/api/patient/referral', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'customize_code', customCode: customCodeInput }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setMessage({ text: data.message, type: 'success' })
+        setCustomCodeInput('')
+        await loadReferral()
+      } else {
+        setMessage({ text: data.error || 'Erro ao personalizar cÃ³digo', type: 'error' })
+      }
+    } catch {
+      setMessage({ text: 'Erro de conexÃ£o', type: 'error' })
+    }
+    setSavingCustomCode(false)
   }
 
   const applyReferralCode = async () => {
@@ -233,10 +305,10 @@ export default function FidelidadePage() {
         setReferralInput('')
         await Promise.all([loadOverview(), loadTransactions()])
       } else {
-        setMessage({ text: data.error || 'Erro ao aplicar código', type: 'error' })
+        setMessage({ text: data.error || 'Erro ao aplicar cÃ³digo', type: 'error' })
       }
     } catch {
-      setMessage({ text: 'Erro de conexão', type: 'error' })
+      setMessage({ text: 'Erro de conexÃ£o', type: 'error' })
     }
     setApplyingCode(false)
   }
@@ -260,7 +332,7 @@ export default function FidelidadePage() {
         setMessage({ text: data.error || 'Erro ao resgatar', type: 'error' })
       }
     } catch {
-      setMessage({ text: 'Erro de conexão', type: 'error' })
+      setMessage({ text: 'Erro de conexÃ£o', type: 'error' })
     }
     setRedeemingId(null)
   }
@@ -281,7 +353,7 @@ export default function FidelidadePage() {
 
   return (
     <div className="min-h-screen pb-28">
-      {/* ═══ Confetti ═══ */}
+      {/* â•â•â• Confetti â•â•â• */}
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
           {Array.from({ length: 50 }).map((_, i) => (
@@ -296,14 +368,14 @@ export default function FidelidadePage() {
                 fontSize: `${12 + Math.random() * 16}px`,
               }}
             >
-              {['✨', '💎', '🌟', '👑', '🎉', '💫'][Math.floor(Math.random() * 6)]}
+              {['âœ¨', 'ðŸ’Ž', 'ðŸŒŸ', 'ðŸ‘‘', 'ðŸŽ‰', 'ðŸ’«'][Math.floor(Math.random() * 6)]}
             </div>
           ))}
         </div>
       )}
 
-      {/* ═══ Hero Card — Tier & Points ═══ */}
-      <div className={`mx-4 mt-4 rounded-2xl bg-gradient-to-br ${tierInfo.color} p-6 text-white shadow-xl relative overflow-hidden`}>
+      {/* â•â•â• Hero Card â€” Tier & Points â•â•â• */}
+      <div className={`mx-4 mt-4 rounded-2xl bg-linear-to-br ${tierInfo.color} p-6 text-white shadow-xl relative overflow-hidden`}>
         {/* Background decoration */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
@@ -332,7 +404,7 @@ export default function FidelidadePage() {
           {overview?.loyalty?.nextTier && (
             <div className="mt-4">
               <div className="flex justify-between text-xs text-white/60 mb-1">
-                <span>Próximo: {TIER_CONFIG[overview.loyalty.nextTier as keyof typeof TIER_CONFIG]?.name || overview.loyalty.nextTier}</span>
+                <span>PrÃ³ximo: {TIER_CONFIG[overview.loyalty.nextTier as keyof typeof TIER_CONFIG]?.name || overview.loyalty.nextTier}</span>
                 <span>{overview.loyalty.progressToNext}%</span>
               </div>
               <div className="h-2 bg-white/20 rounded-full overflow-hidden">
@@ -349,11 +421,11 @@ export default function FidelidadePage() {
         </div>
       </div>
 
-      {/* ═══ Quick Stats ═══ */}
+      {/* â•â•â• Quick Stats â•â•â• */}
       <div className="grid grid-cols-3 gap-3 mx-4 mt-4">
         <div className="bg-white rounded-xl p-3 text-center shadow-sm border border-cream-dark/30">
           <p className="text-xl font-bold text-rose-gold">{overview?.referralCount || 0}</p>
-          <p className="text-[10px] text-warm-gray">Indicações</p>
+          <p className="text-[10px] text-warm-gray">IndicaÃ§Ãµes</p>
         </div>
         <div className="bg-white rounded-xl p-3 text-center shadow-sm border border-cream-dark/30">
           <p className="text-xl font-bold text-rose-gold">{overview?.confirmedReferrals || 0}</p>
@@ -365,20 +437,20 @@ export default function FidelidadePage() {
         </div>
       </div>
 
-      {/* ═══ Message ═══ */}
+      {/* â•â•â• Message â•â•â• */}
       {message && (
         <div className={`mx-4 mt-4 p-3 rounded-xl text-sm font-medium ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
           {message.text}
         </div>
       )}
 
-      {/* ═══ Tab Navigation ═══ */}
+      {/* â•â•â• Tab Navigation â•â•â• */}
       <div className="flex mx-4 mt-4 bg-cream rounded-xl p-1 gap-1">
         {[
-          { key: 'overview' as const, label: 'Resumo', icon: '📊' },
-          { key: 'ranking' as const, label: 'Ranking', icon: '🏆' },
-          { key: 'rewards' as const, label: 'Resgatar', icon: '🎁' },
-          { key: 'referral' as const, label: 'Indicar', icon: '🤝' },
+          { key: 'overview' as const, label: 'Resumo', icon: 'ðŸ“Š' },
+          { key: 'ranking' as const, label: 'Ranking', icon: 'ðŸ†' },
+          { key: 'rewards' as const, label: 'Resgatar', icon: 'ðŸŽ' },
+          { key: 'referral' as const, label: 'Indicar', icon: 'ðŸ¤' },
         ].map(t => (
           <button
             key={t.key}
@@ -395,16 +467,16 @@ export default function FidelidadePage() {
         ))}
       </div>
 
-      {/* ═══ TAB: Resumo ═══ */}
+      {/* â•â•â• TAB: Resumo â•â•â• */}
       {tab === 'overview' && (
         <div className="mx-4 mt-4 space-y-4">
           {/* Tier Benefits */}
           <div className={`${tierInfo.bgColor} border ${tierInfo.borderColor} rounded-xl p-4`}>
-            <h3 className={`text-sm font-bold ${tierInfo.textColor} mb-2`}>{tierInfo.icon} Benefícios Tier {tierInfo.name}</h3>
+            <h3 className={`text-sm font-bold ${tierInfo.textColor} mb-2`}>{tierInfo.icon} BenefÃ­cios Tier {tierInfo.name}</h3>
             <ul className="space-y-1">
               {tierInfo.benefits.map((b, i) => (
                 <li key={i} className="text-xs text-charcoal/70 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-gold/50 flex-shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-gold/50 shrink-0" />
                   {b}
                 </li>
               ))}
@@ -413,15 +485,15 @@ export default function FidelidadePage() {
 
           {/* How to earn points */}
           <div className="bg-white rounded-xl p-4 shadow-sm border border-cream-dark/30">
-            <h3 className="text-sm font-bold text-charcoal mb-3">💰 Como ganhar pontos</h3>
+            <h3 className="text-sm font-bold text-charcoal mb-3">ðŸ’° Como ganhar pontos</h3>
             <div className="space-y-2">
               {[
-                { action: 'Indique uma amiga', points: '+200 pts', icon: '🤝' },
-                { action: 'Amiga indicada se cadastra', points: '+100 pts (ela)', icon: '🎁' },
-                { action: 'Complete uma sessão', points: '+50 pts', icon: '💆' },
-                { action: 'Faça uma avaliação', points: '+30 pts', icon: '⭐' },
-                { action: 'Aniversário', points: '+150 pts', icon: '🎂' },
-                { action: 'Suba de tier', points: '+50 pts', icon: '🏆' },
+                { action: 'Indique uma amiga', points: '+200 pts', icon: 'ðŸ¤' },
+                { action: 'Amiga indicada se cadastra', points: '+100 pts (ela)', icon: 'ðŸŽ' },
+                { action: 'Complete uma sessÃ£o', points: '+50 pts', icon: 'ðŸ’†' },
+                { action: 'FaÃ§a uma avaliaÃ§Ã£o', points: '+30 pts', icon: 'â­' },
+                { action: 'AniversÃ¡rio', points: '+150 pts', icon: 'ðŸŽ‚' },
+                { action: 'Suba de tier', points: '+50 pts', icon: 'ðŸ†' },
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between py-1.5 border-b border-cream last:border-0">
                   <span className="text-xs text-charcoal/80">
@@ -436,9 +508,9 @@ export default function FidelidadePage() {
 
           {/* Transaction History */}
           <div className="bg-white rounded-xl p-4 shadow-sm border border-cream-dark/30">
-            <h3 className="text-sm font-bold text-charcoal mb-3">📋 Histórico Recente</h3>
+            <h3 className="text-sm font-bold text-charcoal mb-3">ðŸ“‹ HistÃ³rico Recente</h3>
             {transactions.length === 0 ? (
-              <p className="text-xs text-warm-gray text-center py-4">Nenhuma transação ainda. Comece indicando amigas!</p>
+              <p className="text-xs text-warm-gray text-center py-4">Nenhuma transaÃ§Ã£o ainda. Comece indicando amigas!</p>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {transactions.slice(0, 10).map(tx => (
@@ -458,22 +530,22 @@ export default function FidelidadePage() {
         </div>
       )}
 
-      {/* ═══ TAB: Ranking ═══ */}
+      {/* â•â•â• TAB: Ranking â•â•â• */}
       {tab === 'ranking' && (
         <div className="mx-4 mt-4 space-y-3">
-          <div className="bg-gradient-to-r from-rose-gold/10 to-transparent rounded-xl p-4 border border-rose-gold/20">
-            <h3 className="text-sm font-bold text-charcoal">🏆 Ranking de Fidelidade</h3>
-            <p className="text-[10px] text-warm-gray mt-0.5">As clientes mais exclusivas da Mykaele Procópio</p>
+          <div className="bg-linear-to-r from-rose-gold/10 to-transparent rounded-xl p-4 border border-rose-gold/20">
+            <h3 className="text-sm font-bold text-charcoal">ðŸ† Ranking de Fidelidade</h3>
+            <p className="text-[10px] text-warm-gray mt-0.5">As clientes mais exclusivas da Mykaele ProcÃ³pio</p>
           </div>
 
           {ranking.length === 0 ? (
-            <p className="text-xs text-warm-gray text-center py-8">Ranking em construção...</p>
+            <p className="text-xs text-warm-gray text-center py-8">Ranking em construÃ§Ã£o...</p>
           ) : (
             <div className="space-y-2">
               {ranking.map(entry => {
                 const entryTier = TIER_CONFIG[entry.tier as keyof typeof TIER_CONFIG] || TIER_CONFIG.BRONZE
                 const isTop3 = entry.position <= 3
-                const positionEmojis = ['', '🥇', '🥈', '🥉']
+                const positionEmojis = ['', 'ðŸ¥‡', 'ðŸ¥ˆ', 'ðŸ¥‰']
 
                 return (
                   <div
@@ -487,14 +559,14 @@ export default function FidelidadePage() {
                     }`}
                   >
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      isTop3 ? 'bg-gradient-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
+                      isTop3 ? 'bg-linear-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
                     }`}>
                       {isTop3 ? positionEmojis[entry.position] : entry.position}
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium truncate ${entry.isCurrentUser ? 'text-rose-gold font-bold' : 'text-charcoal'}`}>
-                        {entry.isCurrentUser ? '⭐ Você' : entry.displayName}
+                        {entry.isCurrentUser ? 'â­ VocÃª' : entry.displayName}
                       </p>
                       <p className={`text-[10px] ${entryTier.textColor}`}>
                         {entryTier.icon} {entryTier.name}
@@ -512,14 +584,14 @@ export default function FidelidadePage() {
               {myRank && !ranking.find(r => r.isCurrentUser) && (
                 <>
                   <div className="text-center py-1">
-                    <span className="text-warm-gray text-xs">• • •</span>
+                    <span className="text-warm-gray text-xs">â€¢ â€¢ â€¢</span>
                   </div>
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-rose-gold/10 border-2 border-rose-gold/30 shadow-md">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-cream text-warm-gray">
                       {myRank.position}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-bold text-rose-gold">⭐ Você</p>
+                      <p className="text-sm font-bold text-rose-gold">â­ VocÃª</p>
                       <p className="text-[10px] text-warm-gray">{TIER_CONFIG[myRank.tier as keyof typeof TIER_CONFIG]?.icon} {TIER_CONFIG[myRank.tier as keyof typeof TIER_CONFIG]?.name}</p>
                     </div>
                     <div className="text-right">
@@ -534,14 +606,14 @@ export default function FidelidadePage() {
         </div>
       )}
 
-      {/* ═══ TAB: Resgatar ═══ */}
+      {/* â•â•â• TAB: Resgatar â•â•â• */}
       {tab === 'rewards' && (
         <div className="mx-4 mt-4 space-y-3">
-          <div className="bg-gradient-to-r from-rose-gold/10 to-transparent rounded-xl p-4 border border-rose-gold/20">
+          <div className="bg-linear-to-r from-rose-gold/10 to-transparent rounded-xl p-4 border border-rose-gold/20">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-charcoal">🎁 Recompensas Exclusivas</h3>
-                <p className="text-[10px] text-warm-gray mt-0.5">Troque seus pontos por benefícios incríveis</p>
+                <h3 className="text-sm font-bold text-charcoal">ðŸŽ Recompensas Exclusivas</h3>
+                <p className="text-[10px] text-warm-gray mt-0.5">Troque seus pontos por benefÃ­cios incrÃ­veis</p>
               </div>
               <div className="bg-white rounded-lg px-3 py-1.5 shadow-sm">
                 <p className="text-xs text-warm-gray">Saldo</p>
@@ -552,7 +624,7 @@ export default function FidelidadePage() {
 
           {rewards.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-4xl mb-3">🎁</p>
+              <p className="text-4xl mb-3">ðŸŽ</p>
               <p className="text-sm text-warm-gray">Novas recompensas em breve!</p>
               <p className="text-xs text-warm-gray/70 mt-1">Continue acumulando pontos</p>
             </div>
@@ -572,7 +644,7 @@ export default function FidelidadePage() {
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="text-3xl flex-shrink-0">{reward.imageEmoji || '🎁'}</div>
+                      <div className="text-3xl shrink-0">{reward.imageEmoji || 'ðŸŽ'}</div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-bold text-charcoal">{reward.name}</h4>
                         {reward.description && (
@@ -605,7 +677,7 @@ export default function FidelidadePage() {
                         : outOfStock
                         ? 'Esgotado'
                         : canAfford
-                        ? '✨ Resgatar Agora'
+                        ? 'âœ¨ Resgatar Agora'
                         : `Faltam ${(reward.pointsCost - (overview?.loyalty?.points || 0)).toLocaleString('pt-BR')} pts`}
                     </button>
                   </div>
@@ -616,19 +688,80 @@ export default function FidelidadePage() {
         </div>
       )}
 
-      {/* ═══ TAB: Indicar ═══ */}
+      {/* â•â•â• TAB: Indicar â•â•â• */}
       {tab === 'referral' && (
         <div className="mx-4 mt-4 space-y-4">
-          {/* My Referral Code */}
-          <div className="bg-gradient-to-br from-rose-gold/5 to-rose-gold/15 rounded-2xl p-5 border border-rose-gold/20 text-center">
-            <p className="text-xs text-warm-gray font-medium mb-1">Seu código exclusivo de indicação</p>
-            <div className="bg-white rounded-xl py-3 px-4 my-3 flex items-center justify-center gap-3 shadow-sm border border-cream-dark/30">
-              <span className="text-lg font-bold tracking-widest text-charcoal">{referralData?.code || '...'}</span>
-              <button
-                onClick={copyCode}
-                className="text-rose-gold hover:text-rose-gold-dark transition-colors"
-              >
-                {copied ? (
+
+          {/* â•â•â• Discount Card â•â•â• */}
+          <div className={`rounded-2xl p-5 text-white shadow-xl relative overflow-hidden ${
+            (referralData?.discount?.discount || 0) >= 12 ? 'bg-linear-to-br from-purple-600 to-indigo-700' :
+            (referralData?.discount?.discount || 0) >= 8 ? 'bg-linear-to-br from-amber-500 to-orange-600' :
+            (referralData?.discount?.discount || 0) >= 5 ? 'bg-linear-to-br from-teal-500 to-emerald-600' :
+            (referralData?.discount?.discount || 0) >= 3 ? 'bg-linear-to-br from-blue-500 to-cyan-600' :
+            'bg-linear-to-br from-gray-500 to-gray-700'
+          }`}>
+            <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="relative z-10">
+              <p className="text-white/70 text-[10px] font-medium tracking-wider uppercase">Seu desconto por indicaÃ§Ãµes</p>
+              <div className="flex items-end gap-3 mt-2">
+                <span className="text-5xl font-black tabular-nums">{referralData?.discount?.discount || 0}%</span>
+                <div className="pb-1.5">
+                  <p className="text-white/90 text-sm font-bold">{referralData?.discount?.label || 'Sem indicaÃ§Ãµes'}</p>
+                  <p className="text-white/50 text-[10px]">{referralData?.confirmedCount || 0} indicaÃ§Ã£o(Ãµes) confirmada(s)</p>
+                </div>
+              </div>
+              {referralData?.discount?.nextTier && (
+                <div className="mt-3 bg-white/10 rounded-lg px-3 py-2">
+                  <p className="text-white/80 text-[10px]">
+                    ðŸŽ¯ Faltam <strong>{referralData.discount.remaining}</strong> indicaÃ§Ã£o(Ãµes) para <strong>{referralData.discount.nextTier.discount}%</strong> ({referralData.discount.nextTier.label})
+                  </p>
+                </div>
+              )}
+              {(referralData?.discount?.discount || 0) >= (referralData?.maxDiscount || 15) && (
+                <div className="mt-3 bg-white/10 rounded-lg px-3 py-2">
+                  <p className="text-white/90 text-[10px] font-bold">ðŸ† ParabÃ©ns! VocÃª atingiu o desconto mÃ¡ximo!</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* â•â•â• Discount Tiers Table â•â•â• */}
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-cream-dark/30">
+            <h3 className="text-sm font-bold text-charcoal mb-3">ðŸ“Š Tabela de Descontos</h3>
+            <div className="space-y-1.5">
+              {(referralData?.discountTiers || []).map((tier, i) => {
+                const isActive = (referralData?.confirmedCount || 0) >= tier.min && (referralData?.confirmedCount || 0) <= tier.max
+                const isPast = (referralData?.confirmedCount || 0) > tier.max
+                return (
+                  <div key={i} className={`flex items-center justify-between py-2 px-3 rounded-lg transition-all ${
+                    isActive ? 'bg-rose-gold/10 border border-rose-gold/30' : isPast ? 'bg-green-50 border border-green-200' : 'bg-cream/50'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs">{isPast ? 'âœ…' : isActive ? 'ðŸ‘‰' : 'â—‹'}</span>
+                      <span className={`text-xs font-medium ${isActive ? 'text-rose-gold font-bold' : 'text-charcoal/70'}`}>{tier.label}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] text-warm-gray">{tier.min}-{tier.max > 100 ? 'âˆž' : tier.max} ind.</span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        isActive ? 'bg-rose-gold text-white' : 'bg-cream text-warm-gray'
+                      }`}>{tier.discount}%</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-[9px] text-warm-gray/60 mt-2 text-center">Teto mÃ¡ximo: {referralData?.maxDiscount || 15}% Â· Desconto aplicÃ¡vel em sessÃµes avulsas</p>
+          </div>
+
+          {/* â•â•â• My Link & Custom Code â•â•â• */}
+          <div className="bg-linear-to-br from-rose-gold/5 to-rose-gold/15 rounded-2xl p-5 border border-rose-gold/20">
+            <p className="text-xs text-warm-gray font-medium mb-1 text-center">Seu link promocional</p>
+            
+            {/* Current link */}
+            <div className="bg-white rounded-xl py-3 px-4 my-3 flex items-center justify-between shadow-sm border border-cream-dark/30">
+              <span className="text-xs font-mono text-charcoal truncate flex-1 mr-2">mykaprocopio.com.br/ref/{referralData?.code || '...'}</span>
+              <button onClick={copyLink} className="text-rose-gold hover:text-rose-gold-dark transition-colors shrink-0">
+                {copiedLink ? (
                   <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                 ) : (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
@@ -636,32 +769,103 @@ export default function FidelidadePage() {
               </button>
             </div>
 
-            <p className="text-[11px] text-warm-gray mb-4">
-              Cada amiga que se cadastra com seu código: você ganha <strong className="text-rose-gold">200 pts</strong> e ela ganha <strong className="text-rose-gold">100 pts</strong>!
-            </p>
+            {/* Customize code */}
+            <div className="mt-4">
+              <p className="text-[11px] text-charcoal font-medium mb-2">âœï¸ Personalize seu cÃ³digo (mÃ¡x. 10 caracteres)</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customCodeInput}
+                  onChange={e => setCustomCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10))}
+                  placeholder="Ex: MYKA2026"
+                  maxLength={10}
+                  className="flex-1 px-3 py-2.5 rounded-lg border border-cream-dark text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-gold/30 focus:border-rose-gold uppercase tracking-wider font-mono"
+                />
+                <button
+                  onClick={saveCustomCode}
+                  disabled={!customCodeInput.trim() || customCodeInput.length < 3 || savingCustomCode}
+                  className="bg-rose-gold text-white px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-rose-gold-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {savingCustomCode ? '...' : 'Salvar'}
+                </button>
+              </div>
+              <p className="text-[9px] text-warm-gray mt-1.5">SÃ³ letras e nÃºmeros. MÃ­n. 3 caracteres. Seu link ficarÃ¡: mykaprocopio.com.br/ref/{customCodeInput || 'SEUCODIGO'}</p>
+            </div>
 
-            <button
-              onClick={shareCode}
-              className="w-full bg-rose-gold text-white py-3 rounded-xl font-bold text-sm hover:bg-rose-gold-dark active:scale-[0.98] transition-all shadow-md"
-            >
-              📲 Compartilhar com amigas
-            </button>
+            {/* Share buttons */}
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                onClick={shareCode}
+                className="bg-rose-gold text-white py-3 rounded-xl font-bold text-xs hover:bg-rose-gold-dark active:scale-[0.98] transition-all shadow-md"
+              >
+                ðŸ“² Compartilhar
+              </button>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  `ðŸ’Ž Venha experimentar o melhor da estÃ©tica com a Mykaele ProcÃ³pio!\n\nUse meu link exclusivo:\n${referralData?.promoLink || `https://mykaprocopio.com.br/ref/${referralData?.code || ''}`}\n\nGanhe pontos de boas-vindas no programa de fidelidade! âœ¨`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 bg-green-600 text-white py-3 rounded-xl font-bold text-xs hover:bg-green-700 active:scale-[0.98] transition-all shadow-md"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                WhatsApp
+              </a>
+            </div>
 
-            <p className="text-[10px] text-warm-gray/60 mt-2">
-              {referralData?.usageCount || 0} pessoa(s) já usaram seu código
+            <p className="text-[10px] text-warm-gray/60 mt-3 text-center">
+              {referralData?.usageCount || 0} pessoa(s) jÃ¡ usaram seu cÃ³digo
             </p>
           </div>
 
+          {/* â•â•â• Ranking de IndicaÃ§Ãµes â•â•â• */}
+          {referralData?.ranking && referralData.ranking.length > 0 && (
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-cream-dark/30">
+              <h3 className="text-sm font-bold text-charcoal mb-3">ðŸ† Ranking de IndicaÃ§Ãµes</h3>
+              <div className="space-y-1.5">
+                {referralData.ranking.map(entry => {
+                  const posEmojis = ['', 'ðŸ¥‡', 'ðŸ¥ˆ', 'ðŸ¥‰']
+                  return (
+                    <div key={entry.position} className={`flex items-center gap-3 py-2.5 px-3 rounded-lg ${
+                      entry.isCurrentUser ? 'bg-rose-gold/10 border border-rose-gold/30' : 'bg-cream/30'
+                    }`}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                        entry.position <= 3 ? 'bg-linear-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
+                      }`}>
+                        {entry.position <= 3 ? posEmojis[entry.position] : entry.position}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-xs font-medium ${entry.isCurrentUser ? 'text-rose-gold font-bold' : 'text-charcoal'}`}>
+                          {entry.isCurrentUser ? 'â­ VocÃª' : entry.displayName}
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold text-charcoal">{entry.referralCount} ind.</span>
+                    </div>
+                  )
+                })}
+              </div>
+              {referralData.myPosition && !referralData.ranking.find(r => r.isCurrentUser) && (
+                <div className="mt-2 flex items-center gap-3 py-2.5 px-3 rounded-lg bg-rose-gold/10 border border-rose-gold/30">
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold bg-cream text-warm-gray">
+                    {referralData.myPosition}
+                  </div>
+                  <p className="text-xs font-bold text-rose-gold flex-1">â­ VocÃª</p>
+                  <span className="text-xs font-bold text-charcoal">{referralData.usageCount} ind.</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Apply referral code */}
           <div className="bg-white rounded-xl p-4 shadow-sm border border-cream-dark/30">
-            <h3 className="text-sm font-bold text-charcoal mb-2">🎁 Tem um código de indicação?</h3>
-            <p className="text-[11px] text-warm-gray mb-3">Se uma amiga te indicou, insira o código dela aqui para ganhar pontos de boas-vindas!</p>
+            <h3 className="text-sm font-bold text-charcoal mb-2">ðŸŽ Tem um cÃ³digo de indicaÃ§Ã£o?</h3>
+            <p className="text-[11px] text-warm-gray mb-3">Se uma amiga te indicou, insira o cÃ³digo dela aqui para ganhar pontos de boas-vindas!</p>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={referralInput}
                 onChange={e => setReferralInput(e.target.value.toUpperCase())}
-                placeholder="Ex: MYKA-ANA2024"
+                placeholder="Ex: MYKA2026"
                 className="flex-1 px-3 py-2.5 rounded-lg border border-cream-dark text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-rose-gold/30 focus:border-rose-gold uppercase tracking-wider"
               />
               <button
@@ -677,8 +881,8 @@ export default function FidelidadePage() {
           {/* My Referrals List */}
           {referralData && referralData.referrals.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow-sm border border-cream-dark/30">
-              <h3 className="text-sm font-bold text-charcoal mb-3">🤝 Minhas Indicações</h3>
-              <div className="space-y-2">
+              <h3 className="text-sm font-bold text-charcoal mb-3">ðŸ¤ Minhas IndicaÃ§Ãµes ({referralData.referrals.length})</h3>
+              <div className="space-y-2 max-h-52 overflow-y-auto">
                 {referralData.referrals.map(ref => (
                   <div key={ref.id} className="flex items-center justify-between py-2 border-b border-cream last:border-0">
                     <div>
@@ -690,26 +894,13 @@ export default function FidelidadePage() {
                       ref.status === 'CONFIRMED' ? 'bg-blue-50 text-blue-700' :
                       'bg-yellow-50 text-yellow-700'
                     }`}>
-                      {ref.status === 'REWARDED' ? '✅ Recompensado' : ref.status === 'CONFIRMED' ? '✓ Confirmado' : '⏳ Pendente'}
+                      {ref.status === 'REWARDED' ? 'âœ… +200pts' : ref.status === 'CONFIRMED' ? 'âœ“ Confirmado' : 'â³ Pendente'}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
           )}
-
-          {/* Share via WhatsApp */}
-          <a
-            href={`https://wa.me/?text=${encodeURIComponent(
-              `💎 Venha experimentar o melhor da estética com a Mykaele Procópio! Use meu código ${referralData?.code || ''} no cadastro e ganhe pontos no programa de fidelidade exclusivo! ✨\n\nhttps://mykaprocopio.com.br/cliente`
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full bg-green-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-green-700 active:scale-[0.98] transition-all shadow-md"
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            Enviar via WhatsApp
-          </a>
         </div>
       )}
     </div>
