@@ -60,7 +60,7 @@
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
-  overscroll-behavior-x: none;
+  overflow-y: auto;
 }
 
 /* ═══ Force scroll on desktop only ═══ */
@@ -68,6 +68,12 @@ html {
   html,
   body {
     overflow-y: scroll !important;
+    height: auto !important;
+    min-height: 100%;
+  }
+  /* Ensure no element blocks scroll */
+  #__next {
+    overflow: visible !important;
     height: auto !important;
   }
 }
@@ -119,8 +125,6 @@ html {
 body {
   background: var(--color-background);
   color: var(--color-foreground);
-  overscroll-behavior: none;
-  overscroll-behavior-x: none;
   font-family:
     var(--font-sans),
     system-ui,
@@ -129,6 +133,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  overflow-y: auto;
   /* Safe area support for notch/home indicator devices */
   padding-top: env(safe-area-inset-top, 0px);
   /* Prevent horizontal overscroll on iOS */
