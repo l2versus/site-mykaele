@@ -44,11 +44,11 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.google.com https://www.gstatic.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https: http:",
               "font-src 'self' https://fonts.gstatic.com data:",
-              `connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://api.mercadopago.com https://connect.facebook.net https://wa.me ${SITE_URL}`,
+              `connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://api.mercadopago.com https://connect.facebook.net https://wa.me https://cloudflareinsights.com ${SITE_URL}`,
               "frame-src 'self' https://www.google.com https://www.mercadopago.com.br",
               "media-src 'self' blob: data:",
               "object-src 'none'",

@@ -59,7 +59,7 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             caches.match(request).then((cached) => {
                 const fetchPromise = fetch(request).then((res) => {
-                    if (res.ok) {
+                    if (res.ok && res.status !== 206) {
                         const clone = res.clone()
                         caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
                     }
@@ -75,7 +75,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(request)
             .then((res) => {
-                if (res.ok) {
+                if (res.ok && res.status !== 206) {
                     const clone = res.clone()
                     caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
                 }
