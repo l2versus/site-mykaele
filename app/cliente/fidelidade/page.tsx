@@ -128,6 +128,22 @@ const TYPE_LABELS: Record<string, string> = {
   FIRST_SESSION_BONUS: '🌟 Primeira Sessão',
 }
 
+// Serviços com preços reais para a calculadora
+const SERVICOS_PRECOS = [
+  { nome: 'Método Mykaele Procópio', valor: 330, duracao: '90min' },
+  { nome: 'Massagem Relaxante', valor: 280, duracao: '90min' },
+  { nome: 'Manta Térmica (Adicional)', valor: 80, duracao: '30min' },
+  { nome: 'Valor personalizado', valor: 0, duracao: '' },
+]
+
+// Configuração dos Tiers de pontos
+const TIER_THRESHOLDS = {
+  BRONZE: { min: 0, max: 499, next: 'SILVER' },
+  SILVER: { min: 500, max: 1499, next: 'GOLD' },
+  GOLD: { min: 1500, max: 3999, next: 'DIAMOND' },
+  DIAMOND: { min: 4000, max: Infinity, next: null },
+}
+
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
@@ -151,7 +167,9 @@ export default function FidelidadePage() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [showConfetti, setShowConfetti] = useState(false)
   const [calcReferrals, setCalcReferrals] = useState(0)
-  const [calcSessionValue, setCalcSessionValue] = useState(250)
+  const [calcSessionValue, setCalcSessionValue] = useState(330)
+  const [selectedServico, setSelectedServico] = useState(0)
+  const [showTiersModal, setShowTiersModal] = useState(false)
 
   // Discount calculator — maps referral count → discount %
   const getCalcDiscount = (refs: number) => {
@@ -481,6 +499,34 @@ export default function FidelidadePage() {
                 </li>
               ))}
             </ul>
+            <button
+              onClick={() => setShowTiersModal(true)}
+              className="mt-3 w-full py-2 text-xs font-medium text-rose-gold hover:bg-rose-gold/5 rounded-lg transition-colors flex items-center justify-center gap-1"
+            >
+              <span>Ver todos os Tiers</span>
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+
+          {/* ═══ Diferença Pontos vs Indicações ═══ */}
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50 rounded-xl p-4">
+            <h4 className="text-xs font-bold text-amber-800 mb-2 flex items-center gap-2">
+              <span>💡</span> Entenda o Sistema
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/60 rounded-lg p-3">
+                <p className="text-xs font-semibold text-charcoal mb-1">🏆 Pontos</p>
+                <p className="text-[10px] text-charcoal/70 leading-relaxed">
+                  Acumulados com sessões e atividades. Use para subir de Tier e trocar por recompensas.
+                </p>
+              </div>
+              <div className="bg-white/60 rounded-lg p-3">
+                <p className="text-xs font-semibold text-charcoal mb-1">🤝 Indicações</p>
+                <p className="text-[10px] text-charcoal/70 leading-relaxed">
+                  Amigas que você indicou. Dão desconto de 3% a 15% em sessões avulsas.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* ═══ Como Acumular Pontos — Apple minimal ═══ */}
@@ -570,21 +616,41 @@ export default function FidelidadePage() {
               </div>
             </div>
 
-            {/* Session Value Input */}
+            {/* Session Value Select */}
             <div className="px-5 mt-4">
-              <label className="text-[10px] font-medium tracking-[0.15em] uppercase text-warm-gray block mb-1.5">Valor da sessão</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-warm-gray">R$</span>
-                <input
-                  type="number"
-                  min={50}
-                  max={2000}
-                  step={10}
-                  value={calcSessionValue}
-                  onChange={e => setCalcSessionValue(Math.max(50, Math.min(2000, Number(e.target.value))))}
-                  className="w-full pl-9 pr-3 py-2.5 border border-cream-dark/20 rounded-xl text-sm text-charcoal bg-cream/20 focus:outline-none focus:ring-2 focus:ring-rose-gold/15 focus:border-rose-gold/30 tabular-nums"
-                />
-              </div>
+              <label className="text-[10px] font-medium tracking-[0.15em] uppercase text-warm-gray block mb-1.5">Serviço</label>
+              <select
+                value={selectedServico}
+                onChange={e => {
+                  const idx = Number(e.target.value)
+                  setSelectedServico(idx)
+                  if (SERVICOS_PRECOS[idx].valor > 0) {
+                    setCalcSessionValue(SERVICOS_PRECOS[idx].valor)
+                  }
+                }}
+                className="w-full px-3 py-2.5 border border-cream-dark/20 rounded-xl text-sm text-charcoal bg-cream/20 focus:outline-none focus:ring-2 focus:ring-rose-gold/15 focus:border-rose-gold/30"
+              >
+                {SERVICOS_PRECOS.map((s, i) => (
+                  <option key={i} value={i}>
+                    {s.nome}{s.valor > 0 ? ` — R$ ${s.valor}` : ''}
+                  </option>
+                ))}
+              </select>
+              {selectedServico === SERVICOS_PRECOS.length - 1 && (
+                <div className="relative mt-2">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-warm-gray">R$</span>
+                  <input
+                    type="number"
+                    min={50}
+                    max={2000}
+                    step={10}
+                    value={calcSessionValue}
+                    onChange={e => setCalcSessionValue(Math.max(50, Math.min(2000, Number(e.target.value))))}
+                    className="w-full pl-9 pr-3 py-2.5 border border-cream-dark/20 rounded-xl text-sm text-charcoal bg-cream/20 focus:outline-none focus:ring-2 focus:ring-rose-gold/15 focus:border-rose-gold/30 tabular-nums"
+                    placeholder="Digite o valor"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Tiers Strip — minimalist */}
@@ -1015,6 +1081,65 @@ export default function FidelidadePage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ═══ Modal: Todos os Tiers ═══ */}
+      {showTiersModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowTiersModal(false)}>
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[85vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white border-b border-cream-dark/20 px-5 py-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-charcoal">Programa de Tiers</h2>
+              <button onClick={() => setShowTiersModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-cream transition-colors">
+                <svg className="w-5 h-5 text-charcoal/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-warm-gray leading-relaxed">
+                Suba de tier acumulando pontos e desbloqueie benefícios exclusivos. Pontos vêm de sessões, indicações e outras atividades.
+              </p>
+
+              {/* Tier Cards */}
+              {Object.entries(TIER_CONFIG).map(([key, tier], idx) => {
+                const threshold = TIER_THRESHOLDS[key as keyof typeof TIER_THRESHOLDS]
+                const isCurrentTier = overview?.loyalty?.tier === key
+                return (
+                  <div key={key} className={`relative rounded-xl p-4 border-2 transition-all ${isCurrentTier ? `${tier.borderColor} ${tier.bgColor} ring-2 ring-offset-2 ring-rose-gold/30` : 'border-cream-dark/30 bg-white'}`}>
+                    {isCurrentTier && (
+                      <span className="absolute -top-2 right-4 px-2 py-0.5 bg-rose-gold text-white text-[9px] font-bold rounded-full">SEU TIER</span>
+                    )}
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-3xl">{tier.icon}</span>
+                      <div>
+                        <h3 className={`font-bold ${tier.textColor}`}>{tier.name}</h3>
+                        <p className="text-[10px] text-warm-gray">
+                          {threshold.min === 0 ? 'Início' : `${threshold.min.toLocaleString('pt-BR')} pts`}
+                          {threshold.max !== Infinity && ` — ${threshold.max.toLocaleString('pt-BR')} pts`}
+                        </p>
+                      </div>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {tier.benefits.map((benefit, i) => (
+                        <li key={i} className="text-xs text-charcoal/70 flex items-start gap-2">
+                          <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${isCurrentTier ? 'bg-rose-gold' : 'bg-charcoal/20'}`} />
+                          {benefit}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              })}
+
+              {/* Dica */}
+              <div className="bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl p-4 border border-rose-200/50">
+                <p className="text-xs text-rose-800 font-medium mb-1">💡 Dica</p>
+                <p className="text-[11px] text-rose-700/80 leading-relaxed">
+                  Indique amigas para ganhar +200 pts cada e suba de tier mais rápido! Além disso, você ganha desconto de até 15% em sessões.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
