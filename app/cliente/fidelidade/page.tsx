@@ -803,10 +803,46 @@ export default function FidelidadePage() {
           </div>
 
           {rewards.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-4xl mb-3">🎁</p>
-              <p className="text-sm text-warm-gray">Novas recompensas em breve!</p>
-              <p className="text-xs text-warm-gray/70 mt-1">Continue acumulando pontos</p>
+            <div className="space-y-3">
+              <div className="bg-amber-50 border border-amber-200/50 rounded-xl p-3 mb-4">
+                <p className="text-xs text-amber-800 font-medium">✨ Recompensas disponíveis em breve! Confira o que você poderá resgatar:</p>
+              </div>
+              {/* Preview das recompensas que serão disponibilizadas */}
+              {[
+                { name: 'Desconto de R$30', description: 'Válido para qualquer sessão avulsa', pointsCost: 300, value: 30, imageEmoji: '💰' },
+                { name: 'Desconto de R$50', description: 'Válido para qualquer sessão avulsa', pointsCost: 500, value: 50, imageEmoji: '💎' },
+                { name: 'Desconto de R$100', description: 'Válido para qualquer serviço ou pacote', pointsCost: 900, value: 100, imageEmoji: '🌟' },
+                { name: 'Manta Térmica Grátis', description: 'Add-on de 30min grátis na próxima sessão', pointsCost: 400, value: 80, imageEmoji: '🔥' },
+                { name: 'Massagem Relaxante Grátis', description: 'Uma sessão completa de 90min', pointsCost: 1400, value: 280, imageEmoji: '💆' },
+                { name: 'Método Mykaele Procópio Grátis', description: 'Uma sessão completa do Método exclusivo', pointsCost: 1650, value: 330, imageEmoji: '👑' },
+              ].map((reward, idx) => {
+                const canAfford = (overview?.loyalty?.points || 0) >= reward.pointsCost
+                return (
+                  <div
+                    key={idx}
+                    className={`bg-white rounded-xl p-4 shadow-sm border transition-all ${
+                      canAfford ? 'border-rose-gold/30' : 'border-cream-dark/30 opacity-70'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="text-3xl shrink-0">{reward.imageEmoji}</div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-charcoal">{reward.name}</h4>
+                        <p className="text-[11px] text-warm-gray mt-0.5">{reward.description}</p>
+                        <div className="flex items-center gap-3 mt-2">
+                          <span className="text-xs font-bold text-rose-gold">{reward.pointsCost.toLocaleString('pt-BR')} pts</span>
+                          <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                            Valor: {fmtCur(reward.value)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 w-full py-2.5 rounded-lg text-xs font-bold text-center bg-cream text-warm-gray">
+                      {canAfford ? '⏳ Em breve disponível' : `Faltam ${(reward.pointsCost - (overview?.loyalty?.points || 0)).toLocaleString('pt-BR')} pts`}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           ) : (
             <div className="space-y-3">
