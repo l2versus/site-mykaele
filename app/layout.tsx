@@ -166,6 +166,26 @@ export default function RootLayout({
         {children}
         <ClientProviders />
 
+        {/* Fix scroll on desktop - detect blocked wheel events */}
+        <Script id="desktop-scroll-fix" strategy="afterInteractive">
+          {`(function(){
+            if(window.matchMedia('(pointer: fine)').matches){
+              var scrolling=false;
+              document.addEventListener('wheel',function(e){
+                if(scrolling)return;
+                scrolling=true;
+                var startY=window.scrollY;
+                requestAnimationFrame(function(){
+                  if(window.scrollY===startY&&!e.defaultPrevented){
+                    window.scrollBy({top:e.deltaY,behavior:'auto'});
+                  }
+                  scrolling=false;
+                });
+              },{passive:true});
+            }
+          })();`}
+        </Script>
+
         {/* Google Analytics 4 */}
         {GA_ID && (
           <>
