@@ -222,7 +222,7 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0e0b10] via-[#100d14] to-[#0e0b10] flex relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#0e0b10] via-[#100d14] to-[#0e0b10] flex relative">
       {/* Pattern watermark — cor real + blur + degradê escuro */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 opacity-[0.12] blur-[1px]" style={{ backgroundImage: 'url(/media/logo-branding/pattern-leaf.png)', backgroundSize: '280px', backgroundRepeat: 'repeat' }} />
