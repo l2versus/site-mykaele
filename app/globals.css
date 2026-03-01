@@ -127,6 +127,14 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Next.js wrapper - ensure scroll propagates */
+#__next,
+[data-nextjs-scroll-focus-boundary] {
+  height: auto !important;
+  overflow: visible !important;
+  pointer-events: auto;
+}
+
 /* ═══════════════════════════════════════════
    PREMIUM SCROLL ANIMATION SYSTEM
    ═══════════════════════════════════════════ */
