@@ -663,7 +663,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
   const { open, toggle } = useContext(PhotoDrawerContext)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0e0b10] via-[#100d14] to-[#0e0b10] relative flex">
+    <div className="min-h-screen bg-gradient-to-b from-[#0e0b10] via-[#100d14] to-[#0e0b10] relative">
 
       {/* ═══ DESKTOP: Painel lateral fixo com foto da Mykaele ═══ */}
       <aside className="hidden lg:block w-[320px] xl:w-[380px] shrink-0 fixed left-0 top-0 h-screen z-20">
@@ -716,18 +716,17 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
       </aside>
 
       {/* ═══ Conteúdo principal ═══ */}
-      <div className="flex-1 lg:ml-[320px] xl:ml-[380px] relative pb-20 lg:pb-8 flex flex-col h-screen">
+      <div className="lg:ml-[320px] xl:ml-[380px] relative pb-20 lg:pb-8 min-h-screen">
 
-        <div className="flex-1 overflow-y-auto h-full">
-          {/* Global Background */}
-          <div className="fixed inset-0 pointer-events-none z-0">
-            <LeafLogo className="absolute top-12 right-6 w-[120px] h-[120px] text-[#b76e79]/[0.018] rotate-12" />
-            <LeafLogo className="absolute bottom-36 left-4 w-[90px] h-[90px] text-[#b76e79]/[0.014] -rotate-30" />
-            <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-[#b76e79]/[0.012] rounded-full blur-[140px]" />
-            <div className="absolute bottom-1/4 left-1/3 w-[250px] h-[250px] bg-[#d4a0a7]/[0.008] rounded-full blur-[120px]" />
-          </div>
-          
-          {/* ─── Header ─── */}
+        {/* Global Background */}
+        <div className="fixed inset-0 pointer-events-none z-0">
+          <LeafLogo className="absolute top-12 right-6 w-[120px] h-[120px] text-[#b76e79]/[0.018] rotate-12" />
+          <LeafLogo className="absolute bottom-36 left-4 w-[90px] h-[90px] text-[#b76e79]/[0.014] -rotate-30" />
+          <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-[#b76e79]/[0.012] rounded-full blur-[140px]" />
+          <div className="absolute bottom-1/4 left-1/3 w-[250px] h-[250px] bg-[#d4a0a7]/[0.008] rounded-full blur-[120px]" />
+        </div>
+        
+        {/* ─── Header ─── */}
           <header className="sticky top-0 z-30 backdrop-blur-2xl border-b border-white/[0.04]" style={{ background: 'linear-gradient(180deg, rgba(14,11,16,0.97) 0%, rgba(14,11,16,0.85) 100%)' }}>
             <div className="px-5 py-4 flex items-center justify-between max-w-lg mx-auto lg:max-w-none">
               <div className="flex items-center gap-3.5">
@@ -771,7 +770,6 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
           <main className="px-5 py-6 max-w-lg mx-auto lg:max-w-2xl relative z-10">
             <PageTransition>{children}</PageTransition>
           </main>
-        </div>
 
         {/* ─── Bottom Nav (mobile) ─── */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
