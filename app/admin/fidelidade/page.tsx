@@ -179,6 +179,8 @@ export default function AdminFidelidadePage() {
         showToast(reward.active ? 'Desativada' : 'Ativada')
         await loadOverview()
       }
+    } catch {}
+  }
 
   const seedDefaultRewards = async () => {
     setSeeding(true)
@@ -200,8 +202,6 @@ export default function AdminFidelidadePage() {
     } finally {
       setSeeding(false)
     }
-  }
-    } catch {}
   }
 
   const adjustPoints = async () => {
