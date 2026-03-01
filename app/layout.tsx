@@ -170,10 +170,13 @@ export default function RootLayout({
         <Script id="desktop-scroll-fix" strategy="afterInteractive">
           {`(function(){
             if(window.matchMedia('(pointer: fine)').matches){
-              document.addEventListener('wheel',function(e){
-                // Always scroll manually on desktop
-                window.scrollBy(0, e.deltaY);
-              },{passive:true});
+              window.addEventListener('wheel',function(e){
+                var delta = e.deltaY;
+                if(delta !== 0){
+                  e.preventDefault();
+                  window.scrollBy({top: delta, behavior: 'auto'});
+                }
+              },{capture:true, passive:false});
             }
           })();`}
         </Script>
