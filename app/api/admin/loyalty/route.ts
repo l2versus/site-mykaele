@@ -228,6 +228,34 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { action } = body
 
+    // ─── SEED DEFAULT REWARDS ───
+    if (action === 'seed_rewards') {
+      const defaultRewards = [
+        { name: 'Desconto de R$30', description: 'Válido para qualquer sessão avulsa', pointsCost: 300, type: 'DISCOUNT', value: 30, imageEmoji: '💰' },
+        { name: 'Desconto de R$50', description: 'Válido para qualquer sessão avulsa', pointsCost: 500, type: 'DISCOUNT', value: 50, imageEmoji: '💎' },
+        { name: 'Desconto de R$100', description: 'Válido para qualquer serviço ou pacote', pointsCost: 900, type: 'DISCOUNT', value: 100, imageEmoji: '🌟' },
+        { name: 'Manta Térmica Grátis', description: 'Add-on de Manta Térmica (30min) grátis na próxima sessão', pointsCost: 400, type: 'FREE_ADDON', value: 80, imageEmoji: '🔥' },
+        { name: 'Massagem Relaxante Grátis', description: 'Uma sessão completa de Massagem Relaxante (90min)', pointsCost: 1400, type: 'FREE_SESSION', value: 280, imageEmoji: '💆' },
+        { name: 'Método Mykaele Procópio Grátis', description: 'Uma sessão completa do Método exclusivo (90min)', pointsCost: 1650, type: 'FREE_SESSION', value: 330, imageEmoji: '👑' },
+        { name: 'Upgrade para Método Premium', description: 'Transforme qualquer sessão em Método Mykaele Procópio', pointsCost: 600, type: 'UPGRADE', value: 120, imageEmoji: '✨' },
+      ]
+
+      const created: string[] = []
+      const skipped: string[] = []
+
+      for (const reward of defaultRewards) {
+        const existing = await prisma.loyaltyReward.findFirst({ where: { name: reward.name } })
+        if (existing) {
+          skipped.push(reward.name)
+          continue
+        }
+        await prisma.loyaltyReward.create({ data: { ...reward, active: true } })
+        created.push(reward.name)
+      }
+
+      return NextResponse.json({ message: 'Seed concluído', created, skipped })
+    }
+
     // ─── CREATE REWARD ───
     if (action === 'create_reward') {
       const { name, description, pointsCost, type, value, stock, imageEmoji } = body

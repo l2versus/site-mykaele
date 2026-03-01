@@ -80,6 +80,7 @@ export default function AdminFidelidadePage() {
   const [showPointsModal, setShowPointsModal] = useState(false)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [pointsAdjust, setPointsAdjust] = useState({ points: '', description: '' })
+  const [seeding, setSeeding] = useState(false)
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToast({ text, type })
@@ -178,6 +179,28 @@ export default function AdminFidelidadePage() {
         showToast(reward.active ? 'Desativada' : 'Ativada')
         await loadOverview()
       }
+
+  const seedDefaultRewards = async () => {
+    setSeeding(true)
+    try {
+      const res = await fetchWithAuth('/api/admin/loyalty', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'seed_rewards' }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        showToast(`Criadas: ${data.created?.length || 0} | Já existentes: ${data.skipped?.length || 0}`)
+        await loadOverview()
+      } else {
+        showToast('Erro ao popular recompensas', 'error')
+      }
+    } catch {
+      showToast('Erro de conexão', 'error')
+    } finally {
+      setSeeding(false)
+    }
+  }
     } catch {}
   }
 
@@ -368,7 +391,18 @@ export default function AdminFidelidadePage() {
       {/* ═══ TAB: Rewards ═══ */}
       {tab === 'rewards' && (
         <div className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-between items-center">
+            {rewards.length === 0 ? (
+              <button
+                onClick={seedDefaultRewards}
+                disabled={seeding}
+                className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-600 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {seeding ? '⏳ Populando...' : '✨ Popular Recompensas Padrão'}
+              </button>
+            ) : (
+              <span className="text-xs text-gray-400">{rewards.length} recompensa(s) cadastrada(s)</span>
+            )}
             <button
               onClick={() => {
                 setEditingReward(null)
