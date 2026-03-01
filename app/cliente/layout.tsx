@@ -716,7 +716,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
       </aside>
 
       {/* ═══ Conteúdo principal ═══ */}
-      <div className="flex-1 lg:ml-[320px] xl:ml-[380px] relative pb-20 lg:pb-8 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 lg:ml-[320px] xl:ml-[380px] relative pb-20 lg:pb-8 flex flex-col h-screen">
 
         <div className="flex-1 overflow-y-auto h-full">
           {/* Global Background */}
