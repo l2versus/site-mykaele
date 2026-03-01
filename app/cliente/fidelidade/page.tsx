@@ -540,13 +540,21 @@ export default function FidelidadePage() {
               </div>
               <p className="text-[11px] text-rose-gold font-medium mt-2 tracking-wide">{getCalcDiscount(calcReferrals).label}</p>
               {calcReferrals > 0 && (
-                <p className="text-[11px] text-warm-gray/70 mt-1.5">
-                  Economia de{' '}
-                  <span className="font-semibold text-charcoal">
-                    {fmtCur(calcSessionValue * getCalcDiscount(calcReferrals).discount / 100)}
-                  </span>
-                  {' '}por sessão de {fmtCur(calcSessionValue)}
-                </p>
+                <>
+                  <p className="text-[11px] text-warm-gray/70 mt-1.5">
+                    Economia de{' '}
+                    <span className="font-semibold text-charcoal">
+                      {fmtCur(calcSessionValue * getCalcDiscount(calcReferrals).discount / 100)}
+                    </span>
+                    {' '}por sessão de {fmtCur(calcSessionValue)}
+                  </p>
+                  <p className="text-sm font-semibold text-charcoal mt-2">
+                    Você pagará:{' '}
+                    <span className="text-rose-gold">
+                      {fmtCur(calcSessionValue - (calcSessionValue * getCalcDiscount(calcReferrals).discount / 100))}
+                    </span>
+                  </p>
+                </>
               )}
             </div>
 
