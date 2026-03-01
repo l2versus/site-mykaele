@@ -166,21 +166,6 @@ export default function RootLayout({
         {children}
         <ClientProviders />
 
-        {/* Fix scroll on desktop - force scroll on wheel */}
-        <Script id="desktop-scroll-fix" strategy="afterInteractive">
-          {`(function(){
-            if(window.matchMedia('(pointer: fine)').matches){
-              window.addEventListener('wheel',function(e){
-                var delta = e.deltaY;
-                if(delta !== 0){
-                  e.preventDefault();
-                  window.scrollBy({top: delta, behavior: 'auto'});
-                }
-              },{capture:true, passive:false});
-            }
-          })();`}
-        </Script>
-
         {/* Google Analytics 4 */}
         {GA_ID && (
           <>

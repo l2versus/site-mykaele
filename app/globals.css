@@ -59,33 +59,6 @@
 
 html {
   scroll-behavior: smooth;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-/* ═══ Force scroll on desktop only ═══ */
-@media (pointer: fine) and (min-width: 768px) {
-  html,
-  body {
-    overflow-y: scroll !important;
-    height: auto !important;
-    min-height: 100%;
-  }
-  /* Ensure no element blocks scroll */
-  #__next {
-    overflow: visible !important;
-    height: auto !important;
-  }
-}
-
-/* ═══ iOS Bounce / Rubber-band fix ═══ */
-@supports (-webkit-touch-callout: none) {
-  /* iPhone 16 Pro Max (430pt), iPhone 17 Pro Max (~440pt) */
-  html,
-  body {
-    overscroll-behavior: none;
-    -webkit-overflow-scrolling: touch;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -133,11 +106,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  overflow-y: auto;
   /* Safe area support for notch/home indicator devices */
   padding-top: env(safe-area-inset-top, 0px);
-  /* Prevent horizontal overscroll on iOS */
-  -webkit-text-size-adjust: 100%;
 }
 
 /* ═══════════════════════════════════════════
