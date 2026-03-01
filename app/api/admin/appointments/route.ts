@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { sendPostSessionEmail } from '@/lib/email'
 
 function getAdmin(req: NextRequest) {
   const auth = req.headers.get('authorization')
@@ -135,6 +136,73 @@ export async function PUT(req: NextRequest) {
         ])
       } catch (loyaltyErr) {
         console.error('Loyalty points award error (non-blocking):', loyaltyErr)
+      }
+
+      // ═══ Enviar email pós-sessão ═══
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: current.userId },
+          select: { name: true, email: true }
+        })
+
+        if (user?.email) {
+          // Buscar medidas recentes para incluir no email
+          const recentMeasurements = await prisma.bodyMeasurement.findMany({
+            where: { userId: current.userId },
+            orderBy: { date: 'desc' },
+            take: 2 // Última e penúltima para calcular variação
+          })
+
+          let measurements: {
+            waist?: { current: number; change: number }
+            abdomen?: { current: number; change: number }
+            hip?: { current: number; change: number }
+            weight?: { current: number; change: number }
+          } | undefined
+
+          if (recentMeasurements.length >= 1) {
+            const latest = recentMeasurements[0]
+            const previous = recentMeasurements[1]
+
+            measurements = {}
+            if (latest.waist) {
+              measurements.waist = {
+                current: latest.waist,
+                change: previous?.waist ? Number((latest.waist - previous.waist).toFixed(1)) : 0
+              }
+            }
+            if (latest.abdomen) {
+              measurements.abdomen = {
+                current: latest.abdomen,
+                change: previous?.abdomen ? Number((latest.abdomen - previous.abdomen).toFixed(1)) : 0
+              }
+            }
+            if (latest.hip) {
+              measurements.hip = {
+                current: latest.hip,
+                change: previous?.hip ? Number((latest.hip - previous.hip).toFixed(1)) : 0
+              }
+            }
+            if (latest.weight) {
+              measurements.weight = {
+                current: latest.weight,
+                change: previous?.weight ? Number((latest.weight - previous.weight).toFixed(1)) : 0
+              }
+            }
+          }
+
+          await sendPostSessionEmail({
+            clientName: user.name,
+            clientEmail: user.email,
+            serviceName: current.service?.name || 'Sessão',
+            sessionDate: current.scheduledAt.toISOString(),
+            measurements,
+            adminNotes: current.notes || undefined
+          })
+          console.log(`[EMAIL] Email pós-sessão enviado para ${user.email}`)
+        }
+      } catch (emailErr) {
+        console.error('Post-session email error (non-blocking):', emailErr)
       }
     }
 

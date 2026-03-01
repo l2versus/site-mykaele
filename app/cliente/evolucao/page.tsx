@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useClient } from '../ClientContext'
 import Link from 'next/link'
+import { generateEvolutionPDF, downloadPDF } from '@/utils/pdf-evolution'
 
 /* ═══ Types ═══ */
 interface Evolution { key: string; label: string; unit: string; initial: number | null; latest: number | null; delta: number | null; deltaPercent: number | null }
@@ -236,11 +237,33 @@ export default function EvolucaoPage() {
   const [chartMetric, setChartMetric] = useState('waist')
   const [npsScore, setNpsScore] = useState<number | null>(null)
   const [npsSubmitted, setNpsSubmitted] = useState(false)
+  const [generatingPdf, setGeneratingPdf] = useState(false)
+  const { user } = useClient()
 
   const submitNps = useCallback(async (score: number) => {
     setNpsScore(score)
     setNpsSubmitted(true)
   }, [])
+
+  const handleDownloadPDF = useCallback(async () => {
+    if (generatingPdf) return
+    setGeneratingPdf(true)
+    try {
+      const blob = await generateEvolutionPDF({
+        clientName: user?.name || 'Cliente',
+        measurements,
+        evolution,
+        summary,
+        latest
+      })
+      const date = new Date().toISOString().split('T')[0]
+      downloadPDF(blob, `evolucao-corporal-${date}.pdf`)
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err)
+    } finally {
+      setGeneratingPdf(false)
+    }
+  }, [generatingPdf, user?.name, measurements, evolution, summary, latest])
 
   useEffect(() => {
     (async () => {
@@ -380,9 +403,32 @@ export default function EvolucaoPage() {
           <h1 className="text-xl font-light text-white/90 tracking-tight">Evolução Corporal</h1>
           <p className="text-[#c28a93]/40 text-[10px] mt-0.5 tracking-wide">{summary?.totalMeasurements} avaliações · {summary?.daysSinceFirst} dias de jornada</p>
         </div>
-        <Link href="/cliente" className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-white/20 hover:text-[#d4a0a7] transition-colors">
-          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6" /></svg>
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownloadPDF}
+            disabled={generatingPdf}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#b76e79]/10 border border-[#b76e79]/20 text-[#d4a0a7] text-[10px] font-medium hover:bg-[#b76e79]/20 transition-all disabled:opacity-50"
+          >
+            {generatingPdf ? (
+              <>
+                <div className="w-3 h-3 border border-[#d4a0a7]/30 border-t-[#d4a0a7] rounded-full animate-spin" />
+                <span>Gerando...</span>
+              </>
+            ) : (
+              <>
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>Baixar PDF</span>
+              </>
+            )}
+          </button>
+          <Link href="/cliente" className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-white/20 hover:text-[#d4a0a7] transition-colors">
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6" /></svg>
+          </Link>
+        </div>
       </div>
 
       {/* Summary Banner */}
