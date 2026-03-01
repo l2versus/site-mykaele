@@ -232,7 +232,7 @@ export default function CreditosPage() {
       {/* ═══ Botão flutuante do carrinho ═══ */}
       <button
         onClick={() => setCartOpen(true)}
-        className={`fixed bottom-6 right-6 z-40 flex items-center gap-2 px-5 py-3.5 rounded-2xl shadow-2xl transition-all duration-300 ${
+        className={`fixed bottom-6 right-6 z-30 flex items-center gap-2 px-5 py-3.5 rounded-2xl shadow-2xl transition-all duration-300 ${
           cart.length > 0
             ? 'bg-gradient-to-r from-[#d4a0a7] to-[#b76e79] shadow-[#b76e79]/40 hover:shadow-[#b76e79]/60 hover:scale-105'
             : 'bg-white/10 backdrop-blur-xl border border-white/15 hover:bg-white/15'

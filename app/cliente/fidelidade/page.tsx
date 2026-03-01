@@ -346,7 +346,7 @@ export default function FidelidadePage() {
   const tierInfo = TIER_CONFIG[tier as keyof typeof TIER_CONFIG] || TIER_CONFIG.BRONZE
 
   return (
-    <div className="min-h-screen pb-28">
+    <div className="space-y-6 animate-[fadeIn_0.5s_ease-out]">
       {/* ═══ Confetti ═══ */}
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
