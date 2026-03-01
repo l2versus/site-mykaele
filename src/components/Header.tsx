@@ -39,7 +39,9 @@ export function Header() {
             <Link href="/" className="relative z-10 group flex items-center gap-3">
               <img
                 src="/media/logo-branding/logocorreta.png"
-                alt=""
+                alt="Mykaele Procópio Home Spa"
+                width={40}
+                height={40}
                 className={`h-10 w-auto object-contain transition-all duration-500 ${
                   scrolled ? 'brightness-0' : 'invert brightness-200'
                 }`}
@@ -102,6 +104,8 @@ export function Header() {
               {/* Hamburger */}
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
+                aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu de navegação'}
+                aria-expanded={menuOpen}
                 className="md:hidden relative z-10 w-8 h-8 flex flex-col items-center justify-center gap-[5px]"
               >
                 <span className={`block w-5 h-[1px] transition-all duration-300 ${

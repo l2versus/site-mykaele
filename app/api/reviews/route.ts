@@ -113,6 +113,37 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // ═══ Award loyalty points for review ═══
+    try {
+      const POINTS_REVIEW = 30
+      const calcTier = (t: number) => t >= 5000 ? 'DIAMOND' : t >= 1500 ? 'GOLD' : t >= 500 ? 'SILVER' : 'BRONZE'
+
+      let loyalty = await prisma.loyaltyPoints.findUnique({ where: { userId } })
+      if (!loyalty) {
+        loyalty = await prisma.loyaltyPoints.create({
+          data: { userId, points: 0, totalEarned: 0, totalSpent: 0, tier: 'BRONZE' },
+        })
+      }
+      const newTier = calcTier(loyalty.totalEarned + POINTS_REVIEW)
+      await prisma.$transaction([
+        prisma.loyaltyPoints.update({
+          where: { userId },
+          data: { points: { increment: POINTS_REVIEW }, totalEarned: { increment: POINTS_REVIEW }, tier: newTier },
+        }),
+        prisma.loyaltyTransaction.create({
+          data: {
+            userId,
+            points: POINTS_REVIEW,
+            type: 'REVIEW_BONUS',
+            description: '⭐ Bônus por avaliação de sessão',
+            referenceId: feedback.id,
+          },
+        }),
+      ])
+    } catch (loyaltyErr) {
+      console.error('Loyalty review bonus error (non-blocking):', loyaltyErr)
+    }
+
     return NextResponse.json({ success: true, feedback }, { status: 201 })
   } catch (error) {
     console.error('Erro ao criar avaliação:', error)

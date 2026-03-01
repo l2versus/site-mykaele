@@ -10,9 +10,8 @@ export function useScrollReveal() {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add('visible')
-          } else {
-            // Remove a classe quando sai da viewport — re-anima ao voltar
-            entry.target.classList.remove('visible')
+            // Anima apenas uma vez — evita re-paints custosos ao rolar
+            observer.unobserve(entry.target)
           }
         })
       },

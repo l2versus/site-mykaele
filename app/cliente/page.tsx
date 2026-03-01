@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useClient } from './ClientContext'
 import Link from 'next/link'
+import { SkeletonBox, SkeletonCard, SkeletonAppointment, SkeletonKPI } from '@/components/Skeleton'
 
 /* ─── Types ─── */
 interface Protocol {
@@ -162,7 +163,25 @@ export default function ClienteHome() {
 
   const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite' }
 
-  if (loading) return <div className="flex justify-center py-16"><div className="w-7 h-7 border-2 border-[#b76e79] border-t-transparent rounded-full animate-spin" /></div>
+  if (loading) return (
+    <div className="space-y-5 animate-fadeIn">
+      {/* Welcome skeleton */}
+      <SkeletonBox className="h-24 w-full rounded-2xl" />
+      {/* KPI row */}
+      <div className="grid grid-cols-2 gap-3">
+        <SkeletonKPI />
+        <SkeletonKPI />
+      </div>
+      {/* Next appointment */}
+      <SkeletonAppointment />
+      <SkeletonAppointment />
+      {/* Cards */}
+      <div className="grid grid-cols-1 gap-3">
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
+    </div>
+  )
 
   return (
     <div className="space-y-5 animate-[fadeIn_0.6s_ease-out]">

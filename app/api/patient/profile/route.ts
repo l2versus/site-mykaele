@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         address: true, addressCep: true, addressStreet: true, addressNumber: true,
         addressComp: true, addressNeighborhood: true, addressCity: true,
         addressState: true, addressLat: true, addressLng: true,
-        avatar: true, createdAt: true,
+        avatar: true, createdAt: true, forcePasswordChange: true,
       },
     })
     if (!profile) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })

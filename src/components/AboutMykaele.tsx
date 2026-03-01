@@ -1,5 +1,5 @@
 // src/components/AboutMykaele.tsx
-'use client'
+// Server Component — sem 'use client' para reduzir bundle JS
 
 export default function AboutMykaele() {
   return (
@@ -17,6 +17,8 @@ export default function AboutMykaele() {
                     src="/media/profissionais/mykaele-principal.png"
                     alt="Mykaele Procópio — Diretora Clínica"
                     className="w-full h-full object-cover object-top"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
                 {/* Minimal caption */}

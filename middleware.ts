@@ -1,6 +1,8 @@
-// middleware.ts — Proteção de rotas
+// middleware.ts — Proteção de rotas + Segurança HTTPS
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+
+const isProd = process.env.NODE_ENV === 'production'
 
 // Rotas públicas que NÃO precisam de autenticação
 const PUBLIC_PATHS = [
@@ -18,10 +20,28 @@ const PUBLIC_PATHS = [
 ]
 
 // Prefixos de rotas estáticas
-const STATIC_PREFIXES = ['/_next', '/favicon', '/media', '/images']
+const STATIC_PREFIXES = ['/_next', '/favicon', '/media', '/images', '/icon', '/apple-icon']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // ═══ HTTPS REDIRECT (produção) ═══
+  // Redireciona HTTP → HTTPS se o header x-forwarded-proto indicar HTTP
+  if (isProd) {
+    const proto = request.headers.get('x-forwarded-proto')
+    const host = request.headers.get('host') || request.nextUrl.host
+    if (proto === 'http') {
+      const httpsUrl = `https://${host}${pathname}${request.nextUrl.search}`
+      return NextResponse.redirect(httpsUrl, { status: 301 })
+    }
+
+    // Redirecionar www → sem www (canonical)
+    if (host.startsWith('www.')) {
+      const cleanHost = host.replace('www.', '')
+      const canonicalUrl = `https://${cleanHost}${pathname}${request.nextUrl.search}`
+      return NextResponse.redirect(canonicalUrl, { status: 301 })
+    }
+  }
 
   // Permitir rotas estáticas
   if (STATIC_PREFIXES.some(p => pathname.startsWith(p))) {
@@ -30,15 +50,14 @@ export function middleware(request: NextRequest) {
 
   // Permitir rotas públicas exatas
   if (PUBLIC_PATHS.includes(pathname)) {
-    return NextResponse.next()
+    const response = NextResponse.next()
+    addSecurityHeaders(response)
+    return response
   }
 
   // Adicionar headers de segurança em TODAS as respostas
   const response = NextResponse.next()
-  response.headers.set('X-Frame-Options', 'DENY')
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  response.headers.set('X-XSS-Protection', '1; mode=block')
+  addSecurityHeaders(response)
 
   // APIs protegidas: /api/patient/*, /api/admin/*
   if (pathname.startsWith('/api/patient/') || pathname.startsWith('/api/admin/')) {
@@ -64,13 +83,26 @@ export function middleware(request: NextRequest) {
   return response
 }
 
+/**
+ * Aplica headers de segurança essenciais na resposta.
+ * Headers principais já estão no next.config.ts — aqui só os críticos para HTTPS.
+ */
+function addSecurityHeaders(response: NextResponse) {
+  // HSTS — força HTTPS por 2 anos
+  response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+
+  // Remove server info
+  response.headers.delete('X-Powered-By')
+  response.headers.delete('Server')
+}
+
 export const config = {
   matcher: [
     /*
      * Aplica em tudo exceto:
      * - _next/static (arquivos estáticos)
      * - _next/image (otimização de imagem)
-     * - favicon.ico
+     * - favicon.ico (ícone do navegador)
      */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],

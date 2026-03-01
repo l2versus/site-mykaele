@@ -59,9 +59,8 @@ export async function PUT(req: NextRequest) {
 
     const current = await prisma.appointment.findUnique({
       where: { id },
-      select: { status: true, price: true, travelFee: true, userId: true, paidFromBalance: true, paymentStatus: true },
       include: { service: { select: { name: true } } },
-    } as any)
+    })
     if (!current) return NextResponse.json({ error: 'Agendamento não encontrado' }, { status: 404 })
 
     const allowed = VALID_TRANSITIONS[current.status] || []
@@ -87,7 +86,7 @@ export async function PUT(req: NextRequest) {
           appointmentId: id,
           amount: totalAmount,
           method: paymentMethod, // PIX, CASH, CARD
-          description: `Atendimento: ${(current as any).service?.name || 'Serviço'} — Pagamento presencial`,
+          description: `Atendimento: ${current.service?.name || 'Serviço'} — Pagamento presencial`,
           category: 'REVENUE',
           status: 'APPROVED',
         },
@@ -105,6 +104,40 @@ export async function PUT(req: NextRequest) {
     }
 
     const appointment = await prisma.appointment.update({ where: { id }, data })
+
+    // ═══ Award loyalty points on session completion ═══
+    if (status === 'COMPLETED') {
+      try {
+        const POINTS_SESSION = 50
+        const TIER_THRESHOLDS = { BRONZE: 0, SILVER: 500, GOLD: 1500, DIAMOND: 5000 }
+        const calcTier = (t: number) => t >= 5000 ? 'DIAMOND' : t >= 1500 ? 'GOLD' : t >= 500 ? 'SILVER' : 'BRONZE'
+
+        let loyalty = await prisma.loyaltyPoints.upsert({
+          where: { userId: current.userId },
+          create: { userId: current.userId, points: 0, totalEarned: 0, totalSpent: 0, tier: 'BRONZE' },
+          update: {},
+        })
+        const newTier = calcTier(loyalty.totalEarned + POINTS_SESSION)
+        await prisma.$transaction([
+          prisma.loyaltyPoints.update({
+            where: { userId: current.userId },
+            data: { points: { increment: POINTS_SESSION }, totalEarned: { increment: POINTS_SESSION }, tier: newTier },
+          }),
+          prisma.loyaltyTransaction.create({
+            data: {
+              userId: current.userId,
+              points: POINTS_SESSION,
+              type: 'SESSION_COMPLETE',
+              description: `💆 Pontos por sessão: ${current.service?.name || 'Atendimento'}`,
+              referenceId: id,
+            },
+          }),
+        ])
+      } catch (loyaltyErr) {
+        console.error('Loyalty points award error (non-blocking):', loyaltyErr)
+      }
+    }
+
     return NextResponse.json({ appointment })
   } catch (error) {
     console.error('Admin appointments PUT error:', error)

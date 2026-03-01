@@ -45,6 +45,8 @@ export default function FloatingWhatsApp() {
   // Esconder apenas no /admin
   if (pathname?.startsWith('/admin')) return null
 
+  const isClientArea = pathname?.startsWith('/cliente')
+
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -53,6 +55,96 @@ export default function FloatingWhatsApp() {
   const [hasInteracted, setHasInteracted] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // ═══ Draggable button state ═══
+  const [btnPos, setBtnPos] = useState<{ x: number; y: number } | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStartRef = useRef<{ x: number; y: number; bx: number; by: number } | null>(null)
+  const dragMovedRef = useRef(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  // Load saved position
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('myka_chat_pos')
+      if (saved) {
+        const pos = JSON.parse(saved)
+        // Validate position is within viewport
+        const maxX = window.innerWidth - 56
+        const maxY = window.innerHeight - 56
+        setBtnPos({
+          x: Math.min(Math.max(0, pos.x), maxX),
+          y: Math.min(Math.max(0, pos.y), maxY),
+        })
+      }
+    } catch {}
+  }, [])
+
+  // Drag handlers (touch + mouse)
+  const onDragStart = useCallback((clientX: number, clientY: number) => {
+    const el = btnRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    dragStartRef.current = { x: clientX, y: clientY, bx: rect.left, by: rect.top }
+    dragMovedRef.current = false
+  }, [])
+
+  const onDragMove = useCallback((clientX: number, clientY: number) => {
+    if (!dragStartRef.current) return
+    const dx = clientX - dragStartRef.current.x
+    const dy = clientY - dragStartRef.current.y
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      dragMovedRef.current = true
+      setIsDragging(true)
+    }
+    if (!dragMovedRef.current) return
+    const maxX = window.innerWidth - 56
+    const maxY = window.innerHeight - 56
+    const newX = Math.min(Math.max(0, dragStartRef.current.bx + dx), maxX)
+    const newY = Math.min(Math.max(0, dragStartRef.current.by + dy), maxY)
+    setBtnPos({ x: newX, y: newY })
+  }, [])
+
+  const onDragEnd = useCallback(() => {
+    if (dragMovedRef.current && btnPos) {
+      // Snap to nearest edge (left or right)
+      const midX = window.innerWidth / 2
+      const snappedX = btnPos.x < midX ? 16 : window.innerWidth - 72
+      const finalPos = { x: snappedX, y: btnPos.y }
+      setBtnPos(finalPos)
+      try { localStorage.setItem('myka_chat_pos', JSON.stringify(finalPos)) } catch {}
+    }
+    dragStartRef.current = null
+    setTimeout(() => setIsDragging(false), 50)
+  }, [btnPos])
+
+  // Touch events
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    onDragStart(e.touches[0].clientX, e.touches[0].clientY)
+  }, [onDragStart])
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    onDragMove(e.touches[0].clientX, e.touches[0].clientY)
+  }, [onDragMove])
+  const onTouchEnd = useCallback(() => { onDragEnd() }, [onDragEnd])
+
+  // Mouse events
+  useEffect(() => {
+    if (!isDragging) return
+    const onMouseMove = (e: MouseEvent) => onDragMove(e.clientX, e.clientY)
+    const onMouseUp = () => onDragEnd()
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [isDragging, onDragMove, onDragEnd])
+
+  // Default position calculation
+  const defaultStyle: React.CSSProperties = btnPos
+    ? { position: 'fixed', left: btnPos.x, top: btnPos.y, right: 'auto', bottom: 'auto' }
+    : {}
+
 
   const now = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
@@ -422,23 +514,32 @@ export default function FloatingWhatsApp() {
         </div>
       </div>
 
-      {/* ════════════ Floating Button ════════════ */}
+      {/* ════════════ Floating Button (Draggable) ════════════ */}
       <button
-        onClick={() => setIsOpen(prev => !prev)}
+        ref={btnRef}
+        onClick={() => { if (!dragMovedRef.current) setIsOpen(prev => !prev) }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onMouseDown={(e) => { onDragStart(e.clientX, e.clientY); setIsDragging(true) }}
         aria-label="Abrir chat Myka IA"
-        className={`fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full
+        className={`z-[9999] w-14 h-14 rounded-full
           shadow-lg hover:shadow-xl
           flex items-center justify-center
-          transition-all duration-300 hover:scale-110 active:scale-95
-          group
+          ${isDragging ? 'scale-110 cursor-grabbing' : 'hover:scale-110 active:scale-95 cursor-grab'}
+          group select-none touch-none
+          ${btnPos ? '' : `fixed ${isClientArea ? 'bottom-20' : 'bottom-6'} right-4 md:bottom-6 md:right-6`}
         `}
         style={{
+          ...defaultStyle,
           background: `linear-gradient(135deg, ${THEME.primary}, ${THEME.primaryDark})`,
-          boxShadow: `0 4px 20px ${THEME.primary}50`,
+          boxShadow: isDragging ? `0 8px 32px ${THEME.primary}70` : `0 4px 20px ${THEME.primary}50`,
+          transition: isDragging ? 'box-shadow 0.2s, transform 0.1s' : 'all 0.3s',
+          zIndex: 9999,
         }}
       >
         {/* Ripple ping */}
-        {!isOpen && !hasInteracted && (
+        {!isOpen && !hasInteracted && !isDragging && (
           <span
             className="absolute inset-0 rounded-full animate-ping opacity-25"
             style={{ background: THEME.primary }}
@@ -467,11 +568,17 @@ export default function FloatingWhatsApp() {
         )}
       </button>
 
-      {/* Tooltip */}
-      {!isOpen && !hasInteracted && (
-        <div className="fixed bottom-[5.5rem] right-6 z-[9998] pointer-events-none">
+      {/* Tooltip — follows button position */}
+      {!isOpen && !hasInteracted && !isDragging && (
+        <div
+          className="fixed z-[9998] pointer-events-none"
+          style={btnPos
+            ? { left: btnPos.x - 40, top: btnPos.y - 36, right: 'auto', bottom: 'auto' }
+            : undefined
+          }
+        >
           <div
-            className="rounded-xl shadow-xl px-3.5 py-2 text-[11px] font-medium whitespace-nowrap animate-bounce"
+            className={`rounded-xl shadow-xl px-3.5 py-2 text-[11px] font-medium whitespace-nowrap animate-bounce ${!btnPos ? `fixed ${isClientArea ? 'bottom-[8.5rem]' : 'bottom-[5.5rem]'} right-4 md:bottom-[5.5rem] md:right-6` : ''}`}
             style={{ background: THEME.bgCard, color: THEME.accent, border: `1px solid ${THEME.primary}30` }}
           >
             ✨ Posso te ajudar!

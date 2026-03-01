@@ -13,10 +13,86 @@
   --color-warm-gray: #8a8580;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Animations */
+  --animate-shimmer: shimmer 1.5s infinite;
+  --animate-fadeIn: fadeIn 0.4s ease-out;
+  --animate-slide-up: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-scale-in: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ═══ Custom Keyframes ═══ */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal,
+  .reveal-left,
+  .reveal-right,
+  .reveal-scale,
+  .reveal-blur,
+  .reveal-clip-up,
+  .reveal-clip-left,
+  .reveal-clip-right,
+  .reveal-rotate,
+  .reveal-fade,
+  .stagger-children,
+  .stagger-left,
+  .stagger-scale,
+  .img-reveal,
+  .line-grow,
+  .text-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    clip-path: none !important;
+  }
 }
 
 body {
@@ -30,6 +106,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  /* Safe area support for notch/home indicator devices */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* ═══════════════════════════════════════════
@@ -98,7 +176,7 @@ body {
 .reveal-blur {
   opacity: 0;
   transform: translateY(40px);
-  filter: blur(12px);
+  filter: blur(6px);
   transition:
     opacity 1.1s var(--ease-premium),
     transform 1.1s var(--ease-premium),
@@ -489,27 +567,7 @@ body {
   opacity: 0.08;
 }
 
-/* ═══ Premium Keyframes ═══ */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
+/* ═══ Premium Keyframes (consolidated) ═══ */
 @keyframes float {
   0%,
   100% {

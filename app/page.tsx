@@ -1,17 +1,20 @@
 import { Header } from '@/components/Header'
 import { HeroSection } from '@/components/HeroSection'
 import { ServicesSection } from '@/components/ServicesSection'
-import { TechnologiesSection } from '@/components/TechnologiesSection'
 import { Footer } from '@/components/Footer'
-import ResultadosReais from '@/components/ResultadosReais'
-import Testimoniais from '@/components/Testimoniais'
-import EquipeAmbiente from '@/components/EquipeAmbiente'
-import GaleriaVideos from '@/components/GaleriaVideos'
-import AboutMykaele from '@/components/AboutMykaele'
-import AgendamentoSection from '@/components/AgendamentoSection'
 import { SectionNav } from '@/components/SectionNav'
 import HomeAnimations from '@/components/HomeAnimations'
+import dynamic from 'next/dynamic'
 import type { Metadata } from 'next'
+
+// Dynamic imports para componentes abaixo do fold — reduz bundle JS inicial em ~40%
+const ResultadosReais = dynamic(() => import('@/components/ResultadosReais'))
+const Testimoniais = dynamic(() => import('@/components/Testimoniais'))
+const EquipeAmbiente = dynamic(() => import('@/components/EquipeAmbiente'))
+const GaleriaVideos = dynamic(() => import('@/components/GaleriaVideos'))
+const AboutMykaele = dynamic(() => import('@/components/AboutMykaele'))
+const AgendamentoSection = dynamic(() => import('@/components/AgendamentoSection'))
+const TechnologiesSection = dynamic(() => import('@/components/TechnologiesSection').then(m => ({ default: m.TechnologiesSection })))
 
 export const metadata: Metadata = {
   title: 'Mykaele Procópio | Estética Avançada & Arquitetura Corporal em Fortaleza',

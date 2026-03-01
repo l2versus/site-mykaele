@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useClient } from '../ClientContext'
 import Link from 'next/link'
+import { SkeletonAppointment } from '@/components/Skeleton'
 
 interface Appointment {
   id: string; scheduledAt: string; endAt: string; status: string
@@ -86,7 +87,11 @@ export default function AgendamentosPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><div className="w-7 h-7 border-2 border-[#b76e79] border-t-transparent rounded-full animate-spin" /></div>
+        <div className="space-y-3">
+          <SkeletonAppointment />
+          <SkeletonAppointment />
+          <SkeletonAppointment />
+        </div>
       ) : list.length === 0 ? (
         <div className="text-center py-16">
           <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white/[0.03] flex items-center justify-center">

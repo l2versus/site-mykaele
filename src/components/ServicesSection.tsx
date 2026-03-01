@@ -69,7 +69,7 @@ export function ServicesSection() {
         {/* Video Background */}
         <div className="absolute inset-0">
           <div 
-            className="absolute inset-[-5%] w-[110%] h-[110%]"
+            className="absolute inset-0"
             style={{ transform: `translateY(${scrollY}px)` }}
           >
             <video
@@ -78,10 +78,9 @@ export function ServicesSection() {
               style={{ filter: 'saturate(1.1) contrast(1.05) brightness(0.85)' }}
               src={METODO_VIDEO}
               muted
-              autoPlay
               loop
               playsInline
-              preload="auto"
+              preload="none"
             />
           </div>
           

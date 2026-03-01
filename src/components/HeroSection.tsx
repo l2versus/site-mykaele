@@ -129,7 +129,7 @@ export function HeroSection() {
     <section id="hero" className="relative h-[100dvh] flex items-end overflow-hidden bg-[#0a0a0a]">
       {/* VIDEO BACKGROUND */}
       <div className="absolute inset-0">
-        <div className="absolute inset-[-5%] w-[110%] h-[110%]">
+        <div className="absolute inset-0">
           <video ref={videoARef}
             className="absolute inset-0 w-full h-full object-cover"
             style={{
@@ -145,7 +145,7 @@ export function HeroSection() {
               opacity: opacityB,
               transition: `opacity ${FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
             }}
-            muted autoPlay loop playsInline preload="auto" />
+            muted autoPlay loop playsInline preload="none" />
         </div>
         {/* Overlays */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />

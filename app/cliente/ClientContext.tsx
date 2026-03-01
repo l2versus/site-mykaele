@@ -11,6 +11,7 @@ export interface ClientUser {
   address?: string
   role: string
   avatar?: string
+  forcePasswordChange?: boolean
 }
 
 export interface ClientContextType {

@@ -16,6 +16,8 @@ const I = {
   out: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
   menu: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>,
   left: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>,
+  diamond: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>,
+  upload: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><path d="M16 16l-4-4-4 4"/></svg>,
 }
 
 const NAV = [
@@ -23,7 +25,9 @@ const NAV = [
   { href: '/admin/agenda', label: 'Agenda', icon: I.cal },
   { href: '/admin/servicos', label: 'Serviços', icon: I.heart },
   { href: '/admin/clientes', label: 'Clientes', icon: I.users },
+  { href: '/admin/importar-clientes', label: 'Importar', icon: I.upload },
   { href: '/admin/financeiro', label: 'Financeiro', icon: I.dollar },
+  { href: '/admin/fidelidade', label: 'Fidelidade', icon: I.diamond },
   { href: '/admin/configuracoes', label: 'Configurações', icon: I.gear },
 ]
 
@@ -263,7 +267,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </header>
 
           {/* Content area */}
-          <div className="p-4 lg:p-6 max-w-full overflow-x-hidden">{children}</div>
+          <div className="p-4 lg:p-6 max-w-full overflow-x-auto">{children}</div>
         </main>
 
       </div>

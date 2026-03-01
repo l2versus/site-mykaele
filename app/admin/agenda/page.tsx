@@ -187,7 +187,7 @@ export default function AgendaPage() {
       </div>
 
       {/* Quick stats */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Total', value: stats.total, color: 'text-stone-700', bg: 'bg-white' },
           { label: 'Confirmados', value: stats.confirmed, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -228,7 +228,7 @@ export default function AgendaPage() {
                 <span className="text-stone-700 text-sm font-semibold">Grade de Horários</span>
               </div>
               {/* Legenda */}
-              <div className="flex items-center gap-4 text-[10px]">
+              <div className="flex items-center gap-3 sm:gap-4 text-[10px] flex-wrap">
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> Livre</span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-400" /> Marcado</span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Pendente</span>

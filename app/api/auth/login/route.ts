@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
           phone: user.phone,
           role: user.role,
           avatar: user.avatar,
+          forcePasswordChange: user.forcePasswordChange,
         },
         token,
       },

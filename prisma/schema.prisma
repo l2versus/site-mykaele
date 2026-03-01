@@ -31,6 +31,7 @@ model User {
   role                String   @default("PATIENT")
   avatar              String?
   balance             Float    @default(0)
+  forcePasswordChange Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -293,4 +294,68 @@ model Anamnese {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════
+// PROGRAMA DE FIDELIDADE & INDICAÇÃO
+// ═══════════════════════════════════════════
+
+model ReferralCode {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  code       String   @unique // ex: "MYKA-ANA2024"
+  usageCount Int      @default(0) // quantas vezes foi usado
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
+
+model Referral {
+  id             String    @id @default(cuid())
+  referrerId     String // quem indicou
+  referredUserId String // quem foi indicado
+  referralCodeId String // código usado
+  status         String    @default("PENDING") // PENDING, CONFIRMED, REWARDED
+  rewardedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@unique([referredUserId]) // cada pessoa só pode ser indicada 1 vez
+  @@index([referrerId])
+}
+
+model LoyaltyPoints {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  points      Int      @default(0) // pontos atuais
+  totalEarned Int      @default(0) // total já acumulado
+  totalSpent  Int      @default(0) // total já resgatado
+  tier        String   @default("BRONZE") // BRONZE, SILVER, GOLD, DIAMOND
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LoyaltyTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  points      Int // positivo = ganho, negativo = gasto
+  type        String // REFERRAL_BONUS, REFERRED_BONUS, SESSION_COMPLETE, REVIEW_BONUS, BIRTHDAY_BONUS, TIER_BONUS, REDEMPTION, ADMIN_ADJUSTMENT
+  description String
+  referenceId String? // ID do referral, appointment, etc
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model LoyaltyReward {
+  id          String   @id @default(cuid())
+  name        String // "Desconto de R$50 na próxima sessão"
+  description String?
+  pointsCost  Int // quantos pontos custa
+  type        String // DISCOUNT, FREE_SESSION, FREE_ADDON, GIFT, UPGRADE
+  value       Float // valor em R$ do desconto ou benefício
+  active      Boolean  @default(true)
+  stock       Int? // null = ilimitado
+  imageEmoji  String? // emoji ou URL
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

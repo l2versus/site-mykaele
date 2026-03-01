@@ -280,12 +280,12 @@ export default function FinanceiroPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-stone-800">Financeiro</h1>
           <p className="text-stone-400 text-xs mt-0.5">Fluxo de caixa e indicadores</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0">
           <button onClick={() => { setRevForm({ description: '', amount: '', method: 'PIX' }); setEditingPayment(null); setShowAddRevenue(true) }}
             className="px-3.5 py-2 rounded-lg text-xs bg-emerald-500/12 border border-emerald-500/20 text-emerald-400 font-medium hover:bg-emerald-500/20 transition-all flex items-center gap-1.5">
             {Ico.plus} Receita
@@ -312,7 +312,7 @@ export default function FinanceiroPage() {
       ) : data && (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-emerald-500/8 border border-emerald-500/15 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 {Ico.up}

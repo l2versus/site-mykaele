@@ -1,20 +1,24 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Geist } from "next/font/google";
 import "./globals.css";
-import FloatingWhatsApp from "@/components/FloatingWhatsApp";
+import ClientProviders from "@/components/ClientProviders";
 import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mykaprocopio.com.br'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+  themeColor: '#b76e79',
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -34,10 +38,6 @@ export const metadata: Metadata = {
   creator: 'Mykaele Procópio Home Spa',
   publisher: 'Mykaele Procópio Home Spa',
   formatDetection: { telephone: true, email: true },
-  icons: {
-    icon: [{ url: '/icon.png', type: 'image/png' }],
-    apple: '/icon.png',
-  },
   // Open Graph
   openGraph: {
     type: 'website',
@@ -147,6 +147,13 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="scroll-smooth">
       <head>
+        {/* PWA manifest */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Myka Spa" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="msapplication-TileColor" content="#b76e79" />
         {/* JSON-LD Structured Data */}
         <script
           type="application/ld+json"
@@ -154,10 +161,10 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#faf9f7] text-[#1a1a1a]`}
+        className={`${geistSans.variable} antialiased bg-[#faf9f7] text-[#1a1a1a]`}
       >
         {children}
-        <FloatingWhatsApp />
+        <ClientProviders />
 
         {/* Google Analytics 4 */}
         {GA_ID && (

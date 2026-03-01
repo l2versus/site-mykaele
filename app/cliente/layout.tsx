@@ -5,6 +5,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ClientContextProvider, ClientContextType, ClientUser } from './ClientContext'
 import { CartProvider, useCart } from './CartContext'
+import PageTransition from '@/components/PageTransition'
+import NotificationPrompt from '@/components/NotificationPrompt'
+import { haptic } from '@/hooks/useHaptic'
 
 /* ─── SVG Icons ─── */
 const Icons = {
@@ -34,7 +37,7 @@ function LeafLogo({ className = '' }: { className?: string }) {
 const NAV_ITEMS = [
   { href: '/cliente', label: 'Início', icon: Icons.home },
   { href: '/cliente/anamnese', label: 'Anamnese', icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg> },
-  { href: '/cliente/evolucao', label: 'Evolução', icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> },
+  { href: '/cliente/fidelidade', label: 'VIP', icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> },
   { href: '/cliente/agendamentos', label: 'Agenda', icon: Icons.agenda },
   { href: '/cliente/perfil', label: 'Perfil', icon: Icons.profile },
 ]
@@ -42,10 +45,61 @@ const NAV_ITEMS = [
 /* ─── Auth Screen ─── */
 function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) => void }) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', phone: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', phone: '', referralCode: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState<string | null>(null)
+
+  // ═══ Biometric / Passkey state ═══
+  const [biometricAvailable, setBiometricAvailable] = useState(false)
+  const [biometricLoading, setBiometricLoading] = useState(false)
+
+  // Check if device supports biometric login
+  useEffect(() => {
+    (async () => {
+      if (typeof window === 'undefined' || !window.PublicKeyCredential) return
+      try {
+        const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+        // Also check if user has saved credentials
+        const hasCreds = !!localStorage.getItem('myka_biometric_user')
+        setBiometricAvailable(available && hasCreds)
+      } catch {}
+    })()
+  }, [])
+
+  // Biometric login handler
+  const handleBiometricLogin = async () => {
+    setBiometricLoading(true)
+    setError('')
+    haptic('medium')
+    try {
+      const savedUser = localStorage.getItem('myka_biometric_user')
+      if (!savedUser) throw new Error('Nenhuma biometria cadastrada')
+      const { email, token: savedToken } = JSON.parse(savedUser)
+      
+      // Verify the saved token is still valid
+      const res = await fetch('/api/patient/profile', {
+        headers: { 'Authorization': `Bearer ${savedToken}` }
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        haptic('success')
+        onLogin(savedToken, data.patient || data)
+      } else {
+        // Token expired, need to re-authenticate
+        localStorage.removeItem('myka_biometric_user')
+        setBiometricAvailable(false)
+        setError('Sessão expirada. Faça login novamente para reativar a biometria.')
+        haptic('error')
+      }
+    } catch (err: any) {
+      haptic('error')
+      setError(err.message || 'Erro na autenticação biométrica')
+    } finally {
+      setBiometricLoading(false)
+    }
+  }
 
   // Capturar OAuth callback da URL
   useEffect(() => {
@@ -125,12 +179,27 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true); setError('')
+    haptic('light')
     try {
       const url = mode === 'login' ? '/api/auth/login' : '/api/auth/register'
-      const body = mode === 'login' ? { email: form.email, password: form.password } : { name: form.name, email: form.email, password: form.password, confirmPassword: form.confirmPassword, phone: form.phone }
+      const body = mode === 'login' ? { email: form.email, password: form.password } : { name: form.name, email: form.email, password: form.password, confirmPassword: form.confirmPassword, phone: form.phone, referralCode: form.referralCode || undefined }
       const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || data.issues?.[0]?.message || 'Erro'); return }
+      if (!res.ok) { haptic('error'); setError(data.error || data.issues?.[0]?.message || 'Erro'); return }
+      haptic('success')
+      // Save for biometric quick-login next time
+      try {
+        if (window.PublicKeyCredential) {
+          const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+          if (available) {
+            localStorage.setItem('myka_biometric_user', JSON.stringify({
+              email: form.email,
+              token: data.token,
+              name: data.user?.name || form.name,
+            }))
+          }
+        }
+      } catch {}
       onLogin(data.token, data.user)
     } catch { setError('Erro de conexão') } finally { setLoading(false) }
   }
@@ -266,6 +335,41 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
           <div className="flex-1 h-px bg-white/[0.04]" />
         </div>
 
+        {/* ═══ Biometric Quick Login ═══ */}
+        {mode === 'login' && biometricAvailable && (
+          <div className="mb-6">
+            <button
+              onClick={handleBiometricLogin}
+              disabled={biometricLoading}
+              className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-2xl border transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 group"
+              style={{
+                background: 'linear-gradient(135deg, rgba(183,110,121,0.12), rgba(183,110,121,0.04))',
+                borderColor: 'rgba(183,110,121,0.25)',
+              }}
+            >
+              {biometricLoading ? (
+                <div className="w-6 h-6 border-2 border-[#b76e79]/40 border-t-[#b76e79] rounded-full animate-spin" />
+              ) : (
+                <svg className="w-7 h-7 text-[#d4a0a7] group-hover:text-[#b76e79] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.864 4.243A7.5 7.5 0 0119.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 004.5 10.5a48.667 48.667 0 00-1.243 3.757M15.75 10.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                </svg>
+              )}
+              <div className="text-left">
+                <span className="text-[#d4a0a7] text-sm font-medium block group-hover:text-[#b76e79] transition-colors">
+                  {biometricLoading ? 'Verificando...' : 'Entrar com Biometria'}
+                </span>
+                <span className="text-white/20 text-[10px]">Face ID · Impressão Digital · PIN</span>
+              </div>
+            </button>
+
+            <div className="flex items-center gap-3 mt-5 mb-0">
+              <div className="flex-1 h-px bg-white/[0.04]" />
+              <span className="text-white/10 text-[9px] font-medium tracking-wider uppercase">ou</span>
+              <div className="flex-1 h-px bg-white/[0.04]" />
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="relative overflow-hidden rounded-3xl">
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-white/[0.01]" />
           <div className="relative border border-white/[0.07] rounded-3xl p-7 space-y-4 backdrop-blur-xl">
@@ -319,6 +423,15 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
               <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
                 className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/[0.06] rounded-2xl text-white placeholder-white/15 text-sm focus:outline-none focus:border-[#b76e79]/40 focus:ring-1 focus:ring-[#b76e79]/15 transition-all"
                 placeholder="(00) 00000-0000" />
+            </div>
+          )}
+          {mode === 'register' && (
+            <div>
+              <label className="block text-white/35 text-[11px] mb-1.5 font-medium tracking-wide">Código de Indicação <span className="text-white/10">(opcional)</span></label>
+              <input value={form.referralCode} onChange={e => setForm({ ...form, referralCode: e.target.value.toUpperCase() })}
+                className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/[0.06] rounded-2xl text-white placeholder-white/15 text-sm focus:outline-none focus:border-[#b76e79]/40 focus:ring-1 focus:ring-[#b76e79]/15 transition-all uppercase tracking-wider"
+                placeholder="Ex: MYKA-ANA2024" />
+              <p className="text-[10px] text-[#b76e79]/50 mt-1">💎 Ganhe 100 pontos VIP ao usar um código de indicação</p>
             </div>
           )}
           <button type="submit" disabled={loading}
@@ -384,6 +497,143 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/* ─── Force Password Change Screen ─── */
+function ForcePasswordChangeScreen({ token, user, onComplete }: {
+  token: string
+  user: ClientUser
+  onComplete: (updatedUser: ClientUser) => void
+}) {
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+
+    if (newPassword.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError('As senhas não coincidem')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ newPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Erro ao alterar senha')
+        return
+      }
+      setSuccess(true)
+      // Atualizar user sem forcePasswordChange
+      setTimeout(() => {
+        onComplete({ ...user, forcePasswordChange: false })
+      }, 1500)
+    } catch {
+      setError('Erro de conexão')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#fdf6f3] via-[#fff5f0] to-[#fce8e2] flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-6">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-[#b76e79] to-[#c28a93] flex items-center justify-center shadow-lg shadow-[#b76e79]/20 mb-3">
+            <svg width="28" height="28" fill="none" stroke="white" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1"/></svg>
+          </div>
+          <h1 className="text-lg font-bold text-[#1a1a2e]">Bem-vinda, {user.name?.split(' ')[0]}! 🌸</h1>
+          <p className="text-[#6b5b6e] text-sm mt-1">
+            Por segurança, crie uma nova senha pessoal para acessar sua conta.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl shadow-[#b76e79]/10 border border-[#b76e79]/10 p-6 space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-2.5">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-600 text-sm rounded-xl px-4 py-2.5 flex items-center gap-2">
+              <span>✅</span> Senha alterada! Redirecionando...
+            </div>
+          )}
+
+          <div>
+            <label className="block text-[#6b5b6e] text-xs font-medium mb-1.5">Nova Senha</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              placeholder="Mínimo 6 caracteres"
+              required
+              minLength={6}
+              disabled={success}
+              className="w-full px-4 py-3 bg-[#fdf6f3] border border-[#b76e79]/20 rounded-xl text-[#1a1a2e] text-sm placeholder-[#b76e79]/30 focus:outline-none focus:border-[#b76e79]/50 focus:ring-2 focus:ring-[#b76e79]/10 transition-all disabled:opacity-50"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[#6b5b6e] text-xs font-medium mb-1.5">Confirmar Senha</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              placeholder="Repita a nova senha"
+              required
+              minLength={6}
+              disabled={success}
+              className="w-full px-4 py-3 bg-[#fdf6f3] border border-[#b76e79]/20 rounded-xl text-[#1a1a2e] text-sm placeholder-[#b76e79]/30 focus:outline-none focus:border-[#b76e79]/50 focus:ring-2 focus:ring-[#b76e79]/10 transition-all disabled:opacity-50"
+            />
+          </div>
+
+          {newPassword && confirmPassword && newPassword === confirmPassword && (
+            <div className="flex items-center gap-2 text-green-600 text-xs">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+              Senhas coincidem
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || success}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#b76e79] to-[#d4a0a7] text-white font-semibold text-sm shadow-lg shadow-[#b76e79]/20 hover:shadow-[#b76e79]/30 hover:brightness-105 active:scale-[0.98] transition-all disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Alterando...
+              </span>
+            ) : success ? (
+              '✅ Senha alterada!'
+            ) : (
+              'Criar Minha Senha'
+            )}
+          </button>
+
+          <p className="text-center text-[#b76e79]/40 text-[10px]">
+            Sua conta foi criada pela equipe Mykaele. Esta é uma etapa única de segurança.
+          </p>
+        </form>
+      </div>
     </div>
   )
 }
@@ -454,7 +704,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
       </aside>
 
       {/* ═══ Conteúdo principal ═══ */}
-      <div className="flex-1 lg:ml-[320px] xl:ml-[380px] relative pb-24 lg:pb-16">
+      <div className="flex-1 lg:ml-[320px] xl:ml-[380px] relative pb-32 lg:pb-16">
 
         {/* Global Background */}
         <div className="fixed inset-0 pointer-events-none z-0">
@@ -506,17 +756,18 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
 
         {/* ─── Content ─── */}
         <main className="px-5 py-6 max-w-lg mx-auto lg:max-w-2xl relative z-10">
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
 
         {/* ─── Bottom Nav (mobile) ─── */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)' }}>
-          <div className="flex justify-around items-center px-2 py-2.5 max-w-lg mx-auto">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <div className="flex justify-around items-center px-1 py-2.5 max-w-lg mx-auto">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href
               return (
                 <Link key={item.href} href={item.href}
-                  className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-2xl transition-all ${
+                  onClick={() => haptic('selection')}
+                  className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all ${
                     isActive ? 'text-[#d4a0a7] bg-[#b76e79]/8' : 'text-white/20 hover:text-white/40'
                   }`}>
                   <span className={`transition-all ${isActive ? 'scale-110 drop-shadow-[0_0_6px_rgba(183,110,121,0.3)]' : ''}`}>{item.icon}</span>
@@ -528,7 +779,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
         </nav>
 
         {/* ─── Desktop Nav (bottom bar) ─── */}
-        <nav className="hidden lg:block fixed bottom-0 left-[320px] xl:left-[380px] right-0 z-40 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)' }}>
+        <nav className="hidden lg:block fixed bottom-0 left-[320px] xl:left-[380px] right-0 z-40 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="flex justify-center items-center gap-1 px-4 py-2.5">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href
@@ -648,8 +899,18 @@ export default function ClienteLayout({ children }: { children: ReactNode }) {
     } catch { /* */ }
   }, [fetchWithAuth])
 
+  const handlePasswordChanged = (updatedUser: ClientUser) => {
+    setUser(updatedUser)
+    localStorage.setItem('client_user', JSON.stringify(updatedUser))
+  }
+
   if (!mounted) return null
   if (!token || !user) return <AuthScreen onLogin={handleLogin} />
+
+  // Interceptar troca de senha obrigatória
+  if (user.forcePasswordChange) {
+    return <ForcePasswordChangeScreen token={token} user={user} onComplete={handlePasswordChanged} />
+  }
 
   return (
     <ClientContextProvider value={{ user, token, fetchWithAuth, logout, refreshUser }}>
@@ -658,6 +919,7 @@ export default function ClienteLayout({ children }: { children: ReactNode }) {
           <ClientShell user={user} pathname={pathname}>
             {children}
           </ClientShell>
+          <NotificationPrompt />
         </PhotoDrawerProvider>
       </CartProvider>
     </ClientContextProvider>
