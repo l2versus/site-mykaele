@@ -55,10 +55,11 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     )
-  } catch (error) {
-    console.error('Erro ao fazer login:', error)
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error)
+    console.error('Erro ao fazer login:', errMsg, error)
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Erro interno do servidor', details: process.env.NODE_ENV !== 'production' ? errMsg : undefined },
       { status: 500 }
     )
   }

@@ -16,5 +16,11 @@ fi
 echo ">> Verificando seed..."
 node /app/seed-prod.mjs 2>&1 || echo "Seed falhou, continuando..."
 
+# Garantir DATABASE_URL para o Next.js
+export DATABASE_URL="file:/app/data/mykaele.db"
+
+# Migrar coluna forcePasswordChange se não existir (bancos antigos)
+sqlite3 "$DB_PATH" "ALTER TABLE User ADD COLUMN forcePasswordChange INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
+
 echo "=== Iniciando servidor Next.js ==="
 exec node server.js
