@@ -60,7 +60,16 @@
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
+  overflow-y: scroll;
   overscroll-behavior-x: none;
+}
+
+/* ═══ Force scroll on desktop ═══ */
+@media (pointer: fine) {
+  html,
+  body {
+    overflow-y: scroll !important;
+  }
 }
 
 /* ═══ iOS Bounce / Rubber-band fix ═══ */
@@ -124,7 +133,6 @@ body {
   padding-top: env(safe-area-inset-top, 0px);
   /* Prevent horizontal overscroll on iOS */
   -webkit-text-size-adjust: 100%;
-  touch-action: pan-y;
 }
 
 /* ═══════════════════════════════════════════
