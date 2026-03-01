@@ -716,7 +716,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
       </aside>
 
       {/* ═══ Conteúdo principal ═══ */}
-      <div className="flex-1 lg:ml-[320px] xl:ml-[380px] relative pb-32 lg:pb-16">
+      <div className="flex-1 lg:ml-[320px] xl:ml-[380px] relative pb-20 lg:pb-8">
 
         {/* Global Background */}
         <div className="fixed inset-0 pointer-events-none z-0">
@@ -767,12 +767,12 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
         </header>
 
         {/* ─── Content ─── */}
-        <main className="px-5 py-6 max-w-lg mx-auto lg:max-w-2xl relative z-10">
+        <main className="px-5 py-6 max-w-lg mx-auto lg:max-w-2xl relative z-10 min-h-[calc(100vh-120px)]">
           <PageTransition>{children}</PageTransition>
         </main>
 
         {/* ─── Bottom Nav (mobile) ─── */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="flex justify-around items-center px-1 py-2.5 max-w-lg mx-auto">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href
@@ -791,7 +791,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
         </nav>
 
         {/* ─── Desktop Nav (bottom bar) ─── */}
-        <nav className="hidden lg:block fixed bottom-0 left-[320px] xl:left-[380px] right-0 z-40 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <nav className="hidden lg:block fixed bottom-0 left-[320px] xl:left-[380px] right-0 z-50 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="flex justify-center items-center gap-1 px-4 py-2.5">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href
