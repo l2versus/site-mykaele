@@ -107,7 +107,7 @@ export default function IndicacoesAdminPage() {
           { label: 'Pendentes', value: stats.pendingReferrals, color: 'from-yellow-500/10 to-yellow-600/10 border-yellow-200' },
           { label: 'Com Desconto', value: stats.usersWithDiscount, color: 'from-purple-500/10 to-purple-600/10 border-purple-200' },
         ].map(s => (
-          <div key={s.label} className={`bg-linear-to-br ${s.color} rounded-xl p-4 border`}>
+          <div key={s.label} className={`bg-gradient-to-br ${s.color} rounded-xl p-4 border`}>
             <p className="text-[10px] text-warm-gray uppercase tracking-wider">{s.label}</p>
             <p className="text-2xl font-black text-charcoal mt-1">{s.value}</p>
           </div>
@@ -115,7 +115,7 @@ export default function IndicacoesAdminPage() {
       </div>
 
       {/* Financial Impact */}
-      <div className="bg-linear-to-r from-rose-gold/5 to-rose-gold/15 rounded-2xl p-5 border border-rose-gold/20">
+      <div className="bg-gradient-to-r from-rose-gold/5 to-rose-gold/15 rounded-2xl p-5 border border-rose-gold/20">
         <h2 className="text-sm font-bold text-charcoal mb-3">Impacto Financeiro dos Descontos</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
@@ -193,7 +193,7 @@ export default function IndicacoesAdminPage() {
                 {ranking.slice(0, 5).map(entry => (
                   <div key={entry.userId} className="flex items-center gap-3 p-3 rounded-lg bg-cream/40 hover:bg-cream/70 transition-colors">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                      entry.position <= 3 ? 'bg-linear-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
+                      entry.position <= 3 ? 'bg-gradient-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
                     }`}>
                       {entry.position}
                     </div>
@@ -271,7 +271,7 @@ export default function IndicacoesAdminPage() {
                     <tr key={entry.userId} className="border-b border-cream/50 hover:bg-cream/30">
                       <td className="py-2.5 px-2">
                         <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold ${
-                          entry.position <= 3 ? 'bg-linear-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
+                          entry.position <= 3 ? 'bg-gradient-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
                         }`}>
                           {entry.position}
                         </span>

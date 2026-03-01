@@ -38,7 +38,7 @@ export default function EquipeAmbiente() {
                   muted autoPlay loop playsInline preload="metadata"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
                 />
-                <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-8">
                   <p className="text-base font-light text-white mb-1">{item.titulo}</p>
                   <p className="text-sm text-white/60 font-light">{item.desc}</p>

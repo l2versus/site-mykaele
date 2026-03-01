@@ -369,7 +369,7 @@ export default function FidelidadePage() {
       )}
 
       {/* ═══ Hero Card — Tier & Points ═══ */}
-      <div className={`mx-4 mt-4 rounded-2xl bg-linear-to-br ${tierInfo.color} p-6 text-white shadow-xl relative overflow-hidden`}>
+      <div className={`mx-4 mt-4 rounded-2xl bg-gradient-to-br ${tierInfo.color} p-6 text-white shadow-xl relative overflow-hidden`}>
         {/* Background decoration */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
@@ -530,7 +530,7 @@ export default function FidelidadePage() {
             </div>
 
             {/* Big Number Display */}
-            <div className="text-center py-8 mx-5 mt-3 border-y border-cream-dark/10 bg-linear-to-b from-cream/30 to-transparent rounded-xl">
+            <div className="text-center py-8 mx-5 mt-3 border-y border-cream-dark/10 bg-gradient-to-b from-cream/30 to-transparent rounded-xl">
               <p className="text-[9px] font-medium tracking-[0.35em] uppercase text-warm-gray/50 mb-3">Seu desconto exclusivo</p>
               <div className="flex items-baseline justify-center gap-0.5">
                 <span className="text-7xl font-extralight text-charcoal tabular-nums tracking-tighter leading-none">
@@ -647,7 +647,7 @@ export default function FidelidadePage() {
       {/* ═══ TAB: Ranking ═══ */}
       {tab === 'ranking' && (
         <div className="mx-4 mt-4 space-y-3">
-          <div className="bg-linear-to-r from-rose-gold/10 to-transparent rounded-xl p-4 border border-rose-gold/20">
+          <div className="bg-gradient-to-r from-rose-gold/10 to-transparent rounded-xl p-4 border border-rose-gold/20">
             <h3 className="text-sm font-bold text-charcoal">🏆 Ranking de Fidelidade</h3>
             <p className="text-[10px] text-warm-gray mt-0.5">As clientes mais exclusivas da Mykaele Procópio</p>
           </div>
@@ -673,7 +673,7 @@ export default function FidelidadePage() {
                     }`}
                   >
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      isTop3 ? 'bg-linear-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
+                      isTop3 ? 'bg-gradient-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
                     }`}>
                       {isTop3 ? positionEmojis[entry.position] : entry.position}
                     </div>
@@ -723,7 +723,7 @@ export default function FidelidadePage() {
       {/* ═══ TAB: Resgatar ═══ */}
       {tab === 'rewards' && (
         <div className="mx-4 mt-4 space-y-3">
-          <div className="bg-linear-to-r from-rose-gold/10 to-transparent rounded-xl p-4 border border-rose-gold/20">
+          <div className="bg-gradient-to-r from-rose-gold/10 to-transparent rounded-xl p-4 border border-rose-gold/20">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-charcoal">🎁 Recompensas Exclusivas</h3>
@@ -808,11 +808,11 @@ export default function FidelidadePage() {
 
           {/* ═══ Discount Card ═══ */}
           <div className={`rounded-2xl p-5 text-white shadow-xl relative overflow-hidden ${
-            (referralData?.discount?.discount || 0) >= 12 ? 'bg-linear-to-br from-purple-600 to-indigo-700' :
-            (referralData?.discount?.discount || 0) >= 8 ? 'bg-linear-to-br from-amber-500 to-orange-600' :
-            (referralData?.discount?.discount || 0) >= 5 ? 'bg-linear-to-br from-teal-500 to-emerald-600' :
-            (referralData?.discount?.discount || 0) >= 3 ? 'bg-linear-to-br from-blue-500 to-cyan-600' :
-            'bg-linear-to-br from-gray-500 to-gray-700'
+            (referralData?.discount?.discount || 0) >= 12 ? 'bg-gradient-to-br from-purple-600 to-indigo-700' :
+            (referralData?.discount?.discount || 0) >= 8 ? 'bg-gradient-to-br from-amber-500 to-orange-600' :
+            (referralData?.discount?.discount || 0) >= 5 ? 'bg-gradient-to-br from-teal-500 to-emerald-600' :
+            (referralData?.discount?.discount || 0) >= 3 ? 'bg-gradient-to-br from-blue-500 to-cyan-600' :
+            'bg-gradient-to-br from-gray-500 to-gray-700'
           }`}>
             <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="relative z-10">
@@ -868,7 +868,7 @@ export default function FidelidadePage() {
           </div>
 
           {/* ═══ My Link & Custom Code ═══ */}
-          <div className="bg-linear-to-br from-rose-gold/5 to-rose-gold/15 rounded-2xl p-5 border border-rose-gold/20">
+          <div className="bg-gradient-to-br from-rose-gold/5 to-rose-gold/15 rounded-2xl p-5 border border-rose-gold/20">
             <p className="text-xs text-warm-gray font-medium mb-1 text-center">Seu link promocional</p>
             
             {/* Current link */}
@@ -944,7 +944,7 @@ export default function FidelidadePage() {
                       entry.isCurrentUser ? 'bg-rose-gold/10 border border-rose-gold/30' : 'bg-cream/30'
                     }`}>
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                        entry.position <= 3 ? 'bg-linear-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
+                        entry.position <= 3 ? 'bg-gradient-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
                       }`}>
                         {entry.position <= 3 ? posEmojis[entry.position] : entry.position}
                       </div>
