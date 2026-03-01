@@ -1,6 +1,51 @@
 // src/components/EquipeAmbiente.tsx
 'use client'
 
+import { useEffect, useRef } from 'react'
+
+function VideoCard({ src, titulo, desc }: { src: string; titulo: string; desc: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    // Force play on iOS - needs user interaction context or IntersectionObserver
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.play().catch(() => {
+            // Silent fail - iOS may block autoplay
+          })
+        }
+      },
+      { threshold: 0.3 }
+    )
+    observer.observe(video)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div className="group relative aspect-[16/10] overflow-hidden bg-[#1a1a1a]">
+      <video
+        ref={videoRef}
+        src={src}
+        muted
+        autoPlay
+        loop
+        playsInline
+        preload="auto"
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 p-8">
+        <p className="text-base font-light text-white mb-1">{titulo}</p>
+        <p className="text-sm text-white/60 font-light">{desc}</p>
+      </div>
+    </div>
+  )
+}
+
 export default function EquipeAmbiente() {
   return (
     <section id="equipe" className="relative bg-white overflow-hidden">
@@ -28,23 +73,8 @@ export default function EquipeAmbiente() {
 
           {/* Video ambientes */}
           <div className="stagger-scale grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              { src: '/media/videos/clinica-tour.mp4', titulo: 'Ambiente Clínico', desc: 'Elegância e privacidade em cada detalhe' },
-              { src: '/media/videos/clinica-tour-2.mp4', titulo: 'Estrutura Completa', desc: 'Equipamentos e tecnologia de ponta' },
-            ].map((item, idx) => (
-              <div key={idx} className="group relative aspect-[16/10] overflow-hidden bg-[#f0ebe5]">
-                <video
-                  src={item.src}
-                  muted autoPlay loop playsInline preload="metadata"
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-8">
-                  <p className="text-base font-light text-white mb-1">{item.titulo}</p>
-                  <p className="text-sm text-white/60 font-light">{item.desc}</p>
-                </div>
-              </div>
-            ))}
+            <VideoCard src="/media/videos/clinica-tour.mp4" titulo="Ambiente Clínico" desc="Elegância e privacidade em cada detalhe" />
+            <VideoCard src="/media/videos/clinica-tour-2.mp4" titulo="Estrutura Completa" desc="Equipamentos e tecnologia de ponta" />
           </div>
 
           {/* Features strip */}
