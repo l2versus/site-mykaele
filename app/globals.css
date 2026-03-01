@@ -59,9 +59,8 @@
 
 html {
   scroll-behavior: smooth;
-  overflow-y: auto !important;
   overflow-x: hidden;
-  height: auto !important;
+  overscroll-behavior-x: none;
 }
 
 /* ═══ iOS Bounce / Rubber-band fix ═══ */
@@ -111,6 +110,8 @@ html {
 body {
   background: var(--color-background);
   color: var(--color-foreground);
+  overscroll-behavior: none;
+  overscroll-behavior-x: none;
   font-family:
     var(--font-sans),
     system-ui,
@@ -118,21 +119,12 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-y: auto !important;
   overflow-x: hidden;
-  height: auto !important;
   /* Safe area support for notch/home indicator devices */
   padding-top: env(safe-area-inset-top, 0px);
   /* Prevent horizontal overscroll on iOS */
   -webkit-text-size-adjust: 100%;
-}
-
-/* Next.js wrapper - ensure scroll propagates */
-#__next,
-[data-nextjs-scroll-focus-boundary] {
-  height: auto !important;
-  overflow: visible !important;
-  pointer-events: auto;
+  touch-action: pan-y;
 }
 
 /* ═══════════════════════════════════════════

@@ -163,21 +163,6 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} antialiased bg-[#faf9f7] text-[#1a1a1a]`}
       >
-        {/* Fix scroll - fallback wheel handler */}
-        <Script id="scroll-fix" strategy="afterInteractive">
-          {`(function(){
-            var lastY = window.pageYOffset;
-            document.addEventListener('wheel', function(e) {
-              setTimeout(function() {
-                // If scroll didn't happen naturally, force it
-                if (window.pageYOffset === lastY && !e.defaultPrevented) {
-                  window.scrollBy(0, e.deltaY);
-                }
-                lastY = window.pageYOffset;
-              }, 10);
-            }, { passive: true });
-          })();`}
-        </Script>
         {children}
         <ClientProviders />
 

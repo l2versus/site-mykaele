@@ -222,7 +222,7 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0e0b10] via-[#100d14] to-[#0e0b10] flex relative">
+    <div className="min-h-screen bg-gradient-to-b from-[#0e0b10] via-[#100d14] to-[#0e0b10] flex relative overflow-hidden">
       {/* Pattern watermark — cor real + blur + degradê escuro */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 opacity-[0.12] blur-[1px]" style={{ backgroundImage: 'url(/media/logo-branding/pattern-leaf.png)', backgroundSize: '280px', backgroundRepeat: 'repeat' }} />
@@ -663,7 +663,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
   const { open, toggle } = useContext(PhotoDrawerContext)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0e0b10] via-[#100d14] to-[#0e0b10] relative">
+    <div className="min-h-screen bg-gradient-to-b from-[#0e0b10] via-[#100d14] to-[#0e0b10] relative flex">
 
       {/* ═══ DESKTOP: Painel lateral fixo com foto da Mykaele ═══ */}
       <aside className="hidden lg:block w-[320px] xl:w-[380px] shrink-0 fixed left-0 top-0 h-screen z-20">
@@ -716,7 +716,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
       </aside>
 
       {/* ═══ Conteúdo principal ═══ */}
-      <div className="lg:ml-[320px] xl:ml-[380px] relative pb-20 lg:pb-8 min-h-screen">
+      <div className="flex-1 lg:ml-[320px] xl:ml-[380px] relative pb-32 lg:pb-16">
 
         {/* Global Background */}
         <div className="fixed inset-0 pointer-events-none z-0">
@@ -725,54 +725,54 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
           <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-[#b76e79]/[0.012] rounded-full blur-[140px]" />
           <div className="absolute bottom-1/4 left-1/3 w-[250px] h-[250px] bg-[#d4a0a7]/[0.008] rounded-full blur-[120px]" />
         </div>
-        
+
         {/* ─── Header ─── */}
-          <header className="sticky top-0 z-30 backdrop-blur-2xl border-b border-white/[0.04]" style={{ background: 'linear-gradient(180deg, rgba(14,11,16,0.97) 0%, rgba(14,11,16,0.85) 100%)' }}>
-            <div className="px-5 py-4 flex items-center justify-between max-w-lg mx-auto lg:max-w-none">
-              <div className="flex items-center gap-3.5">
-                {/* MOBILE: Foto da Mykaele que abre drawer */}
-                <button onClick={toggle} className="lg:hidden relative group">
-                  <img
-                    src="/media/profissionais/mykaele-principal.png"
-                    alt="Mykaele"
-                    className="w-10 h-10 rounded-full object-cover shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/15 group-hover:ring-[#b76e79]/30 transition-all"
-                    style={{ objectPosition: 'center 15%' }}
-                  />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#b76e79] border-2 border-[#0e0b10] flex items-center justify-center">
-                    <LeafLogo className="w-1.5 h-2 text-white" />
+        <header className="sticky top-0 z-30 backdrop-blur-2xl border-b border-white/[0.04]" style={{ background: 'linear-gradient(180deg, rgba(14,11,16,0.97) 0%, rgba(14,11,16,0.85) 100%)' }}>
+          <div className="px-5 py-4 flex items-center justify-between max-w-lg mx-auto lg:max-w-none">
+            <div className="flex items-center gap-3.5">
+              {/* MOBILE: Foto da Mykaele que abre drawer */}
+              <button onClick={toggle} className="lg:hidden relative group">
+                <img
+                  src="/media/profissionais/mykaele-principal.png"
+                  alt="Mykaele"
+                  className="w-10 h-10 rounded-full object-cover shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/15 group-hover:ring-[#b76e79]/30 transition-all"
+                  style={{ objectPosition: 'center 15%' }}
+                />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#b76e79] border-2 border-[#0e0b10] flex items-center justify-center">
+                  <LeafLogo className="w-1.5 h-2 text-white" />
+                </div>
+              </button>
+
+              {/* DESKTOP: Avatar do paciente */}
+              <div className="hidden lg:block relative">
+                {user.avatar ? (
+                  <img src={user.avatar} alt="" className="w-10 h-10 rounded-full object-cover shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c28a93] to-[#9e6670] flex items-center justify-center text-white text-sm font-light shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10">
+                    {user.name?.charAt(0)}
                   </div>
-                </button>
-
-                {/* DESKTOP: Avatar do paciente */}
-                <div className="hidden lg:block relative">
-                  {user.avatar ? (
-                    <img src={user.avatar} alt="" className="w-10 h-10 rounded-full object-cover shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c28a93] to-[#9e6670] flex items-center justify-center text-white text-sm font-light shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10">
-                      {user.name?.charAt(0)}
-                    </div>
-                  )}
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0e0b10]" />
-                </div>
-
-                <div>
-                  <div className="text-white/90 font-medium text-[15px] tracking-tight">{user.name?.split(' ')[0]}</div>
-                  <div className="text-[#c28a93]/50 text-[8px] font-semibold tracking-[0.25em] uppercase">Arquitetura Corporal</div>
-                </div>
+                )}
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0e0b10]" />
               </div>
-              <div className="flex items-center gap-2.5">
-                <LeafLogo className="w-3 h-4.5 text-[#b76e79]/25" />
+
+              <div>
+                <div className="text-white/90 font-medium text-[15px] tracking-tight">{user.name?.split(' ')[0]}</div>
+                <div className="text-[#c28a93]/50 text-[8px] font-semibold tracking-[0.25em] uppercase">Arquitetura Corporal</div>
               </div>
             </div>
-          </header>
+            <div className="flex items-center gap-2.5">
+              <LeafLogo className="w-3 h-4.5 text-[#b76e79]/25" />
+            </div>
+          </div>
+        </header>
 
-          {/* ─── Content ─── */}
-          <main className="px-5 py-6 max-w-lg mx-auto lg:max-w-2xl relative z-10">
-            <PageTransition>{children}</PageTransition>
-          </main>
+        {/* ─── Content ─── */}
+        <main className="px-5 py-6 max-w-lg mx-auto lg:max-w-2xl relative z-10">
+          <PageTransition>{children}</PageTransition>
+        </main>
 
         {/* ─── Bottom Nav (mobile) ─── */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="flex justify-around items-center px-1 py-2.5 max-w-lg mx-auto">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href
@@ -791,7 +791,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
         </nav>
 
         {/* ─── Desktop Nav (bottom bar) ─── */}
-        <nav className="hidden lg:block fixed bottom-0 left-[320px] xl:left-[380px] right-0 z-50 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <nav className="hidden lg:block fixed bottom-0 left-[320px] xl:left-[380px] right-0 z-40 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="flex justify-center items-center gap-1 px-4 py-2.5">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href
