@@ -716,60 +716,62 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
       </aside>
 
       {/* ═══ Conteúdo principal ═══ */}
-      <div className="flex-1 lg:ml-[320px] xl:ml-[380px] relative pb-20 lg:pb-8">
+      <div className="flex-1 lg:ml-[320px] xl:ml-[380px] relative pb-20 lg:pb-8 flex flex-col overflow-hidden">
 
-        {/* Global Background */}
-        <div className="fixed inset-0 pointer-events-none z-0">
-          <LeafLogo className="absolute top-12 right-6 w-[120px] h-[120px] text-[#b76e79]/[0.018] rotate-12" />
-          <LeafLogo className="absolute bottom-36 left-4 w-[90px] h-[90px] text-[#b76e79]/[0.014] -rotate-30" />
-          <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-[#b76e79]/[0.012] rounded-full blur-[140px]" />
-          <div className="absolute bottom-1/4 left-1/3 w-[250px] h-[250px] bg-[#d4a0a7]/[0.008] rounded-full blur-[120px]" />
-        </div>
-
-        {/* ─── Header ─── */}
-        <header className="sticky top-0 z-30 backdrop-blur-2xl border-b border-white/[0.04]" style={{ background: 'linear-gradient(180deg, rgba(14,11,16,0.97) 0%, rgba(14,11,16,0.85) 100%)' }}>
-          <div className="px-5 py-4 flex items-center justify-between max-w-lg mx-auto lg:max-w-none">
-            <div className="flex items-center gap-3.5">
-              {/* MOBILE: Foto da Mykaele que abre drawer */}
-              <button onClick={toggle} className="lg:hidden relative group">
-                <img
-                  src="/media/profissionais/mykaele-principal.png"
-                  alt="Mykaele"
-                  className="w-10 h-10 rounded-full object-cover shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/15 group-hover:ring-[#b76e79]/30 transition-all"
-                  style={{ objectPosition: 'center 15%' }}
-                />
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#b76e79] border-2 border-[#0e0b10] flex items-center justify-center">
-                  <LeafLogo className="w-1.5 h-2 text-white" />
-                </div>
-              </button>
-
-              {/* DESKTOP: Avatar do paciente */}
-              <div className="hidden lg:block relative">
-                {user.avatar ? (
-                  <img src={user.avatar} alt="" className="w-10 h-10 rounded-full object-cover shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c28a93] to-[#9e6670] flex items-center justify-center text-white text-sm font-light shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10">
-                    {user.name?.charAt(0)}
-                  </div>
-                )}
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0e0b10]" />
-              </div>
-
-              <div>
-                <div className="text-white/90 font-medium text-[15px] tracking-tight">{user.name?.split(' ')[0]}</div>
-                <div className="text-[#c28a93]/50 text-[8px] font-semibold tracking-[0.25em] uppercase">Arquitetura Corporal</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <LeafLogo className="w-3 h-4.5 text-[#b76e79]/25" />
-            </div>
+        <div className="flex-1 overflow-y-auto">
+          {/* Global Background */}
+          <div className="fixed inset-0 pointer-events-none z-0">
+            <LeafLogo className="absolute top-12 right-6 w-[120px] h-[120px] text-[#b76e79]/[0.018] rotate-12" />
+            <LeafLogo className="absolute bottom-36 left-4 w-[90px] h-[90px] text-[#b76e79]/[0.014] -rotate-30" />
+            <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-[#b76e79]/[0.012] rounded-full blur-[140px]" />
+            <div className="absolute bottom-1/4 left-1/3 w-[250px] h-[250px] bg-[#d4a0a7]/[0.008] rounded-full blur-[120px]" />
           </div>
-        </header>
+          
+          {/* ─── Header ─── */}
+          <header className="sticky top-0 z-30 backdrop-blur-2xl border-b border-white/[0.04]" style={{ background: 'linear-gradient(180deg, rgba(14,11,16,0.97) 0%, rgba(14,11,16,0.85) 100%)' }}>
+            <div className="px-5 py-4 flex items-center justify-between max-w-lg mx-auto lg:max-w-none">
+              <div className="flex items-center gap-3.5">
+                {/* MOBILE: Foto da Mykaele que abre drawer */}
+                <button onClick={toggle} className="lg:hidden relative group">
+                  <img
+                    src="/media/profissionais/mykaele-principal.png"
+                    alt="Mykaele"
+                    className="w-10 h-10 rounded-full object-cover shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/15 group-hover:ring-[#b76e79]/30 transition-all"
+                    style={{ objectPosition: 'center 15%' }}
+                  />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#b76e79] border-2 border-[#0e0b10] flex items-center justify-center">
+                    <LeafLogo className="w-1.5 h-2 text-white" />
+                  </div>
+                </button>
 
-        {/* ─── Content ─── */}
-        <main className="px-5 py-6 max-w-lg mx-auto lg:max-w-2xl relative z-10">
-          <PageTransition>{children}</PageTransition>
-        </main>
+                {/* DESKTOP: Avatar do paciente */}
+                <div className="hidden lg:block relative">
+                  {user.avatar ? (
+                    <img src={user.avatar} alt="" className="w-10 h-10 rounded-full object-cover shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c28a93] to-[#9e6670] flex items-center justify-center text-white text-sm font-light shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10">
+                      {user.name?.charAt(0)}
+                    </div>
+                  )}
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0e0b10]" />
+                </div>
+
+                <div>
+                  <div className="text-white/90 font-medium text-[15px] tracking-tight">{user.name?.split(' ')[0]}</div>
+                  <div className="text-[#c28a93]/50 text-[8px] font-semibold tracking-[0.25em] uppercase">Arquitetura Corporal</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <LeafLogo className="w-3 h-4.5 text-[#b76e79]/25" />
+              </div>
+            </div>
+          </header>
+
+          {/* ─── Content ─── */}
+          <main className="px-5 py-6 max-w-lg mx-auto lg:max-w-2xl relative z-10">
+            <PageTransition>{children}</PageTransition>
+          </main>
+        </div>
 
         {/* ─── Bottom Nav (mobile) ─── */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-2xl border-t border-white/[0.05]" style={{ background: 'linear-gradient(0deg, rgba(14,11,16,0.98) 0%, rgba(14,11,16,0.92) 100%)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
