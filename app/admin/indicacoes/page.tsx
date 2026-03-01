@@ -1,8 +1,8 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 
-/* â”€â”€â”€ Types â”€â”€â”€ */
+/* --- Types --- */
 interface ReferralUser { id: string; name: string; email: string; phone?: string }
 interface RankEntry {
   position: number; userId: string; user: ReferralUser | null
@@ -24,7 +24,7 @@ interface Data {
   codes: CodeEntry[]; discountTiers: DiscountTier[]
 }
 
-/* â”€â”€â”€ Helpers â”€â”€â”€ */
+/* --- Helpers --- */
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
@@ -46,7 +46,7 @@ export default function IndicacoesAdminPage() {
       const json: Data = await res.json()
       setData(json)
     } catch (e) {
-      console.error('Erro ao carregar dados de indicaÃ§Ãµes:', e)
+      console.error('Erro ao carregar dados de indicacoes:', e)
     } finally {
       setLoading(false)
     }
@@ -91,24 +91,24 @@ export default function IndicacoesAdminPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal">ðŸ”— IndicaÃ§Ãµes</h1>
-          <p className="text-sm text-warm-gray mt-0.5">Painel em tempo real Â· Atualiza a cada 30s</p>
+          <h1 className="text-2xl font-bold text-charcoal">Indicacoes</h1>
+          <p className="text-sm text-warm-gray mt-0.5">Painel em tempo real - Atualiza a cada 30s</p>
         </div>
         <button onClick={fetchData} disabled={loading} className="text-xs text-rose-gold hover:underline disabled:opacity-50">
-          {loading ? 'Atualizando...' : 'ðŸ”„ Atualizar'}
+          {loading ? 'Atualizando...' : 'Atualizar'}
         </button>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Total IndicaÃ§Ãµes', value: stats.totalReferrals, icon: 'ðŸ“Š', color: 'from-blue-500/10 to-blue-600/10 border-blue-200' },
-          { label: 'Confirmadas', value: stats.confirmedReferrals, icon: 'âœ…', color: 'from-green-500/10 to-green-600/10 border-green-200' },
-          { label: 'Pendentes', value: stats.pendingReferrals, icon: 'â³', color: 'from-yellow-500/10 to-yellow-600/10 border-yellow-200' },
-          { label: 'Com Desconto', value: stats.usersWithDiscount, icon: 'ðŸ’°', color: 'from-purple-500/10 to-purple-600/10 border-purple-200' },
+          { label: 'Total Indicacoes', value: stats.totalReferrals, color: 'from-blue-500/10 to-blue-600/10 border-blue-200' },
+          { label: 'Confirmadas', value: stats.confirmedReferrals, color: 'from-green-500/10 to-green-600/10 border-green-200' },
+          { label: 'Pendentes', value: stats.pendingReferrals, color: 'from-yellow-500/10 to-yellow-600/10 border-yellow-200' },
+          { label: 'Com Desconto', value: stats.usersWithDiscount, color: 'from-purple-500/10 to-purple-600/10 border-purple-200' },
         ].map(s => (
           <div key={s.label} className={`bg-linear-to-br ${s.color} rounded-xl p-4 border`}>
-            <p className="text-[10px] text-warm-gray uppercase tracking-wider">{s.icon} {s.label}</p>
+            <p className="text-[10px] text-warm-gray uppercase tracking-wider">{s.label}</p>
             <p className="text-2xl font-black text-charcoal mt-1">{s.value}</p>
           </div>
         ))}
@@ -116,14 +116,14 @@ export default function IndicacoesAdminPage() {
 
       {/* Financial Impact */}
       <div className="bg-linear-to-r from-rose-gold/5 to-rose-gold/15 rounded-2xl p-5 border border-rose-gold/20">
-        <h2 className="text-sm font-bold text-charcoal mb-3">ðŸ’Ž Impacto Financeiro dos Descontos</h2>
+        <h2 className="text-sm font-bold text-charcoal mb-3">Impacto Financeiro dos Descontos</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
-            <p className="text-[10px] text-warm-gray uppercase">CÃ³digos Criados</p>
+            <p className="text-[10px] text-warm-gray uppercase">Codigos Criados</p>
             <p className="text-xl font-black text-charcoal">{stats.totalCodes}</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-warm-gray uppercase">Desconto MÃ©dio</p>
+            <p className="text-[10px] text-warm-gray uppercase">Desconto Medio</p>
             <p className="text-xl font-black text-charcoal">{stats.avgDiscount}%</p>
           </div>
           <div className="text-center">
@@ -131,18 +131,18 @@ export default function IndicacoesAdminPage() {
             <p className="text-xl font-black text-rose-gold">{stats.maxDiscountGiven}%</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-warm-gray uppercase">Teto MÃ¡ximo</p>
+            <p className="text-[10px] text-warm-gray uppercase">Teto Maximo</p>
             <p className="text-xl font-black text-green-700">{stats.maxDiscountAllowed}%</p>
           </div>
         </div>
 
         {/* Discount Tiers Reference */}
         <div className="mt-4 pt-3 border-t border-rose-gold/20">
-          <p className="text-[10px] text-warm-gray font-medium mb-2">ðŸ“‹ Tabela de Tiers</p>
+          <p className="text-[10px] text-warm-gray font-medium mb-2">Tabela de Tiers</p>
           <div className="flex flex-wrap gap-2">
             {discountTiers.map(tier => (
               <span key={tier.label} className="text-[10px] bg-white/80 rounded-full px-3 py-1 border border-cream-dark/30">
-                <strong>{tier.label}</strong>: {tier.min}-{tier.max > 100 ? 'âˆž' : tier.max} ind. â†’ <strong>{tier.discount}%</strong>
+                <strong>{tier.label}</strong>: {tier.min}-{tier.max > 100 ? 'mais' : tier.max} ind. = <strong>{tier.discount}%</strong>
               </span>
             ))}
           </div>
@@ -152,10 +152,10 @@ export default function IndicacoesAdminPage() {
       {/* Tabs */}
       <div className="flex gap-1 bg-cream rounded-xl p-1">
         {[
-          { key: 'overview' as const, label: 'VisÃ£o Geral', icon: 'ðŸ“Š' },
-          { key: 'ranking' as const, label: 'Ranking', icon: 'ðŸ†' },
-          { key: 'referrals' as const, label: 'IndicaÃ§Ãµes', icon: 'ðŸ¤' },
-          { key: 'codes' as const, label: 'CÃ³digos', icon: 'ðŸ”—' },
+          { key: 'overview' as const, label: 'Visao Geral' },
+          { key: 'ranking' as const, label: 'Ranking' },
+          { key: 'referrals' as const, label: 'Indicacoes' },
+          { key: 'codes' as const, label: 'Codigos' },
         ].map(t => (
           <button
             key={t.key}
@@ -164,7 +164,7 @@ export default function IndicacoesAdminPage() {
               tab === t.key ? 'bg-white text-charcoal shadow-sm' : 'text-warm-gray hover:text-charcoal'
             }`}
           >
-            {t.icon} {t.label}
+            {t.label}
           </button>
         ))}
       </div>
@@ -175,19 +175,19 @@ export default function IndicacoesAdminPage() {
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="ðŸ” Buscar por nome ou cÃ³digo..."
+          placeholder="Buscar por nome ou codigo..."
           className="w-full px-4 py-2.5 rounded-xl border border-cream-dark text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-gold/30"
         />
       )}
 
-      {/* â•â•â• TAB: VisÃ£o Geral â•â•â• */}
+      {/* TAB: Visao Geral */}
       {tab === 'overview' && (
         <div className="space-y-4">
           {/* Top 5 Indicadores */}
           <div className="bg-white rounded-xl p-5 shadow-sm border border-cream-dark/30">
-            <h3 className="text-sm font-bold text-charcoal mb-3">ðŸ† Top 5 Indicadores</h3>
+            <h3 className="text-sm font-bold text-charcoal mb-3">Top 5 Indicadores</h3>
             {ranking.length === 0 ? (
-              <p className="text-xs text-warm-gray text-center py-4">Nenhuma indicaÃ§Ã£o confirmada ainda</p>
+              <p className="text-xs text-warm-gray text-center py-4">Nenhuma indicacao confirmada ainda</p>
             ) : (
               <div className="space-y-2">
                 {ranking.slice(0, 5).map(entry => (
@@ -195,11 +195,11 @@ export default function IndicacoesAdminPage() {
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                       entry.position <= 3 ? 'bg-linear-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
                     }`}>
-                      {entry.position <= 3 ? ['', 'ðŸ¥‡', 'ðŸ¥ˆ', 'ðŸ¥‰'][entry.position] : entry.position}
+                      {entry.position}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-charcoal truncate">{entry.user?.name || 'Desconhecido'}</p>
-                      <p className="text-[10px] text-warm-gray">CÃ³digo: {entry.code}</p>
+                      <p className="text-[10px] text-warm-gray">Codigo: {entry.code}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-bold text-charcoal">{entry.confirmedReferrals} ind.</p>
@@ -209,7 +209,7 @@ export default function IndicacoesAdminPage() {
                         entry.discount >= 5 ? 'bg-teal-100 text-teal-700' :
                         entry.discount >= 3 ? 'bg-blue-100 text-blue-700' :
                         'bg-gray-100 text-gray-700'
-                      }`}>{entry.discount}% Â· {entry.tierLabel}</span>
+                      }`}>{entry.discount}% - {entry.tierLabel}</span>
                     </div>
                   </div>
                 ))}
@@ -219,9 +219,9 @@ export default function IndicacoesAdminPage() {
 
           {/* Recent referrals */}
           <div className="bg-white rounded-xl p-5 shadow-sm border border-cream-dark/30">
-            <h3 className="text-sm font-bold text-charcoal mb-3">ðŸ• IndicaÃ§Ãµes Recentes</h3>
+            <h3 className="text-sm font-bold text-charcoal mb-3">Indicacoes Recentes</h3>
             {referrals.length === 0 ? (
-              <p className="text-xs text-warm-gray text-center py-4">Nenhuma indicaÃ§Ã£o registrada</p>
+              <p className="text-xs text-warm-gray text-center py-4">Nenhuma indicacao registrada</p>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {referrals.slice(0, 10).map(ref => (
@@ -237,7 +237,7 @@ export default function IndicacoesAdminPage() {
                       ref.status === 'CONFIRMED' ? 'bg-blue-50 text-blue-700' :
                       'bg-yellow-50 text-yellow-700'
                     }`}>
-                      {ref.status === 'REWARDED' ? 'âœ… Recompensado' : ref.status === 'CONFIRMED' ? 'âœ“ Confirmado' : 'â³ Pendente'}
+                      {ref.status === 'REWARDED' ? 'Recompensado' : ref.status === 'CONFIRMED' ? 'Confirmado' : 'Pendente'}
                     </span>
                   </div>
                 ))}
@@ -247,10 +247,10 @@ export default function IndicacoesAdminPage() {
         </div>
       )}
 
-      {/* â•â•â• TAB: Ranking â•â•â• */}
+      {/* TAB: Ranking */}
       {tab === 'ranking' && (
         <div className="bg-white rounded-xl p-5 shadow-sm border border-cream-dark/30">
-          <h3 className="text-sm font-bold text-charcoal mb-3">ðŸ† Ranking Completo de Indicadores ({filteredRanking.length})</h3>
+          <h3 className="text-sm font-bold text-charcoal mb-3">Ranking Completo de Indicadores ({filteredRanking.length})</h3>
           {filteredRanking.length === 0 ? (
             <p className="text-xs text-warm-gray text-center py-6">Nenhum indicador encontrado</p>
           ) : (
@@ -260,8 +260,8 @@ export default function IndicacoesAdminPage() {
                   <tr className="border-b border-cream text-warm-gray">
                     <th className="py-2 px-2 font-medium">#</th>
                     <th className="py-2 px-2 font-medium">Nome</th>
-                    <th className="py-2 px-2 font-medium">CÃ³digo</th>
-                    <th className="py-2 px-2 font-medium text-center">IndicaÃ§Ãµes</th>
+                    <th className="py-2 px-2 font-medium">Codigo</th>
+                    <th className="py-2 px-2 font-medium text-center">Indicacoes</th>
                     <th className="py-2 px-2 font-medium text-center">Desconto</th>
                     <th className="py-2 px-2 font-medium text-center">Tier</th>
                   </tr>
@@ -273,7 +273,7 @@ export default function IndicacoesAdminPage() {
                         <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold ${
                           entry.position <= 3 ? 'bg-linear-to-br from-yellow-400 to-amber-600 text-white' : 'bg-cream text-warm-gray'
                         }`}>
-                          {entry.position <= 3 ? ['', 'ðŸ¥‡', 'ðŸ¥ˆ', 'ðŸ¥‰'][entry.position] : entry.position}
+                          {entry.position}
                         </span>
                       </td>
                       <td className="py-2.5 px-2">
@@ -299,12 +299,12 @@ export default function IndicacoesAdminPage() {
         </div>
       )}
 
-      {/* â•â•â• TAB: IndicaÃ§Ãµes â•â•â• */}
+      {/* TAB: Indicacoes */}
       {tab === 'referrals' && (
         <div className="bg-white rounded-xl p-5 shadow-sm border border-cream-dark/30">
-          <h3 className="text-sm font-bold text-charcoal mb-3">ðŸ¤ Todas as IndicaÃ§Ãµes ({filteredReferrals.length})</h3>
+          <h3 className="text-sm font-bold text-charcoal mb-3">Todas as Indicacoes ({filteredReferrals.length})</h3>
           {filteredReferrals.length === 0 ? (
-            <p className="text-xs text-warm-gray text-center py-6">Nenhuma indicaÃ§Ã£o encontrada</p>
+            <p className="text-xs text-warm-gray text-center py-6">Nenhuma indicacao encontrada</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -333,7 +333,7 @@ export default function IndicacoesAdminPage() {
                           ref.status === 'CONFIRMED' ? 'bg-blue-50 text-blue-700' :
                           'bg-yellow-50 text-yellow-700'
                         }`}>
-                          {ref.status === 'REWARDED' ? 'âœ… Recompensado' : ref.status === 'CONFIRMED' ? 'âœ“ Confirmado' : 'â³ Pendente'}
+                          {ref.status === 'REWARDED' ? 'Recompensado' : ref.status === 'CONFIRMED' ? 'Confirmado' : 'Pendente'}
                         </span>
                       </td>
                       <td className="py-2.5 px-2 text-right text-warm-gray">{fmtDate(ref.createdAt)}</td>
@@ -346,18 +346,18 @@ export default function IndicacoesAdminPage() {
         </div>
       )}
 
-      {/* â•â•â• TAB: CÃ³digos â•â•â• */}
+      {/* TAB: Codigos */}
       {tab === 'codes' && (
         <div className="bg-white rounded-xl p-5 shadow-sm border border-cream-dark/30">
-          <h3 className="text-sm font-bold text-charcoal mb-3">ðŸ”— Todos os CÃ³digos ({filteredCodes.length})</h3>
+          <h3 className="text-sm font-bold text-charcoal mb-3">Todos os Codigos ({filteredCodes.length})</h3>
           {filteredCodes.length === 0 ? (
-            <p className="text-xs text-warm-gray text-center py-6">Nenhum cÃ³digo encontrado</p>
+            <p className="text-xs text-warm-gray text-center py-6">Nenhum codigo encontrado</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-cream text-warm-gray">
-                    <th className="py-2 px-2 font-medium">CÃ³digo</th>
+                    <th className="py-2 px-2 font-medium">Codigo</th>
                     <th className="py-2 px-2 font-medium">Dono</th>
                     <th className="py-2 px-2 font-medium text-center">Usos</th>
                     <th className="py-2 px-2 font-medium text-right">Criado em</th>
