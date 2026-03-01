@@ -232,21 +232,32 @@ export function ServicesSection() {
               <div className="p-10">
                 <span className="text-xs font-medium tracking-[0.25em] uppercase text-[#8a8580] block mb-6">Formato I</span>
                 <h4 className="text-lg font-light text-[#2d2d2d] mb-4">Atendimento em Clínica</h4>
-                <p className="text-sm text-[#6a6560] font-light leading-relaxed">
+                <p className="text-sm text-[#6a6560] font-light leading-relaxed mb-5">
                   Instalações de alto padrão projetadas para o conforto
                   e privacidade absoluta durante cada protocolo.
                 </p>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#2d2d2d] rounded-full">
+                  <span className="w-1 h-1 rounded-full bg-[#b76e79] animate-pulse" />
+                  <span className="text-[8px] font-medium tracking-[0.2em] uppercase text-white/60">Agenda limitada</span>
+                </span>
               </div>
             </div>
             <div className="group relative overflow-hidden border border-[#e8dfd6]/60 hover:border-[#b76e79]/30 transition-all duration-700 hover:shadow-lg hover:shadow-[#b76e79]/5">
               <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#b76e79]/40 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-700" />
               <div className="p-10">
-                <span className="text-xs font-medium tracking-[0.25em] uppercase text-[#8a8580] block mb-6">Formato II</span>
+                <div className="flex items-center justify-between mb-6">
+                  <span className="text-xs font-medium tracking-[0.25em] uppercase text-[#8a8580]">Formato II</span>
+                  <span className="text-[8px] font-medium tracking-[0.15em] uppercase text-[#b76e79] border border-[#b76e79]/20 px-2 py-0.5 rounded-sm">Exclusivo</span>
+                </div>
                 <h4 className="text-lg font-light text-[#2d2d2d] mb-4">Serviço Home Spa</h4>
-                <p className="text-sm text-[#6a6560] font-light leading-relaxed">
+                <p className="text-sm text-[#6a6560] font-light leading-relaxed mb-5">
                   A infraestrutura clínica transposta para a privacidade
                   e o conforto da sua residência em Fortaleza.
                 </p>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#2d2d2d] rounded-full">
+                  <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[8px] font-medium tracking-[0.2em] uppercase text-white/60">Vagas sob consulta</span>
+                </span>
               </div>
             </div>
           </div>

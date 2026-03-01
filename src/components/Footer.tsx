@@ -82,7 +82,7 @@ export function Footer() {
         </div>
 
         {/* ═══ Marquee premium copyright ═══ */}
-        <div className="reveal-fade pt-5 border-t border-white/[0.08]">
+        <div className="reveal-fade pt-5 border-t border-white/[0.08] overflow-hidden">
           {/* Marquee band */}
           <div className="overflow-hidden py-4 -mx-6 md:-mx-10">
             <div className="marquee-track">

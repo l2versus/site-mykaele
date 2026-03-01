@@ -183,6 +183,16 @@ export default function AgendamentoSection() {
           <p className="mt-6 text-[#8a8580] text-lg font-light max-w-lg mx-auto">
             Escolha o procedimento, data e horário. Disponibilidade atualizada em tempo real.
           </p>
+          {/* Scarcity badge — Apple desire */}
+          <div className="flex justify-center mt-5">
+            <span className="inline-flex items-center gap-2.5 px-5 py-2 bg-[#1a1a1a] rounded-full">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#b76e79] opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#b76e79]" />
+              </span>
+              <span className="text-[10px] font-medium tracking-[0.15em] uppercase text-white/70">Agenda limitada · Vagas restritas esta semana</span>
+            </span>
+          </div>
         </div>
 
         {/* Stepper */}

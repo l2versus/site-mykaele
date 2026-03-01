@@ -150,6 +150,18 @@ export default function FidelidadePage() {
   const [copiedLink, setCopiedLink] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [showConfetti, setShowConfetti] = useState(false)
+  const [calcReferrals, setCalcReferrals] = useState(0)
+  const [calcSessionValue, setCalcSessionValue] = useState(250)
+
+  // Discount calculator — maps referral count → discount %
+  const getCalcDiscount = (refs: number) => {
+    if (refs >= 20) return { discount: 15, label: 'VIP Embaixadora' }
+    if (refs >= 10) return { discount: 12, label: 'Embaixadora' }
+    if (refs >= 6) return { discount: 8, label: 'Influenciadora' }
+    if (refs >= 3) return { discount: 5, label: 'Conectada' }
+    if (refs >= 1) return { discount: 3, label: 'Iniciante' }
+    return { discount: 0, label: '—' }
+  }
 
   const loadOverview = useCallback(async () => {
     try {
@@ -365,7 +377,13 @@ export default function FidelidadePage() {
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-white/70 text-xs font-medium tracking-wider uppercase">Programa de Fidelidade</p>
+              <div className="flex items-center gap-2">
+                <p className="text-white/70 text-xs font-medium tracking-wider uppercase">Programa de Fidelidade</p>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-white/15 rounded-full">
+                  <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[8px] font-medium tracking-wider uppercase text-white/70">Verificado</span>
+                </span>
+              </div>
               <h1 className="text-2xl font-bold mt-1">{user?.name?.split(' ')[0] || 'Cliente'}</h1>
             </div>
             <div className="text-4xl">{tierInfo.icon}</div>
@@ -465,26 +483,140 @@ export default function FidelidadePage() {
             </ul>
           </div>
 
-          {/* How to earn points */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-cream-dark/30">
-            <h3 className="text-sm font-bold text-charcoal mb-3">💰 Como ganhar pontos</h3>
-            <div className="space-y-2">
+          {/* ═══ Como Acumular Pontos — Apple minimal ═══ */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-cream-dark/20">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-full bg-rose-gold/10 flex items-center justify-center shrink-0">
+                <svg className="w-3.5 h-3.5 text-rose-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-charcoal tracking-tight">Como acumular pontos</h3>
+                <p className="text-[10px] text-warm-gray">Troque por recompensas exclusivas</p>
+              </div>
+            </div>
+            <div className="space-y-0.5">
               {[
-                { action: 'Indique uma amiga', points: '+200 pts', icon: '🤝' },
-                { action: 'Amiga indicada se cadastra', points: '+100 pts (ela)', icon: '🎁' },
-                { action: 'Complete uma sessão', points: '+50 pts', icon: '💆' },
-                { action: 'Faça uma avaliação', points: '+30 pts', icon: '⭐' },
-                { action: 'Aniversário', points: '+150 pts', icon: '🎂' },
-                { action: 'Suba de tier', points: '+50 pts', icon: '🏆' },
+                { action: 'Indique uma amiga', points: '+200', icon: '🤝' },
+                { action: 'Amiga indicada se cadastra', points: '+100', icon: '🎁' },
+                { action: 'Complete uma sessão', points: '+50', icon: '💆' },
+                { action: 'Faça uma avaliação', points: '+30', icon: '⭐' },
+                { action: 'Aniversário', points: '+150', icon: '🎂' },
+                { action: 'Suba de tier', points: '+50', icon: '🏆' },
               ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between py-1.5 border-b border-cream last:border-0">
-                  <span className="text-xs text-charcoal/80">
-                    <span className="mr-1.5">{item.icon}</span>
+                <div key={i} className="flex items-center justify-between py-2 border-b border-cream-dark/10 last:border-0">
+                  <span className="text-xs text-charcoal/70 flex items-center gap-2">
+                    <span className="text-sm">{item.icon}</span>
                     {item.action}
                   </span>
-                  <span className="text-xs font-bold text-rose-gold">{item.points}</span>
+                  <span className="text-xs font-semibold text-rose-gold tabular-nums">{item.points} pts</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* ═══ Simulador de Desconto por Indicação — Apple style ═══ */}
+          <div className="bg-white rounded-2xl shadow-sm border border-cream-dark/20 overflow-hidden">
+            {/* Header */}
+            <div className="px-5 pt-5 pb-0">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-8 h-8 rounded-full bg-rose-gold/10 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-rose-gold">%</span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-charcoal tracking-tight">Simulador de Desconto</h3>
+                  <p className="text-[10px] text-warm-gray tracking-wide">Privilégio exclusivo por indicações</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Big Number Display */}
+            <div className="text-center py-8 mx-5 mt-3 border-y border-cream-dark/10 bg-linear-to-b from-cream/30 to-transparent rounded-xl">
+              <p className="text-[9px] font-medium tracking-[0.35em] uppercase text-warm-gray/50 mb-3">Seu desconto exclusivo</p>
+              <div className="flex items-baseline justify-center gap-0.5">
+                <span className="text-7xl font-extralight text-charcoal tabular-nums tracking-tighter leading-none">
+                  {getCalcDiscount(calcReferrals).discount}
+                </span>
+                <span className="text-3xl font-extralight text-rose-gold">%</span>
+              </div>
+              <p className="text-[11px] text-rose-gold font-medium mt-2 tracking-wide">{getCalcDiscount(calcReferrals).label}</p>
+              {calcReferrals > 0 && (
+                <p className="text-[11px] text-warm-gray/70 mt-1.5">
+                  Economia de{' '}
+                  <span className="font-semibold text-charcoal">
+                    {fmtCur(calcSessionValue * getCalcDiscount(calcReferrals).discount / 100)}
+                  </span>
+                  {' '}por sessão de {fmtCur(calcSessionValue)}
+                </p>
+              )}
+            </div>
+
+            {/* Slider — Referrals */}
+            <div className="px-5 pt-5">
+              <div className="flex justify-between items-baseline mb-2">
+                <label className="text-[10px] font-medium tracking-[0.15em] uppercase text-warm-gray">Indicações confirmadas</label>
+                <span className="text-sm font-semibold text-charcoal tabular-nums">{calcReferrals}</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={25}
+                value={calcReferrals}
+                onChange={e => setCalcReferrals(Number(e.target.value))}
+                className="w-full h-1 bg-cream-dark/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-rose-gold [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:shadow-rose-gold/25 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
+              />
+              <div className="flex justify-between text-[9px] text-warm-gray/40 mt-1">
+                <span>0</span>
+                <span>25+</span>
+              </div>
+            </div>
+
+            {/* Session Value Input */}
+            <div className="px-5 mt-4">
+              <label className="text-[10px] font-medium tracking-[0.15em] uppercase text-warm-gray block mb-1.5">Valor da sessão</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-warm-gray">R$</span>
+                <input
+                  type="number"
+                  min={50}
+                  max={2000}
+                  step={10}
+                  value={calcSessionValue}
+                  onChange={e => setCalcSessionValue(Math.max(50, Math.min(2000, Number(e.target.value))))}
+                  className="w-full pl-9 pr-3 py-2.5 border border-cream-dark/20 rounded-xl text-sm text-charcoal bg-cream/20 focus:outline-none focus:ring-2 focus:ring-rose-gold/15 focus:border-rose-gold/30 tabular-nums"
+                />
+              </div>
+            </div>
+
+            {/* Tiers Strip — minimalist */}
+            <div className="px-5 pt-5 pb-5 mt-4 border-t border-cream-dark/10">
+              <div className="grid grid-cols-5 gap-0.5">
+                {[
+                  { refs: '1-2', pct: 3 },
+                  { refs: '3-5', pct: 5 },
+                  { refs: '6-9', pct: 8 },
+                  { refs: '10-19', pct: 12 },
+                  { refs: '20+', pct: 15 },
+                ].map((t, i) => {
+                  const isActive = getCalcDiscount(calcReferrals).discount === t.pct
+                  return (
+                    <div key={i} className={`text-center py-2.5 rounded-lg transition-all duration-300 ${isActive ? 'bg-rose-gold/10 scale-105' : ''}`}>
+                      <p className={`text-sm font-semibold transition-colors ${isActive ? 'text-rose-gold' : 'text-charcoal/30'}`}>{t.pct}%</p>
+                      <p className={`text-[8px] mt-0.5 transition-colors ${isActive ? 'text-rose-gold/60' : 'text-warm-gray/40'}`}>{t.refs} ind.</p>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="flex justify-between mt-3">
+                <span className="text-[9px] text-warm-gray/40 flex items-center gap-1">
+                  <span className="w-3 h-[1px] bg-rose-gold/30" />
+                  Piso: 3%
+                </span>
+                <span className="text-[9px] text-warm-gray/40 flex items-center gap-1">
+                  Teto: 15%
+                  <span className="w-3 h-[1px] bg-rose-gold/30" />
+                </span>
+              </div>
+              <p className="text-[9px] text-warm-gray/40 text-center mt-2">Desconto aplicável em todas as sessões avulsas</p>
             </div>
           </div>
 
