@@ -31,23 +31,23 @@ function personalizeMsg(template: string, client: BroadcastClient): string {
 const TEMPLATES = [
   {
     label: '💆 Promoção',
-    msg: 'Olá {primeiro_nome}! 🌸\n\nTenho uma promoção especial para você!\n\nQuer saber mais? Me chama aqui! 💕\n\n— Mykaele Procópio',
+    msg: 'Olá {primeiro_nome}!\n\nTenho uma promoção especial para você!\n\nQuer saber mais? Me chama aqui!\n\n— Mykaele Procópio',
   },
   {
     label: '📅 Agendamento',
-    msg: 'Olá {primeiro_nome}! 💛\n\nFaz um tempinho que não nos vemos! Que tal agendar uma sessão?\n\nEstou com horários disponíveis esta semana. Vamos marcar? 🗓️\n\n— Mykaele Procópio',
+    msg: 'Olá {primeiro_nome}!\n\nFaz um tempinho que não nos vemos! Que tal agendar uma sessão?\n\nEstou com horários disponíveis esta semana. Vamos marcar?\n\n— Mykaele Procópio',
   },
   {
     label: '🎉 Novidade',
-    msg: 'Oi {primeiro_nome}! ✨\n\nTenho novidades incríveis no Home Spa que você vai amar!\n\nVem conferir? Me chama para saber mais! 🌟\n\n— Mykaele Procópio',
+    msg: 'Oi {primeiro_nome}!\n\nTenho novidades incríveis no Home Spa que você vai amar!\n\nVem conferir? Me chama para saber mais!\n\n— Mykaele Procópio',
   },
   {
     label: '🎄 Data especial',
-    msg: 'Olá {primeiro_nome}! 🌺\n\nNessa data especial, quero te desejar tudo de melhor!\n\nE claro, preparei algo especial para você. Vamos conversar? 💝\n\n— Mykaele Procópio',
+    msg: 'Olá {primeiro_nome}!\n\nNessa data especial, quero te desejar tudo de melhor!\n\nE claro, preparei algo especial para você. Vamos conversar?\n\n— Mykaele Procópio',
   },
   {
     label: '⭐ Fidelidade',
-    msg: 'Oi {primeiro_nome}! 🌸\n\nVocê é uma cliente muito especial e quero te agradecer por confiar no meu trabalho!\n\nPreparei um mimo exclusivo para você. Quer saber? 💕\n\n— Mykaele Procópio',
+    msg: 'Oi {primeiro_nome}!\n\nVocê é uma cliente muito especial e quero te agradecer por confiar no meu trabalho!\n\nPreparei um mimo exclusivo para você. Quer saber?\n\n— Mykaele Procópio',
   },
 ]
 
