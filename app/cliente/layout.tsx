@@ -716,9 +716,9 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
       </aside>
 
       {/* ═══ Conteúdo principal ═══ */}
-      <div className="flex-1 lg:ml-[320px] xl:ml-[380px] relative pb-20 lg:pb-8 flex flex-col overflow-hidden">
+      <div className="flex-1 lg:ml-[320px] xl:ml-[380px] relative pb-20 lg:pb-8 flex flex-col h-screen overflow-hidden">
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto h-full">
           {/* Global Background */}
           <div className="fixed inset-0 pointer-events-none z-0">
             <LeafLogo className="absolute top-12 right-6 w-[120px] h-[120px] text-[#b76e79]/[0.018] rotate-12" />
