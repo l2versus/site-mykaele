@@ -242,6 +242,7 @@ export default function AdminDashboard() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [followUps, setFollowUps] = useState<FollowUp[]>([])
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([])
+  const [birthdays, setBirthdays] = useState<{ name: string; phone?: string; date: string; daysUntil: number }[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -265,6 +266,29 @@ export default function AdminDashboard() {
           if (invRes.ok) {
             const invData = await invRes.json()
             setLowStockItems(invData.items || [])
+          }
+        } catch {}
+        // Buscar aniversariantes proximos
+        try {
+          const bdRes = await fetchWithAuth('/api/admin/clients')
+          if (bdRes.ok) {
+            const bdData = await bdRes.json()
+            const clients = Array.isArray(bdData) ? bdData : bdData.clients || []
+            const today = new Date()
+            const bdays: { name: string; phone?: string; date: string; daysUntil: number }[] = []
+            for (const c of clients) {
+              const birthDate = c.birthDate || (c.anamnese && c.anamnese.birthDate)
+              if (!birthDate) continue
+              const bd = new Date(birthDate)
+              const thisYear = new Date(today.getFullYear(), bd.getMonth(), bd.getDate())
+              let diff = Math.floor((thisYear.getTime() - today.getTime()) / 86400000)
+              if (diff < -1) diff += 365 // already passed this year
+              if (diff >= -1 && diff <= 14) {
+                bdays.push({ name: c.name, phone: c.phone, date: birthDate, daysUntil: diff })
+              }
+            }
+            bdays.sort((a, b) => a.daysUntil - b.daysUntil)
+            setBirthdays(bdays)
           }
         } catch {}
       } catch {}
@@ -664,6 +688,38 @@ export default function AdminDashboard() {
                 ))}
               </div>
               <Link href="/admin/estoque" className="block text-center text-[#b76e79] text-[10px] mt-3 hover:underline">Ver todo o estoque</Link>
+            </div>
+          )}
+
+          {/* Birthday Alerts */}
+          {birthdays.length > 0 && (
+            <div className="bg-gradient-to-br from-pink-500/[0.08] to-white/[0.02] rounded-2xl border border-pink-500/10 p-6 shadow-none transition-all">
+              <h3 className="text-xs font-semibold text-pink-400 flex items-center gap-2 mb-3">
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span>Aniversariantes</span>
+                <span className="bg-pink-500/15 text-pink-400 text-[9px] px-1.5 py-0.5 rounded-full font-bold">{birthdays.length}</span>
+              </h3>
+              <div className="space-y-2">
+                {birthdays.slice(0, 5).map((b, i) => (
+                  <div key={i} className="flex items-center justify-between bg-pink-500/5 border border-pink-500/10 rounded-lg px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-pink-400 text-[11px] font-medium truncate">
+                        {b.daysUntil === 0 ? '🎂 ' : b.daysUntil === -1 ? '🎂 ' : ''}{b.name}
+                      </div>
+                      <div className="text-pink-500/50 text-[10px]">
+                        {b.daysUntil === 0 ? 'Hoje!' : b.daysUntil === -1 ? 'Ontem' : b.daysUntil === 1 ? 'Amanha' : `Em ${b.daysUntil} dias`}
+                      </div>
+                    </div>
+                    {b.phone && (
+                      <a href={`https://wa.me/55${b.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Feliz aniversario, ${b.name.split(' ')[0]}! 🎉🌟 A Mykaele Procopio Home Spa deseja um dia maravilhoso! Temos uma surpresa especial esperando por voce 💝`)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-medium hover:bg-emerald-500/20 transition-all flex-shrink-0">
+                        {I.phone} Parabens
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

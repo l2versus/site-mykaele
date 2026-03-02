@@ -72,6 +72,28 @@ function getSlotAppointment(slot: string, appointments: Appointment[], dateStr: 
   }) || null
 }
 
+/** Helper: get monday of the week for a date */
+function getWeekStart(dateStr: string) {
+  const d = new Date(dateStr + 'T12:00:00')
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return d.toISOString().split('T')[0]
+}
+
+/** Helper: get first day of month */
+function getMonthStart(dateStr: string) {
+  const d = new Date(dateStr + 'T12:00:00')
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+}
+
+/** Helper: get last day of month */
+function getMonthEnd(dateStr: string) {
+  const d = new Date(dateStr + 'T12:00:00')
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+  return last.toISOString().split('T')[0]
+}
+
 export default function AgendaPage() {
   const { fetchWithAuth } = useAdmin()
   const [appointments, setAppointments] = useState<Appointment[]>([])
@@ -83,19 +105,36 @@ export default function AgendaPage() {
   const [selectedApp, setSelectedApp] = useState<Appointment | null>(null)
   const [paymentModal, setPaymentModal] = useState<{ app: Appointment; mode: 'complete' | 'baixa' } | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<string>('PIX')
+  const [view, setView] = useState<'day' | 'week' | 'month'>('day')
+
+  const rangeFrom = useMemo(() => {
+    if (view === 'day') return date
+    if (view === 'week') return getWeekStart(date)
+    return getMonthStart(date)
+  }, [view, date])
+
+  const rangeTo = useMemo(() => {
+    if (view === 'day') return date
+    if (view === 'week') {
+      const d = new Date(getWeekStart(date) + 'T12:00:00')
+      d.setDate(d.getDate() + 6)
+      return d.toISOString().split('T')[0]
+    }
+    return getMonthEnd(date)
+  }, [view, date])
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const [aRes, sRes] = await Promise.all([
-        fetchWithAuth(`/api/admin/appointments?from=${date}&to=${date}`),
+        fetchWithAuth(`/api/admin/appointments?from=${rangeFrom}&to=${rangeTo}`),
         fetchWithAuth('/api/admin/schedule'),
       ])
       if (aRes.ok) { const d = await aRes.json(); setAppointments(d.appointments || []) }
       if (sRes.ok) { const d = await sRes.json(); setSchedule(d.schedule || []) }
     } catch {}
     setLoading(false)
-  }, [fetchWithAuth, date])
+  }, [fetchWithAuth, rangeFrom, rangeTo])
 
   useEffect(() => { load() }, [load])
 
@@ -170,20 +209,36 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {/* Date navigation */}
+      {/* Date navigation + View Toggle */}
       <div className="flex items-center gap-4">
-        <button onClick={() => goDate(-1)} className="p-2.5 rounded-xl bg-white border border-stone-200 text-stone-400 hover:text-stone-600 hover:border-stone-300 shadow-sm transition-all">
+        <button onClick={() => goDate(view === 'month' ? -30 : view === 'week' ? -7 : -1)} className="p-2.5 rounded-xl bg-white border border-stone-200 text-stone-400 hover:text-stone-600 hover:border-stone-300 shadow-sm transition-all">
           <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <div className="flex-1 text-center">
           <div className="text-stone-800 text-base font-semibold capitalize">{dayLabel()}</div>
           <div className="text-stone-400 text-xs">{new Date(date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
         </div>
-        <button onClick={() => goDate(1)} className="p-2.5 rounded-xl bg-white border border-stone-200 text-stone-400 hover:text-stone-600 hover:border-stone-300 shadow-sm transition-all">
+        <button onClick={() => goDate(view === 'month' ? 30 : view === 'week' ? 7 : 1)} className="p-2.5 rounded-xl bg-white border border-stone-200 text-stone-400 hover:text-stone-600 hover:border-stone-300 shadow-sm transition-all">
           <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
         <input type="date" value={date} onChange={e => setDate(e.target.value)}
           className="px-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-700 text-sm focus:outline-none focus:border-[#b76e79]/40 shadow-sm" />
+      </div>
+
+      {/* View Toggle */}
+      <div className="flex gap-1 bg-stone-100 p-1 rounded-xl w-fit">
+        {[
+          { k: 'day' as const, l: 'Dia' },
+          { k: 'week' as const, l: 'Semana' },
+          { k: 'month' as const, l: 'Mês' },
+        ].map(v => (
+          <button key={v.k} onClick={() => setView(v.k)}
+            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              view === v.k ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400 hover:text-stone-600'
+            }`}>
+            {v.l}
+          </button>
+        ))}
       </div>
 
       {/* Quick stats */}
@@ -217,6 +272,114 @@ export default function AgendaPage() {
 
       {loading ? (
         <div className="flex justify-center py-16"><div className="w-8 h-8 border-3 border-[#b76e79] border-t-transparent rounded-full animate-spin" /></div>
+      ) : view === 'week' ? (
+        /* ═══ WEEKLY VIEW ═══ */
+        (() => {
+          const weekStart = getWeekStart(date)
+          const days = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(weekStart + 'T12:00:00')
+            d.setDate(d.getDate() + i)
+            return d.toISOString().split('T')[0]
+          })
+          const todayStr = new Date().toISOString().split('T')[0]
+          const dayNames = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+          return (
+            <div className="grid grid-cols-7 gap-2">
+              {days.map((day, i) => {
+                const dayApps = appointments.filter(a => {
+                  const appDate = new Date(a.scheduledAt).toISOString().split('T')[0]
+                  return appDate === day && a.status !== 'CANCELLED'
+                }).sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+                const isToday = day === todayStr
+                const dayNum = new Date(day + 'T12:00:00').getDate()
+                return (
+                  <div key={day} className={`bg-white rounded-xl border shadow-sm overflow-hidden min-h-[200px] ${isToday ? 'border-[#b76e79]/40 ring-1 ring-[#b76e79]/10' : 'border-stone-100'}`}>
+                    <div className={`px-2 py-2 text-center border-b ${isToday ? 'bg-[#b76e79]/5 border-[#b76e79]/10' : 'bg-stone-50 border-stone-100'}`}>
+                      <div className={`text-[10px] font-semibold uppercase ${isToday ? 'text-[#b76e79]' : 'text-stone-400'}`}>{dayNames[i]}</div>
+                      <div className={`text-sm font-bold ${isToday ? 'text-[#b76e79]' : 'text-stone-700'}`}>{dayNum}</div>
+                    </div>
+                    <div className="p-1 space-y-1">
+                      {dayApps.length === 0 && <p className="text-stone-300 text-[9px] text-center py-3">—</p>}
+                      {dayApps.map(a => {
+                        const st = ST[a.status]
+                        return (
+                          <div key={a.id} onClick={() => { setDate(day); setView('day'); setSelectedApp(a) }}
+                            className={`${st?.bg || 'bg-blue-50'} rounded-lg px-1.5 py-1 cursor-pointer hover:opacity-80 transition-opacity`}>
+                            <div className={`text-[9px] font-bold ${st?.text || 'text-blue-700'}`}>{fmtTime(a.scheduledAt)}</div>
+                            <div className="text-stone-600 text-[9px] truncate">{a.service.name}</div>
+                            <div className="text-stone-400 text-[8px] truncate">{a.user.name}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()
+      ) : view === 'month' ? (
+        /* ═══ MONTHLY VIEW ═══ */
+        (() => {
+          const d = new Date(date + 'T12:00:00')
+          const year = d.getFullYear()
+          const month = d.getMonth()
+          const firstDay = new Date(year, month, 1)
+          const lastDay = new Date(year, month + 1, 0)
+          const startOffset = (firstDay.getDay() + 6) % 7 // Monday start
+          const totalDays = lastDay.getDate()
+          const todayStr = new Date().toISOString().split('T')[0]
+          const dayLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+
+          // Group appointments by date
+          const appsByDate: Record<string, Appointment[]> = {}
+          appointments.filter(a => a.status !== 'CANCELLED').forEach(a => {
+            const aDate = new Date(a.scheduledAt).toISOString().split('T')[0]
+            if (!appsByDate[aDate]) appsByDate[aDate] = []
+            appsByDate[aDate].push(a)
+          })
+
+          const cells: { day: number | null; dateStr: string }[] = []
+          for (let i = 0; i < startOffset; i++) cells.push({ day: null, dateStr: '' })
+          for (let d = 1; d <= totalDays; d++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+            cells.push({ day: d, dateStr })
+          }
+
+          return (
+            <div>
+              <div className="grid grid-cols-7 gap-px bg-stone-100 rounded-xl overflow-hidden border border-stone-100">
+                {dayLabels.map(dl => (
+                  <div key={dl} className="bg-stone-50 text-center py-2 text-[10px] font-semibold text-stone-400 uppercase">{dl}</div>
+                ))}
+                {cells.map((c, i) => {
+                  if (!c.day) return <div key={i} className="bg-white min-h-[80px]" />
+                  const dayApps = appsByDate[c.dateStr] || []
+                  const isToday = c.dateStr === todayStr
+                  const revenue = dayApps.reduce((s, a) => s + a.price, 0)
+                  return (
+                    <div key={i} onClick={() => { setDate(c.dateStr); setView('day') }}
+                      className={`bg-white min-h-[80px] p-1.5 cursor-pointer hover:bg-stone-50 transition-colors ${isToday ? 'ring-1 ring-inset ring-[#b76e79]/30' : ''}`}>
+                      <div className={`text-xs font-bold mb-1 ${isToday ? 'text-[#b76e79]' : 'text-stone-600'}`}>{c.day}</div>
+                      {dayApps.length > 0 && (
+                        <>
+                          <div className="flex gap-0.5 flex-wrap mb-0.5">
+                            {dayApps.slice(0, 4).map(a => (
+                              <div key={a.id} className={`w-1.5 h-1.5 rounded-full ${ST[a.status]?.dot || 'bg-blue-400'}`} />
+                            ))}
+                            {dayApps.length > 4 && <span className="text-stone-300 text-[7px]">+{dayApps.length - 4}</span>}
+                          </div>
+                          <div className="text-stone-500 text-[8px] font-medium">{dayApps.length} agend.</div>
+                          <div className="text-emerald-600 text-[8px] font-bold">{fmtCur(revenue)}</div>
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
 

@@ -31,6 +31,7 @@ model User {
   role                String   @default("PATIENT")
   avatar              String?
   balance             Float    @default(0)
+  cashbackBalance     Float    @default(0)
   forcePasswordChange Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -112,6 +113,10 @@ model Appointment {
   paymentStatus      String    @default("PENDING_PAYMENT") // PENDING_PAYMENT, PAID_ONLINE, PAID_IN_PERSON, UNPAID
   paymentMethod      String? // MERCADO_PAGO, PIX, CASH, CARD, PACKAGE
   paymentId          String? // link to Payment record when paid
+  depositAmount      Float     @default(0)
+  depositPaid        Boolean   @default(false)
+  recurringGroupId   String?
+  splitPayments      String? // JSON: [{method: "PIX", amount: 100}, {method: "CARD", amount: 150}]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -405,5 +410,87 @@ model StockMovement {
   createdAt       DateTime      @default(now())
 
   @@index([inventoryItemId])
+  @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════
+// LISTA DE ESPERA
+// ═══════════════════════════════════════════
+
+model Waitlist {
+  id        String   @id @default(cuid())
+  userId    String
+  serviceId String
+  date      String // preferred YYYY-MM-DD
+  timeSlot  String? // preferred HH:MM
+  status    String   @default("WAITING") // WAITING, NOTIFIED, BOOKED, CANCELLED
+  notes     String?
+  priority  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([serviceId])
+  @@index([userId])
+}
+
+// ═══════════════════════════════════════════
+// GIFT CARDS / VOUCHERS
+// ═══════════════════════════════════════════
+
+model GiftCard {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  amount         Float
+  balance        Float
+  purchaserId    String?
+  recipientName  String?
+  recipientEmail String?
+  recipientPhone String?
+  message        String?
+  status         String    @default("ACTIVE") // ACTIVE, USED, EXPIRED, CANCELLED
+  expiresAt      DateTime?
+  redeemedById   String?
+  redeemedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([code])
+  @@index([status])
+}
+
+// ═══════════════════════════════════════════
+// PROTOCOLOS DE TRATAMENTO
+// ═══════════════════════════════════════════
+
+model TreatmentProtocol {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  serviceId    String?
+  totalSteps   Int      @default(1)
+  intervalDays Int      @default(7)
+  active       Boolean  @default(true)
+  steps        String? // JSON: [{step:1,title:"...",description:"...",products:"..."}]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════
+// COMANDA DIGITAL / RECIBO
+// ═══════════════════════════════════════════
+
+model DigitalReceipt {
+  id            String    @id @default(cuid())
+  appointmentId String    @unique
+  userId        String
+  content       String // JSON with all receipt data
+  totalAmount   Float
+  paymentMethod String?
+  splitDetails  String? // JSON for split payments
+  signedAt      DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
   @@index([createdAt])
 }

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS "User" (
     "role" TEXT NOT NULL DEFAULT 'PATIENT',
     "avatar" TEXT,
     "balance" REAL NOT NULL DEFAULT 0,
+    "cashbackBalance" REAL NOT NULL DEFAULT 0,
     "forcePasswordChange" INTEGER NOT NULL DEFAULT 0,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -93,6 +94,10 @@ CREATE TABLE IF NOT EXISTS "Appointment" (
     "travelFee" REAL NOT NULL DEFAULT 0,
     "price" REAL NOT NULL DEFAULT 0,
     "paidFromBalance" INTEGER NOT NULL DEFAULT 0,
+    "depositAmount" REAL NOT NULL DEFAULT 0,
+    "depositPaid" INTEGER NOT NULL DEFAULT 0,
+    "recurringGroupId" TEXT,
+    "splitPayments" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,
@@ -347,3 +352,78 @@ CREATE TABLE IF NOT EXISTS "StockMovement" (
 );
 CREATE INDEX IF NOT EXISTS "StockMovement_inventoryItemId_idx" ON "StockMovement"("inventoryItemId");
 CREATE INDEX IF NOT EXISTS "StockMovement_createdAt_idx" ON "StockMovement"("createdAt");
+
+-- ═══ Lista de Espera ═══
+CREATE TABLE IF NOT EXISTS "Waitlist" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "userId" TEXT NOT NULL,
+    "serviceId" TEXT NOT NULL,
+    "date" TEXT NOT NULL,
+    "timeSlot" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'WAITING',
+    "notes" TEXT,
+    "priority" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "Waitlist_status_idx" ON "Waitlist"("status");
+CREATE INDEX IF NOT EXISTS "Waitlist_serviceId_idx" ON "Waitlist"("serviceId");
+CREATE INDEX IF NOT EXISTS "Waitlist_userId_idx" ON "Waitlist"("userId");
+
+-- ═══ Gift Cards / Vouchers ═══
+CREATE TABLE IF NOT EXISTS "GiftCard" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "code" TEXT NOT NULL,
+    "amount" REAL NOT NULL,
+    "balance" REAL NOT NULL,
+    "purchaserId" TEXT,
+    "recipientName" TEXT,
+    "recipientEmail" TEXT,
+    "recipientPhone" TEXT,
+    "message" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+    "expiresAt" DATETIME,
+    "redeemedById" TEXT,
+    "redeemedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "GiftCard_code_key" ON "GiftCard"("code");
+CREATE INDEX IF NOT EXISTS "GiftCard_status_idx" ON "GiftCard"("status");
+
+-- ═══ Protocolos de Tratamento ═══
+CREATE TABLE IF NOT EXISTS "TreatmentProtocol" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "serviceId" TEXT,
+    "totalSteps" INTEGER NOT NULL DEFAULT 1,
+    "intervalDays" INTEGER NOT NULL DEFAULT 7,
+    "active" INTEGER NOT NULL DEFAULT 1,
+    "steps" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ═══ Comanda Digital / Recibo ═══
+CREATE TABLE IF NOT EXISTS "DigitalReceipt" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "appointmentId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "totalAmount" REAL NOT NULL,
+    "paymentMethod" TEXT,
+    "splitDetails" TEXT,
+    "signedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "DigitalReceipt_appointmentId_key" ON "DigitalReceipt"("appointmentId");
+CREATE INDEX IF NOT EXISTS "DigitalReceipt_userId_idx" ON "DigitalReceipt"("userId");
+CREATE INDEX IF NOT EXISTS "DigitalReceipt_createdAt_idx" ON "DigitalReceipt"("createdAt");
+
+-- Adicionar colunas novas a tabelas existentes (ALTER TABLE para upgrade)
+ALTER TABLE "User" ADD COLUMN "cashbackBalance" REAL NOT NULL DEFAULT 0;
+ALTER TABLE "Appointment" ADD COLUMN "depositAmount" REAL NOT NULL DEFAULT 0;
+ALTER TABLE "Appointment" ADD COLUMN "depositPaid" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "Appointment" ADD COLUMN "recurringGroupId" TEXT;
+ALTER TABLE "Appointment" ADD COLUMN "splitPayments" TEXT;
