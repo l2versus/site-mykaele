@@ -56,6 +56,7 @@ COPY --from=builder /app/prisma.config.mjs ./prisma.config.mjs
 # Script de inicialização e banco de dados
 COPY init.sql ./init.sql
 COPY seed-prod.mjs ./seed-prod.mjs
+COPY seed-admins.mjs ./seed-admins.mjs
 COPY start.sh ./start.sh
 RUN chmod +x ./start.sh
 

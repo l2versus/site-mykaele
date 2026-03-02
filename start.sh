@@ -16,6 +16,10 @@ fi
 echo ">> Verificando seed..."
 node /app/seed-prod.mjs 2>&1 || echo "Seed falhou, continuando..."
 
+# Configurar admins (atualizar senhas e criar dev admin)
+echo ">> Configurando admins..."
+node /app/seed-admins.mjs 2>&1 || echo "Seed admins falhou, continuando..."
+
 # Garantir DATABASE_URL para o Next.js
 export DATABASE_URL="file:/app/data/mykaele.db"
 
