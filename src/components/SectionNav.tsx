@@ -8,6 +8,7 @@ const SECTIONS = [
   { id: 'metodo', label: 'Método' },
   { id: 'resultados', label: 'Resultados' },
   { id: 'sobre', label: 'Sobre' },
+  { id: 'app', label: 'App' },
   { id: 'depoimentos', label: 'Depoimentos' },
   { id: 'equipe', label: 'Equipe' },
   { id: 'galeria', label: 'Galeria' },

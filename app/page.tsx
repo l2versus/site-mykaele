@@ -13,6 +13,7 @@ const Testimoniais = dynamic(() => import('@/components/Testimoniais'))
 const EquipeAmbiente = dynamic(() => import('@/components/EquipeAmbiente'))
 const GaleriaVideos = dynamic(() => import('@/components/GaleriaVideos'))
 const AboutMykaele = dynamic(() => import('@/components/AboutMykaele'))
+const AppShowcase = dynamic(() => import('@/components/AppShowcase'))
 const AgendamentoSection = dynamic(() => import('@/components/AgendamentoSection'))
 const TechnologiesSection = dynamic(() => import('@/components/TechnologiesSection').then(m => ({ default: m.TechnologiesSection })))
 
@@ -64,6 +65,7 @@ export default function Home() {
       <ServicesSection />
       <ResultadosReais />
       <AboutMykaele />
+      <AppShowcase />
       <Testimoniais />
       <EquipeAmbiente />
       <GaleriaVideos />

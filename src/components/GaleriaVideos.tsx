@@ -4,6 +4,7 @@
 import { useState, useRef, useEffect } from 'react'
 
 const VIDEOS = [
+  { id: 'v0', titulo: 'Conheça o App Myka Spa', src: '/media/videos/app-showcase-1.mp4', tag: 'App' },
   { id: 'v1', titulo: 'Procedimento em Ação', src: '/media/videos/procedimento-1.mp4', tag: 'Método' },
   { id: 'v2', titulo: 'Resultado Imediato', src: '/media/videos/procedimento-2.mp4', tag: 'Método' },
   { id: 'v3', titulo: 'Massagem Terapêutica', src: '/media/videos/procedimento-3.mp4', tag: 'Método' },
@@ -25,7 +26,7 @@ function VideoThumb({ video, onClick }: { video: typeof VIDEOS[0]; onClick: () =
     <div className="group cursor-pointer" onClick={onClick}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <div className="relative overflow-hidden bg-[#1a1a1a] aspect-[9/14] transition-all duration-700 group-hover:-translate-y-1">
-        <video ref={ref} src={video.src} muted loop playsInline preload="none"
+        <video ref={ref} src={video.src} muted loop playsInline preload="metadata"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
 
@@ -68,7 +69,7 @@ export default function GaleriaVideos() {
           </div>
 
           {/* Grid */}
-          <div className="stagger-scale grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="stagger-scale grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {VIDEOS.map(v => (
               <VideoThumb key={v.id} video={v} onClick={() => setVideoAberto(v.id)} />
             ))}

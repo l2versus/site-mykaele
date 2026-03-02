@@ -98,12 +98,9 @@ function addSecurityHeaders(response: NextResponse) {
 
 export const config = {
   matcher: [
-    /*
-     * Aplica em tudo exceto:
-     * - _next/static (arquivos estáticos)
-     * - _next/image (otimização de imagem)
-     * - favicon.ico (ícone do navegador)
-     */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/api/(.*)',
+    '/admin/(.*)',
+    '/cliente/(.*)',
+    '/ref/(.*)',
   ],
 }

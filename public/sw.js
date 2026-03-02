@@ -1,11 +1,14 @@
-// Myka Home Spa — Service Worker v1
+// Myka Home Spa — Service Worker v3
 // Offline-first caching strategy for premium app experience
 
-const CACHE_NAME = 'myka-spa-v1'
+const CACHE_NAME = 'myka-spa-v3'
 const STATIC_ASSETS = [
     '/',
     '/manifest.json',
     '/offline',
+    '/icon-192x192.png',
+    '/icon-512x512.png',
+    '/favicon.ico',
 ]
 
 // Install: pre-cache shell

@@ -51,6 +51,8 @@ const nextConfig: NextConfig = {
               `connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://api.mercadopago.com https://connect.facebook.net https://wa.me https://cloudflareinsights.com ${SITE_URL}`,
               "frame-src 'self' https://www.google.com https://www.mercadopago.com.br",
               "media-src 'self' blob: data:",
+              "worker-src 'self' blob:",
+              "manifest-src 'self'",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -78,8 +80,24 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Manifest JSON — necessário para PWA install
+        source: '/manifest.json',
+        headers: [
+          { key: 'Content-Type', value: 'application/manifest+json' },
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+        ],
+      },
+      {
+        // Service Worker
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+      {
         // Cache busting for favicon/icons
-        source: '/icon',
+        source: '/icon(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=3600, must-revalidate' },
         ],

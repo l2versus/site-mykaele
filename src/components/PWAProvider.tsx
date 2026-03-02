@@ -12,6 +12,8 @@ export default function PWAProvider() {
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [isStandalone, setIsStandalone] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
+  const [closing, setClosing] = useState(false)
 
   useEffect(() => {
     // Register service worker
@@ -28,19 +30,30 @@ export default function PWAProvider() {
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
     setIsIOS(ios)
 
-    // Listen for install prompt (Android/Chrome)
+    // Desktop detection
+    const desktop = window.innerWidth >= 1024 && !(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent))
+    setIsDesktop(desktop)
+
+    // Listen for install prompt (Android/Chrome/Edge)
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
-      // Show banner only after 30s of first visit, or after 2nd visit
-      const visits = parseInt(localStorage.getItem('myka_visits') || '0', 10) + 1
-      localStorage.setItem('myka_visits', String(visits))
+      // Show banner on first visit after 4s
       const dismissed = localStorage.getItem('myka_install_dismissed')
-      if (!dismissed && visits >= 2) {
-        setTimeout(() => setShowInstallBanner(true), 3000)
+      if (!dismissed) {
+        setTimeout(() => setShowInstallBanner(true), 4000)
       }
     }
     window.addEventListener('beforeinstallprompt', handler)
+
+    // Also show iOS banner on first visit
+    if (ios && !standalone) {
+      const dismissed = localStorage.getItem('myka_install_dismissed')
+      if (!dismissed) {
+        setTimeout(() => setShowInstallBanner(true), 4000)
+      }
+    }
+
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
@@ -56,63 +69,159 @@ export default function PWAProvider() {
   }, [deferredPrompt])
 
   const handleDismiss = useCallback(() => {
-    setShowInstallBanner(false)
-    localStorage.setItem('myka_install_dismissed', Date.now().toString())
+    setClosing(true)
+    setTimeout(() => {
+      setShowInstallBanner(false)
+      setClosing(false)
+      localStorage.setItem('myka_install_dismissed', Date.now().toString())
+    }, 300)
   }, [])
 
   // Don't show anything if already installed
   if (isStandalone || !showInstallBanner) return null
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[10000] safe-area-bottom animate-slide-up">
+    <>
+      {/* Overlay escuro */}
       <div
-        className="mx-3 mb-3 rounded-2xl shadow-2xl border p-4 backdrop-blur-xl"
+        className={`fixed inset-0 z-[9999] transition-opacity duration-300 ${closing ? 'opacity-0' : 'opacity-100'}`}
+        style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+        onClick={handleDismiss}
+      />
+
+      {/* Modal central */}
+      <div
+        className={`fixed z-[10000] transition-all duration-300 ${closing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
         style={{
-          background: 'rgba(255,255,255,0.97)',
-          borderColor: '#b76e7930',
+          top: '50%',
+          left: '50%',
+          transform: `translate(-50%, -50%) ${closing ? 'scale(0.95)' : 'scale(1)'}`,
+          width: isDesktop ? '420px' : 'calc(100% - 32px)',
+          maxWidth: '420px',
         }}
       >
-        <div className="flex items-center gap-3">
-          {/* Icon */}
+        <div
+          className="rounded-3xl shadow-2xl overflow-hidden"
+          style={{ background: 'rgba(255,255,255,0.99)' }}
+        >
+          {/* Header com gradiente */}
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+            className="relative px-6 pt-8 pb-6 text-center"
             style={{ background: 'linear-gradient(135deg, #b76e79, #8a4f5a)' }}
           >
-            <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
-              <path d="M50 8C50 8 20 30 20 55C20 72 33 88 50 92C67 88 80 72 80 55C80 30 50 8 50 8Z" fill="white" fillOpacity="0.95" />
-            </svg>
-          </div>
+            {/* Botão fechar */}
+            <button
+              onClick={handleDismiss}
+              className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all"
+              aria-label="Fechar"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
 
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm text-[#1a1a1a]">Instale o Myka Spa</p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {isIOS
-                ? 'Toque em Compartilhar ⬆ e "Adicionar à Tela Início"'
-                : 'Acesso rápido, notificações e modo offline'}
+            {/* Ícone do app */}
+            <div className="mx-auto w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-4 shadow-lg border border-white/30">
+              <img
+                src="/icon-192x192.png"
+                alt="Myka Spa"
+                className="w-14 h-14 rounded-xl"
+              />
+            </div>
+
+            <h2 className="text-white text-xl font-bold tracking-tight">
+              Myka Spa
+            </h2>
+            <p className="text-white/80 text-sm mt-1">
+              Estética Avançada & Arquitetura Corporal
             </p>
           </div>
 
-          {!isIOS && (
-            <button
-              onClick={handleInstall}
-              className="px-4 py-2 rounded-full text-white text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95"
-              style={{ background: 'linear-gradient(135deg, #b76e79, #8a4f5a)' }}
-            >
-              Instalar
-            </button>
-          )}
+          {/* Corpo */}
+          <div className="px-6 py-5">
+            {/* Benefícios */}
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#b76e7915' }}>
+                  <svg className="w-5 h-5" style={{ color: '#b76e79' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#1a1a1a]">Acesso instantâneo</p>
+                  <p className="text-xs text-gray-500">Abra direto da tela inicial{isDesktop ? ' ou Menu Iniciar' : ''}</p>
+                </div>
+              </div>
 
-          <button
-            onClick={handleDismiss}
-            className="text-gray-400 hover:text-gray-600 p-1"
-            aria-label="Fechar"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#b76e7915' }}>
+                  <svg className="w-5 h-5" style={{ color: '#b76e79' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#1a1a1a]">Notificações</p>
+                  <p className="text-xs text-gray-500">Receba lembretes dos seus agendamentos</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#b76e7915' }}>
+                  <svg className="w-5 h-5" style={{ color: '#b76e79' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#1a1a1a]">Funciona offline</p>
+                  <p className="text-xs text-gray-500">Consulte seus dados mesmo sem internet</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Botões */}
+            {isIOS ? (
+              <div className="text-center">
+                <div className="bg-gray-50 rounded-2xl p-4 mb-3">
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    Toque no botão <span className="inline-flex items-center align-middle mx-1 px-2 py-0.5 bg-gray-200 rounded text-xs font-medium">
+                      <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                      Compartilhar
+                    </span> do Safari e depois em <strong>&ldquo;Adicionar à Tela de Início&rdquo;</strong>
+                  </p>
+                </div>
+                <button
+                  onClick={handleDismiss}
+                  className="w-full py-3 rounded-xl text-gray-500 text-sm font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Agora não
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <button
+                  onClick={handleInstall}
+                  className="w-full py-3.5 rounded-xl text-white font-semibold text-sm transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+                  style={{ background: 'linear-gradient(135deg, #b76e79, #8a4f5a)' }}
+                >
+                  📲 Instalar Aplicativo Grátis
+                </button>
+                <button
+                  onClick={handleDismiss}
+                  className="w-full py-3 rounded-xl text-gray-500 text-sm font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Agora não
+                </button>
+              </div>
+            )}
+
+            {isDesktop && !isIOS && (
+              <p className="text-center text-[10px] text-gray-400 mt-3">
+                ✓ Aparece no Menu Iniciar do Windows &bull; Sem ocupar espaço
+              </p>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
