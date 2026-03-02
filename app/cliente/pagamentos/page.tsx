@@ -1,7 +1,7 @@
 'use client'
-import { useState, useEffect, useCallback, useContext } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ClientContext } from '../ClientContext'
+import { useClient } from '../ClientContext'
 
 const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
@@ -11,7 +11,7 @@ interface PaymentRecord {
 }
 
 export default function PagamentosPage() {
-  const { fetchWithAuth } = useContext(ClientContext)
+  const { fetchWithAuth } = useClient()
   const [appointments, setAppointments] = useState<PaymentRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'paid' | 'pending'>('all')
