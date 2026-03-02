@@ -22,24 +22,28 @@ export async function GET(req: NextRequest) {
     const dateFrom = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
     const dateTo = to ? new Date(to + 'T23:59:59') : new Date()
 
+    const safe = async <T>(fn: () => Promise<T>, fallback: T): Promise<T> => {
+      try { return await fn() } catch (e) { console.error('[reports] query failed:', e); return fallback }
+    }
+
     const [appointments, payments, expenses, users] = await Promise.all([
-      prisma.appointment.findMany({
+      safe(() => prisma.appointment.findMany({
         where: { scheduledAt: { gte: dateFrom, lte: dateTo } },
         include: { user: { select: { name: true, email: true } }, service: { select: { name: true, price: true } } },
         orderBy: { scheduledAt: 'asc' },
-      }),
-      prisma.payment.findMany({
+      }), []),
+      safe(() => prisma.payment.findMany({
         where: { createdAt: { gte: dateFrom, lte: dateTo } },
         orderBy: { createdAt: 'asc' },
-      }),
-      prisma.expense.findMany({
+      }), []),
+      safe(() => prisma.expense.findMany({
         where: { date: { gte: dateFrom, lte: dateTo } },
         orderBy: { date: 'asc' },
-      }),
-      prisma.user.findMany({
+      }), []),
+      safe(() => prisma.user.findMany({
         where: { role: 'PATIENT' },
         select: { id: true, name: true, createdAt: true },
-      }),
+      }), []),
     ])
 
     // Revenue by service
