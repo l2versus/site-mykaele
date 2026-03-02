@@ -406,7 +406,7 @@ export default function ImportarClientesPage() {
       {/* ── Mobile-first: BIG import contact button ── */}
       <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-xl p-4 space-y-3">
         <p className="text-white/60 text-xs sm:text-sm">
-          <strong className="text-white/80">Forma rápida:</strong> Importe direto dos seus contatos do celular
+          <strong className="text-white/80">Importar do celular:</strong> Puxe nome e telefone direto da agenda
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
           {/* Contact Picker (Android Chrome) */}
@@ -418,7 +418,7 @@ export default function ImportarClientesPage() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
               </svg>
-              Escolher dos Contatos
+              Escolher da Agenda
             </button>
           )}
 
@@ -428,17 +428,19 @@ export default function ImportarClientesPage() {
             className={`${hasContactPicker ? 'flex-1' : 'w-full'} flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl text-sm font-semibold bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 active:scale-[0.98] transition-all`}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
-            {hasContactPicker ? 'Importar .vcf' : 'Importar Contato (.vcf)'}
+            Importar Contato do Celular
           </button>
         </div>
-        <p className="text-white/25 text-[10px] leading-relaxed">
-          {hasContactPicker
-            ? '💡 "Escolher dos Contatos" abre sua lista de contatos direto. Ou use .vcf para importar arquivo de contato.'
-            : '💡 iPhone: Abra Contatos → Toque no contato → Compartilhar Contato → selecione este arquivo .vcf'
-          }
-        </p>
+        <div className="text-white/30 text-[10px] leading-relaxed space-y-1">
+          <p>📱 <strong className="text-white/40">No iPhone:</strong></p>
+          <p className="pl-4">1. Abra o app <strong className="text-white/50">Contatos</strong></p>
+          <p className="pl-4">2. Toque no contato que deseja importar</p>
+          <p className="pl-4">3. Role para baixo e toque em <strong className="text-white/50">Compartilhar Contato</strong></p>
+          <p className="pl-4">4. Toque em <strong className="text-white/50">Salvar em Arquivos</strong></p>
+          <p className="pl-4">5. Volte aqui e toque no botão acima — selecione o arquivo salvo</p>
+        </div>
       </div>
 
       {/* ── Import feedback banner ── */}
@@ -790,7 +792,7 @@ export default function ImportarClientesPage() {
                 onClick={() => vcfInputRef.current?.click()}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-green-500/5 border border-dashed border-green-500/20 text-green-400/70 hover:text-green-400 active:scale-[0.98] transition-all"
               >
-                📱 Do Contato
+                📱 Do Celular
               </button>
             </div>
 
