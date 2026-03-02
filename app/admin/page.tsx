@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useAdmin } from './AdminContext'
 import Link from 'next/link'
+import { getUpcomingDatas, type DataComemorativa } from '@/data/datas-comemorativas'
 
 /* ─── Types ─── */
 interface Stats {
@@ -227,6 +228,73 @@ function HealthBadge({ stats }: { stats: Stats }) {
     <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${borders[level]}`}>
       <div className={`w-1.5 h-1.5 rounded-full ${colors[level]} animate-pulse`} />
       <span className={`text-[10px] font-semibold ${texts[level]}`}>{labels[level]}</span>
+    </div>
+  )
+}
+
+/* ─── Datas Comemorativas Widget ─── */
+function DatasRecordatorias() {
+  const datas = useMemo(() => getUpcomingDatas(30), [])
+  const [expanded, setExpanded] = useState(false)
+
+  if (datas.length === 0) return null
+
+  const catColors: Record<string, string> = {
+    marketing: 'bg-amber-500/15 text-amber-400',
+    feriado:   'bg-red-500/15 text-red-400',
+    saude:     'bg-emerald-500/15 text-emerald-400',
+    beleza:    'bg-pink-500/15 text-pink-400',
+    social:    'bg-blue-500/15 text-blue-400',
+  }
+  const catLabel: Record<string, string> = {
+    marketing: 'Marketing', feriado: 'Feriado', saude: 'Saúde', beleza: 'Beleza', social: 'Social',
+  }
+
+  const visible = expanded ? datas : datas.slice(0, 5)
+
+  return (
+    <div className="bg-gradient-to-br from-violet-500/[0.08] to-white/[0.02] rounded-2xl border border-violet-500/10 p-6 shadow-none transition-all">
+      <h3 className="text-xs font-semibold text-violet-400 flex items-center gap-2 mb-3">
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+        <span>Datas Comemorativas</span>
+        <span className="bg-violet-500/15 text-violet-400 text-[9px] px-1.5 py-0.5 rounded-full font-bold">{datas.length}</span>
+      </h3>
+      <div className="space-y-2">
+        {visible.map((d, i) => (
+          <div key={i} className="bg-violet-500/5 border border-violet-500/10 rounded-lg px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1 flex items-center gap-2">
+                <span className="text-lg flex-shrink-0">{d.emoji}</span>
+                <div className="min-w-0">
+                  <div className="text-violet-300 text-[11px] font-medium truncate">{d.name}</div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${catColors[d.categoria] || 'bg-white/10 text-white/50'}`}>
+                      {catLabel[d.categoria] || d.categoria}
+                    </span>
+                    <span className="text-violet-500/40 text-[10px]">
+                      {d.day.toString().padStart(2, '0')}/{d.month.toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-1 rounded-md flex-shrink-0 ${
+                d.daysUntil === 0 ? 'bg-green-500/20 text-green-400' :
+                d.daysUntil <= 7  ? 'bg-amber-500/20 text-amber-400' :
+                d.daysUntil <= 20 ? 'bg-blue-500/15 text-blue-400' :
+                                    'bg-white/[0.06] text-white/40'
+              }`}>
+                {d.daysUntil === 0 ? '🔔 Hoje!' : d.daysUntil === 1 ? 'Amanhã' : `${d.daysUntil} dias`}
+              </span>
+            </div>
+            <p className="text-violet-400/50 text-[10px] mt-1.5 leading-relaxed pl-7">💡 {d.dica}</p>
+          </div>
+        ))}
+      </div>
+      {datas.length > 5 && (
+        <button onClick={() => setExpanded(e => !e)} className="block text-center text-violet-400 text-[10px] mt-3 hover:underline w-full">
+          {expanded ? 'Ver menos' : `Ver todas (${datas.length})`}
+        </button>
+      )}
     </div>
   )
 }
@@ -722,6 +790,9 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+
+          {/* ═══ Datas Comemorativas Próximas ═══ */}
+          <DatasRecordatorias />
 
           {/* Recent Payments */}
           <div className="bg-gradient-to-br from-emerald-500/[0.08] to-white/[0.02] rounded-2xl border border-emerald-500/10 p-6 shadow-none transition-all">
