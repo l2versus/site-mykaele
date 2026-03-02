@@ -185,25 +185,25 @@ export async function sendPurchaseNotification(data: {
 }): Promise<{ sent: boolean; method: string }> {
   const fmtBRL = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`
   const lines: string[] = [
-    '💰 *NOVA COMPRA DE CRÉDITOS*',
+    '\u2728 *NOVA COMPRA DE CR\u00c9DITOS*',
     '',
-    `👤 *Cliente:* ${data.clientName}`,
+    `*Cliente:* ${data.clientName}`,
   ]
-  if (data.clientPhone) lines.push(`📱 *Telefone:* ${data.clientPhone}`)
-  if (data.clientEmail) lines.push(`📧 *Email:* ${data.clientEmail}`)
+  if (data.clientPhone) lines.push(`*Telefone:* ${data.clientPhone}`)
+  if (data.clientEmail) lines.push(`*Email:* ${data.clientEmail}`)
   lines.push('')
-  lines.push('📋 *Itens comprados:*')
+  lines.push('*Itens comprados:*')
   data.items.forEach((item, i) => {
     lines.push(`  ${i + 1}. ${item.name}`)
-    lines.push(`     ${item.sessions} sessão(ões) — ${fmtBRL(item.price)}`)
+    lines.push(`     ${item.sessions} sess\u00e3o(\u00f5es) \u2014 ${fmtBRL(item.price)}`)
   })
   lines.push('')
-  lines.push(`💳 *Forma de pagamento:* ${data.paymentMethod}`)
-  lines.push(`💵 *Valor total:* ${fmtBRL(data.totalAmount)}`)
-  if (data.paymentId) lines.push(`🔑 *ID transação:* ${data.paymentId}`)
-  lines.push(`📅 *Data:* ${data.transactionDate}`)
+  lines.push(`*Forma de pagamento:* ${data.paymentMethod}`)
+  lines.push(`*Valor total:* ${fmtBRL(data.totalAmount)}`)
+  if (data.paymentId) lines.push(`*ID transa\u00e7\u00e3o:* ${data.paymentId}`)
+  lines.push(`*Data:* ${data.transactionDate}`)
   lines.push('')
-  lines.push('✅ Pagamento confirmado com sucesso!')
+  lines.push('\u2705 Pagamento confirmado com sucesso!')
   const message = lines.join('\n')
 
   if (hasEvolutionApi()) {
@@ -228,16 +228,16 @@ export async function sendNewRegistrationNotification(data: {
   const providerLabel = data.provider === 'google' ? 'Google' : data.provider === 'instagram' ? 'Instagram' : 'Email/Senha'
   const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })
   const lines: string[] = [
-    '🆕 *NOVO CADASTRO NO SITE*',
+    '\u2B50 *NOVO CADASTRO NO SITE*',
     '',
-    `👤 *Nome:* ${data.clientName}`,
-    `📧 *Email:* ${data.clientEmail}`,
+    `*Nome:* ${data.clientName}`,
+    `*Email:* ${data.clientEmail}`,
   ]
-  if (data.clientPhone) lines.push(`📱 *Telefone:* ${data.clientPhone}`)
-  lines.push(`🔑 *Via:* ${providerLabel}`)
-  lines.push(`📅 *Data:* ${now}`)
+  if (data.clientPhone) lines.push(`*Telefone:* ${data.clientPhone}`)
+  lines.push(`*Via:* ${providerLabel}`)
+  lines.push(`*Data:* ${now}`)
   lines.push('')
-  lines.push('Uma nova cliente se cadastrou! ✨')
+  lines.push('Uma nova cliente se cadastrou! \u2728')
   const message = lines.join('\n')
 
   if (hasEvolutionApi()) {

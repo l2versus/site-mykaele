@@ -302,11 +302,28 @@ export default function ClientesPage() {
     c.phone?.includes(search)
   )
 
+  // Deletar cliente
+  const deleteClient = async (c: Client) => {
+    if (!confirm(`Tem certeza que deseja excluir ${c.name}? Esta ação não pode ser desfeita.`)) return
+    try {
+      const res = await fetchWithAuth(`/api/admin/clients/${c.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setClients(prev => prev.filter(cl => cl.id !== c.id))
+        setExpanded(null)
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Erro ao excluir cliente')
+      }
+    } catch {
+      alert('Erro de conexão ao excluir cliente')
+    }
+  }
+
   const quickMsgs = [
-    { label: 'Lembrete de sessão', msg: (c: Client) => `Olá ${c.name.split(' ')[0]}! 🌟\n\nPassando para lembrar da sua sessão agendada. Qualquer dúvida, estou à disposição!\n\nMykaele Procópio - Home Spa` },
-    { label: 'Reagendar', msg: (c: Client) => `Olá ${c.name.split(' ')[0]}!\n\nPreciso reagendar sua próxima sessão. Podemos combinar um novo horário?\n\nMykaele Procópio - Home Spa` },
-    { label: 'Pós-atendimento', msg: (c: Client) => `Olá ${c.name.split(' ')[0]}! 💆‍♀️\n\nComo você está se sentindo após a sessão? Lembre-se de manter a hidratação e seguir as recomendações!\n\nQualquer dúvida, pode me chamar.\nMykaele Procópio - Home Spa` },
-    { label: 'Promoção/Novidade', msg: (c: Client) => `Olá ${c.name.split(' ')[0]}! ✨\n\nTenho uma novidade especial para você! Entre em contato para saber mais.\n\nMykaele Procópio - Home Spa` },
+    { label: 'Lembrete de sess\u00e3o', msg: (c: Client) => `Ol\u00e1 ${c.name.split(' ')[0]}! \u2728\n\nPassando para lembrar da sua sess\u00e3o agendada. Qualquer d\u00fanvida, estou \u00e0 disposi\u00e7\u00e3o!\n\nMykaele Proc\u00f3pio - Home Spa` },
+    { label: 'Reagendar', msg: (c: Client) => `Ol\u00e1 ${c.name.split(' ')[0]}!\n\nPreciso reagendar sua pr\u00f3xima sess\u00e3o. Podemos combinar um novo hor\u00e1rio?\n\nMykaele Proc\u00f3pio - Home Spa` },
+    { label: 'P\u00f3s-atendimento', msg: (c: Client) => `Ol\u00e1 ${c.name.split(' ')[0]}! \u2764\uFE0F\n\nComo voc\u00ea est\u00e1 se sentindo ap\u00f3s a sess\u00e3o? Lembre-se de manter a hidrata\u00e7\u00e3o e seguir as recomenda\u00e7\u00f5es!\n\nQualquer d\u00favida, pode me chamar.\nMykaele Proc\u00f3pio - Home Spa` },
+    { label: 'Promo\u00e7\u00e3o/Novidade', msg: (c: Client) => `Ol\u00e1 ${c.name.split(' ')[0]}! \u2B50\n\nTenho uma novidade especial para voc\u00ea! Entre em contato para saber mais.\n\nMykaele Proc\u00f3pio - Home Spa` },
   ]
 
   const ST: Record<string, { label: string; cls: string }> = {
@@ -378,6 +395,11 @@ export default function ClientesPage() {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                       </button>
                     )}
+                    {/* Botão Excluir */}
+                    <button onClick={(e) => { e.stopPropagation(); deleteClient(c) }}
+                      className="p-1.5 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all" title="Excluir cliente">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
                     <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className={`text-stone-300 transition-transform ${isExpanded ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
                 </div>
@@ -463,6 +485,11 @@ export default function ClientesPage() {
                         </button>
                         </>
                       )}
+                      <button onClick={() => deleteClient(c)}
+                        className="px-2.5 py-1.5 rounded-md text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/15 hover:bg-red-500/20 transition-all flex items-center gap-1 ml-auto">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        Excluir
+                      </button>
                     </div>
                   </div>
                 )}

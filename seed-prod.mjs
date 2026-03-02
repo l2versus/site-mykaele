@@ -114,6 +114,27 @@ async function main() {
     }
     console.log(`${rewards.length} recompensas de fidelidade configuradas!`);
 
+    // ─── Seed Estoque Inicial ───
+    const inventoryItems = [
+        { id: 'inv-001', name: 'Chá de Hibisco', description: 'Chá oferecido às pacientes durante a sessão', category: 'MATERIAL', unit: 'cx', quantity: 10, minQuantity: 3, costPerUnit: 12.90, supplierName: null, supplierPhone: null },
+        { id: 'inv-002', name: 'Foto Impressa', description: 'Foto antes/depois impressa para registro da paciente', category: 'DESCARTAVEL', unit: 'un', quantity: 50, minQuantity: 10, costPerUnit: 1.50, supplierName: null, supplierPhone: null },
+        { id: 'inv-003', name: 'Kest Comprimido', description: 'Comprimido utilizado em protocolo corporal', category: 'COSMETICO', unit: 'cx', quantity: 5, minQuantity: 2, costPerUnit: 45.00, supplierName: null, supplierPhone: null },
+        { id: 'inv-004', name: 'Creme Modelador', description: 'Creme de massagem modeladora profissional', category: 'COSMETICO', unit: 'un', quantity: 8, minQuantity: 3, costPerUnit: 65.00, supplierName: null, supplierPhone: null },
+    ];
+
+    for (const item of inventoryItems) {
+        try {
+            await client.execute({
+                sql: `INSERT OR IGNORE INTO "InventoryItem" ("id", "name", "description", "category", "unit", "quantity", "minQuantity", "costPerUnit", "active", "supplierName", "supplierPhone", "supplierEmail", "supplierNotes", "autoOrderQty", "lastOrderedAt", "createdAt", "updatedAt")
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, NULL, NULL, NULL, NULL, ?, ?)`,
+                args: [item.id, item.name, item.description, item.category, item.unit, item.quantity, item.minQuantity, item.costPerUnit, item.supplierName, item.supplierPhone, now, now]
+            });
+        } catch (e) {
+            // Tabela pode não existir em deploys mais antigos
+        }
+    }
+    console.log(`${inventoryItems.length} itens de estoque iniciais configurados!`);
+
     console.log('=== Seed completo! ===');
 }
 

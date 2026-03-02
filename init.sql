@@ -309,3 +309,41 @@ CREATE TABLE IF NOT EXISTS "LoyaltyReward" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ═══ Estoque de Insumos ═══
+CREATE TABLE IF NOT EXISTS "InventoryItem" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "category" TEXT NOT NULL DEFAULT 'MATERIAL',
+    "unit" TEXT NOT NULL DEFAULT 'un',
+    "quantity" REAL NOT NULL DEFAULT 0,
+    "minQuantity" REAL NOT NULL DEFAULT 5,
+    "costPerUnit" REAL NOT NULL DEFAULT 0,
+    "active" INTEGER NOT NULL DEFAULT 1,
+    "supplierName" TEXT,
+    "supplierPhone" TEXT,
+    "supplierEmail" TEXT,
+    "supplierNotes" TEXT,
+    "autoOrderQty" REAL,
+    "lastOrderedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "InventoryItem_name_key" ON "InventoryItem"("name");
+CREATE INDEX IF NOT EXISTS "InventoryItem_category_idx" ON "InventoryItem"("category");
+CREATE INDEX IF NOT EXISTS "InventoryItem_quantity_idx" ON "InventoryItem"("quantity");
+
+CREATE TABLE IF NOT EXISTS "StockMovement" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "inventoryItemId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "quantity" REAL NOT NULL,
+    "reason" TEXT,
+    "cost" REAL,
+    "expenseId" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY ("inventoryItemId") REFERENCES "InventoryItem"("id") ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS "StockMovement_inventoryItemId_idx" ON "StockMovement"("inventoryItemId");
+CREATE INDEX IF NOT EXISTS "StockMovement_createdAt_idx" ON "StockMovement"("createdAt");

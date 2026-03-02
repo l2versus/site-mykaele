@@ -359,3 +359,51 @@ model LoyaltyReward {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ═══════════════════════════════════════════
+// ESTOQUE DE INSUMOS & FORNECEDORES
+// ═══════════════════════════════════════════
+
+model InventoryItem {
+  id          String  @id @default(cuid())
+  name        String  @unique // "Chá de Hibisco", "Kest Comprimido", etc
+  description String?
+  category    String  @default("MATERIAL") // MATERIAL, DESCARTAVEL, COSMÉTICO, EQUIPAMENTO
+  unit        String  @default("un") // un, ml, g, kg, cx, pct
+  quantity    Float   @default(0) // quantidade atual em estoque
+  minQuantity Float   @default(5) // alerta quando abaixo disso
+  costPerUnit Float   @default(0) // custo unitário R$
+  active      Boolean @default(true)
+
+  // Fornecedor
+  supplierName  String? // nome do fornecedor
+  supplierPhone String? // WhatsApp do fornecedor
+  supplierEmail String?
+  supplierNotes String? // observações (marca preferida, prazo entrega, etc)
+
+  // Pedido automático
+  autoOrderQty  Float? // quantidade padrão para pedir (ex: 50 unidades)
+  lastOrderedAt DateTime?
+
+  movements StockMovement[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([category])
+  @@index([quantity])
+}
+
+model StockMovement {
+  id              String        @id @default(cuid())
+  inventoryItemId String
+  item            InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  type            String // IN (entrada), OUT (saída/uso), ADJUSTMENT
+  quantity        Float // positivo = entrada, negativo = saída
+  reason          String? // "Compra", "Uso em sessão", "Descarte", "Ajuste"
+  cost            Float? // custo total desta movimentação (para entradas)
+  expenseId       String? // link para despesa gerada
+  createdAt       DateTime      @default(now())
+
+  @@index([inventoryItemId])
+  @@index([createdAt])
+}

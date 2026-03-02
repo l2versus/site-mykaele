@@ -505,17 +505,8 @@ export default function ImportarClientesPage() {
               <span className="text-lg">📱</span>
               <div className="text-sm text-white/50 space-y-1">
                 <p className="text-white/70 font-medium">Após importar, envie as credenciais via WhatsApp:</p>
-                <p className="text-white/40 text-xs font-mono bg-white/[0.03] rounded-lg p-3 leading-relaxed">
-                  Olá [Nome]! 🌸{'\n'}
-                  Seu acesso ao app da Mykaele Procópio Home Spa está pronto!{'\n'}
-                  {'\n'}
-                  📧 Email: [email]{'\n'}
-                  🔑 Senha temporária: [senha]{'\n'}
-                  {'\n'}
-                  Acesse: mykaprocopio.com.br/cliente{'\n'}
-                  No primeiro login, você será solicitada a criar uma nova senha.{'\n'}
-                  {'\n'}
-                  Qualquer dúvida, estou à disposição! 💕
+                <p className="text-white/40 text-xs font-mono bg-white/[0.03] rounded-lg p-3 leading-relaxed whitespace-pre-line">
+                  {`Olá [Nome]! \u2728\nSeu acesso ao app da Mykaele Procópio Home Spa está pronto!\n\nEmail: [email]\nSenha temporária: [senha]\n\nAcesse: mykaprocopio.com.br/cliente\nNo primeiro login, você será solicitada a criar uma nova senha.\n\nQualquer dúvida, estou à disposição! \u2764\uFE0F`}
                 </p>
               </div>
             </div>

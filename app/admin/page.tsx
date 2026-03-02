@@ -18,6 +18,7 @@ interface TopSvc { name: string; count: number; price: number }
 interface Apt { id: string; scheduledAt: string; status: string; type: string; user: { name: string; phone?: string }; service: { name: string; duration?: number }; price: number }
 interface Payment { id: string; amount: number; method: string; description?: string; createdAt: string; user?: { name: string } }
 interface FollowUp { patientName: string; patientPhone?: string; lastService: string; lastDate: string }
+interface LowStockItem { id: string; name: string; quantity: number; minQuantity: number; unit: string; supplierPhone?: string | null }
 
 const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 const fmtCurShort = (v: number) => {
@@ -240,6 +241,7 @@ export default function AdminDashboard() {
   const [todayApts, setTodayApts] = useState<Apt[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
   const [followUps, setFollowUps] = useState<FollowUp[]>([])
+  const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -257,6 +259,14 @@ export default function AdminDashboard() {
           setPayments(d.recentPayments || [])
           setFollowUps(d.followUpAlerts || [])
         }
+        // Buscar itens com estoque baixo
+        try {
+          const invRes = await fetchWithAuth('/api/admin/inventory?lowStock=true')
+          if (invRes.ok) {
+            const invData = await invRes.json()
+            setLowStockItems(invData.items || [])
+          }
+        } catch {}
       } catch {}
       setLoading(false)
     })()
@@ -632,6 +642,31 @@ export default function AdminDashboard() {
             )}
           </div>
 
+          {/* Low Stock Alerts */}
+          {lowStockItems.length > 0 && (
+            <div className="bg-gradient-to-br from-red-500/[0.08] to-white/[0.02] rounded-2xl border border-red-500/10 p-6 shadow-none transition-all">
+              <h3 className="text-xs font-semibold text-red-400 flex items-center gap-2 mb-3">
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                <span>Estoque Baixo</span>
+                <span className="bg-red-500/15 text-red-400 text-[9px] px-1.5 py-0.5 rounded-full font-bold">{lowStockItems.length}</span>
+              </h3>
+              <div className="space-y-2">
+                {lowStockItems.slice(0, 5).map(item => (
+                  <div key={item.id} className="flex items-center justify-between bg-red-500/5 border border-red-500/10 rounded-lg px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-red-400 text-[11px] font-medium truncate">{item.name}</div>
+                      <div className="text-red-500/50 text-[10px]">{item.quantity} {item.unit} restante{item.quantity !== 1 ? 's' : ''} (min: {item.minQuantity})</div>
+                    </div>
+                    <Link href="/admin/estoque" className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#b76e79]/10 text-[#b76e79] text-[10px] font-medium hover:bg-[#b76e79]/20 transition-all flex-shrink-0">
+                      Repor {I.arrow}
+                    </Link>
+                  </div>
+                ))}
+              </div>
+              <Link href="/admin/estoque" className="block text-center text-[#b76e79] text-[10px] mt-3 hover:underline">Ver todo o estoque</Link>
+            </div>
+          )}
+
           {/* Recent Payments */}
           <div className="bg-gradient-to-br from-emerald-500/[0.08] to-white/[0.02] rounded-2xl border border-emerald-500/10 p-6 shadow-none transition-all">
             <div className="flex items-center justify-between mb-3">
@@ -658,12 +693,13 @@ export default function AdminDashboard() {
       </div>
 
       {/* ─── Quick Actions Power BI Style ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4 mt-2">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 lg:gap-4 mt-2">
         {(
           [
             { href: '/admin/agenda', label: 'Agenda', icon: I.cal, grad: 'from-blue-400 to-cyan-400' },
             { href: '/admin/clientes', label: 'Clientes', icon: I.users, grad: 'from-[#b76e79] to-[#d4a0a7]' },
             { href: '/admin/financeiro', label: 'Financeiro', icon: I.revenue, grad: 'from-emerald-400 to-teal-400' },
+            { href: '/admin/estoque', label: 'Estoque', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>, grad: 'from-violet-400 to-purple-400' },
             { href: '/admin/configuracoes', label: 'Configurações', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, grad: 'from-amber-400 to-orange-400' },
           ]
         ).map(a => (
