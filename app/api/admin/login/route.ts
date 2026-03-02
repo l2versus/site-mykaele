@@ -1,23 +1,28 @@
 // src/app/api/admin/login/route.ts
 import { NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'mykaele2025'
-const JWT_SECRET = process.env.JWT_SECRET || 'sua-chave-jwt-aqui-alterada-em-producao'
+import { generateToken } from '@/lib/auth'
+import { rateLimit, getClientIP, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   try {
+    // Rate limit: 5 attempts per minute per IP
+    const ip = getClientIP(request)
+    const rl = rateLimit(`admin-login:${ip}`, 5, 60_000)
+    if (!rl.allowed) return rateLimitResponse(rl.resetIn)
+
     const { password } = await request.json()
 
-    if (password !== ADMIN_PASSWORD) {
+    const adminPassword = process.env.ADMIN_PASSWORD
+    if (!adminPassword) {
+      console.error('ADMIN_PASSWORD env var not configured')
+      return NextResponse.json({ error: 'Configuração inválida' }, { status: 500 })
+    }
+
+    if (password !== adminPassword) {
       return NextResponse.json({ error: 'Senha incorreta' }, { status: 401 })
     }
 
-    const token = jwt.sign(
-      { role: 'admin', name: 'Mykaele Procópio' },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    )
+    const token = generateToken('admin', 'admin@mykaprocopio.com.br', 'ADMIN')
 
     return NextResponse.json({ token, name: 'Mykaele Procópio' }, { status: 200 })
   } catch (error) {

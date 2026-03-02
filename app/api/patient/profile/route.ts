@@ -45,6 +45,18 @@ export async function PUT(req: NextRequest) {
       const file = formData.get('avatar') as File | null
       if (!file) return NextResponse.json({ error: 'Nenhum arquivo enviado' }, { status: 400 })
 
+      // Validate file type
+      const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        return NextResponse.json({ error: 'Tipo de arquivo não permitido. Use JPEG, PNG ou WebP.' }, { status: 400 })
+      }
+
+      // Validate file size (max 5MB)
+      const MAX_SIZE = 5 * 1024 * 1024
+      if (file.size > MAX_SIZE) {
+        return NextResponse.json({ error: 'Arquivo muito grande. Máximo 5MB.' }, { status: 400 })
+      }
+
       const bytes = await file.arrayBuffer()
       const buffer = Buffer.from(bytes)
 
@@ -52,8 +64,10 @@ export async function PUT(req: NextRequest) {
       const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'avatars')
       await mkdir(uploadDir, { recursive: true })
 
-      // Save file
-      const ext = file.name.split('.').pop() || 'jpg'
+      // Sanitize extension
+      const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'avif']
+      const rawExt = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z]/g, '')
+      const ext = ALLOWED_EXTS.includes(rawExt) ? rawExt : 'jpg'
       const filename = `${user.userId}-${Date.now()}.${ext}`
       const filepath = path.join(uploadDir, filename)
       await writeFile(filepath, buffer)

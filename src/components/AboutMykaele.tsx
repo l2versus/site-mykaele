@@ -1,5 +1,5 @@
 // src/components/AboutMykaele.tsx
-// Server Component — sem 'use client' para reduzir bundle JS
+import Image from 'next/image'
 
 export default function AboutMykaele() {
   return (
@@ -12,13 +12,14 @@ export default function AboutMykaele() {
             {/* Photo column */}
             <div className="lg:col-span-5 reveal-left">
               <div className="relative">
-                <div className="aspect-[3/4] max-w-[420px] overflow-hidden bg-[#f0ebe5]">
-                  <img
+                <div className="aspect-[3/4] max-w-[420px] overflow-hidden bg-[#f0ebe5] relative">
+                  <Image
                     src="/media/profissionais/mykaele-principal.png"
                     alt="Mykaele Procópio — Diretora Clínica"
-                    className="w-full h-full object-cover object-top"
+                    fill
+                    className="object-cover object-top"
                     loading="lazy"
-                    decoding="async"
+                    sizes="(max-width: 1024px) 100vw, 420px"
                   />
                 </div>
                 {/* Minimal caption */}

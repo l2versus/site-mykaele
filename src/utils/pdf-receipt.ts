@@ -1,5 +1,5 @@
 // src/utils/pdf-receipt.ts — Geração de Comprovante de Pagamento PDF
-import jsPDF from 'jspdf'
+// jsPDF is lazy-loaded when generateReceiptPDF is called
 
 interface ReceiptData {
   clientName: string
@@ -22,6 +22,7 @@ const formatCurrency = (value: number) => value.toLocaleString('pt-BR', {
 })
 
 export async function generateReceiptPDF(data: ReceiptData): Promise<Blob> {
+  const { default: jsPDF } = await import('jspdf')
   const pdf = new jsPDF('p', 'mm', 'a4')
   const pageWidth = pdf.internal.pageSize.getWidth()
   const margin = 20

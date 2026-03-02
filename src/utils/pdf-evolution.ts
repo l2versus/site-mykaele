@@ -1,5 +1,5 @@
 // src/utils/pdf-evolution.ts — Geração de PDF de Evolução Corporal
-import jsPDF from 'jspdf'
+// jsPDF is lazy-loaded when generateEvolutionPDF is called
 
 interface MeasurementData {
   id: string
@@ -54,6 +54,7 @@ const formatDate = (d: string) => new Date(d).toLocaleDateString('pt-BR', { day:
 const formatNum = (n: number) => n.toFixed(1)
 
 export async function generateEvolutionPDF(data: EvolutionPDFData): Promise<Blob> {
+  const { default: jsPDF } = await import('jspdf')
   const pdf = new jsPDF('p', 'mm', 'a4')
   const pageWidth = pdf.internal.pageSize.getWidth()
   const pageHeight = pdf.internal.pageSize.getHeight()

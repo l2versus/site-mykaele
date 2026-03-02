@@ -111,6 +111,13 @@ const jsonLd = {
     latitude: -3.7994,
     longitude: -38.4768,
   },
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: '4.9',
+    reviewCount: '127',
+    bestRating: '5',
+    worstRating: '1',
+  },
   openingHoursSpecification: [
     { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], opens: '08:00', closes: '19:00' },
   ],
@@ -134,6 +141,44 @@ const jsonLd = {
       { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'Tratamento Facial', description: 'Limpeza, peeling e microagulhamento facial' } },
     ],
   },
+}
+
+// FAQ Schema
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Como funciona o agendamento online?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Você pode agendar pelo nosso site ou app a qualquer momento. Basta criar sua conta, escolher o procedimento desejado, selecionar data e horário disponíveis e confirmar. Você receberá confirmação por WhatsApp.' },
+    },
+    {
+      '@type': 'Question',
+      name: 'Quais formas de pagamento são aceitas?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Aceitamos PIX (com desconto), cartão de crédito em até 12x, cartão de débito e dinheiro. O pagamento pode ser realizado na hora do atendimento ou antecipadamente pelo site.' },
+    },
+    {
+      '@type': 'Question',
+      name: 'Qual a diferença entre atendimento na clínica e Home Spa?',
+      acceptedAnswer: { '@type': 'Answer', text: 'No Home Spa, a Mykaele vai até você com todos os equipamentos necessários para realizar o procedimento no conforto da sua casa. O atendimento na clínica oferece toda a infraestrutura do espaço em Sapiranga, Fortaleza.' },
+    },
+    {
+      '@type': 'Question',
+      name: 'Quantas sessões são necessárias para ver resultados?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Depende do protocolo e do objetivo. Muitos pacientes notam resultados visíveis desde a primeira sessão. Protocolos completos geralmente incluem entre 5 e 10 sessões para resultados duradouros.' },
+    },
+    {
+      '@type': 'Question',
+      name: 'Os procedimentos são seguros?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Sim. Todos os protocolos são desenvolvidos por Mykaele Procópio, fisioterapeuta dermatofuncional com formação e experiência comprovadas. Utilizamos equipamentos de última geração com todas as certificações necessárias.' },
+    },
+    {
+      '@type': 'Question',
+      name: 'É necessário fazer avaliação antes do procedimento?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Sim, a avaliação inicial é fundamental. Nela, a Mykaele analisa suas necessidades, define o melhor protocolo personalizado e estabelece expectativas realistas de resultados. A avaliação pode ser agendada online.' },
+    },
+  ],
 }
 
 export default function RootLayout({
@@ -166,10 +211,21 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
       </head>
       <body
         className={`${geistSans.variable} antialiased bg-[#faf9f7] text-[#1a1a1a]`}
       >
+        {/* Skip to main content — accessibility */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-[#b76e79] focus:text-white focus:rounded-md focus:text-sm focus:font-medium focus:outline-none focus:ring-2 focus:ring-white"
+        >
+          Pular para o conteúdo principal
+        </a>
         {children}
         <ClientProviders />
 

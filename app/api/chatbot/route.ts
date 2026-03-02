@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { rateLimit, getClientIP, rateLimitResponse } from '@/lib/rate-limit'
 
 /**
  * Chatbot Myka IA — Sistema inteligente de fluxos por botões + NLP local.
@@ -430,6 +431,11 @@ function getMainMenu(): FlowButton[] {
 // ═══════════════════════════════════════════
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 30 messages per minute per IP
+    const ip = getClientIP(req)
+    const rl = rateLimit(`chatbot:${ip}`, 30, 60_000)
+    if (!rl.allowed) return rateLimitResponse(rl.resetIn)
+
     const { message, sessionId, context, flowAction } = await req.json()
 
     if (!message && !flowAction) {

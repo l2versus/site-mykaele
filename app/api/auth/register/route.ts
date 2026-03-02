@@ -4,9 +4,15 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword, generateToken } from '@/lib/auth'
 import { registerSchema } from '@/utils/validation'
 import { sendNewRegistrationNotification } from '@/lib/whatsapp'
+import { rateLimit, getClientIP, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 5 registrations per hour per IP
+    const ip = getClientIP(request)
+    const rl = rateLimit(`auth-register:${ip}`, 5, 3600_000)
+    if (!rl.allowed) return rateLimitResponse(rl.resetIn)
+
     const body = await request.json()
 
     // Validar entrada

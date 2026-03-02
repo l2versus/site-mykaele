@@ -2,6 +2,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 
 const NAV_ITEMS = [
@@ -37,7 +38,7 @@ export function Header() {
           <div className="flex justify-between items-center h-[72px]">
             {/* Logo */}
             <Link href="/" className="relative z-10 group flex items-center gap-3">
-              <img
+              <Image
                 src="/media/logo-branding/logocorreta.png"
                 alt="Mykaele Procópio Home Spa"
                 width={40}
@@ -45,6 +46,7 @@ export function Header() {
                 className={`h-10 w-auto object-contain transition-all duration-500 ${
                   scrolled ? 'brightness-0' : 'invert brightness-200'
                 }`}
+                priority
               />
               <div>
                 <span className={`text-base font-normal tracking-[0.06em] transition-colors duration-500 ${
@@ -61,7 +63,7 @@ export function Header() {
             </Link>
 
             {/* Nav desktop */}
-            <nav className="hidden md:flex items-center gap-8">
+            <nav aria-label="Navegação principal" className="hidden md:flex items-center gap-8">
               {NAV_ITEMS.map((item) => (
                 <Link
                   key={item.href}
@@ -121,7 +123,7 @@ export function Header() {
       </header>
 
       {/* Mobile menu */}
-      <div className={`fixed inset-0 z-40 bg-[#faf9f7] transition-all duration-500 md:hidden flex flex-col items-start justify-center px-10 gap-6 ${
+      <nav aria-label="Menu mobile" className={`fixed inset-0 z-40 bg-[#faf9f7] transition-all duration-500 md:hidden flex flex-col items-start justify-center px-10 gap-6 ${
         menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}>
         {NAV_ITEMS.map((item) => (
@@ -142,7 +144,7 @@ export function Header() {
             Agendar Avaliação
           </Link>
         </div>
-      </div>
+      </nav>
     </>
   )
 }

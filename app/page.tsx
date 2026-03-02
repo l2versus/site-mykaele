@@ -16,6 +16,7 @@ const AboutMykaele = dynamic(() => import('@/components/AboutMykaele'))
 const AppShowcase = dynamic(() => import('@/components/AppShowcase'))
 const AgendamentoSection = dynamic(() => import('@/components/AgendamentoSection'))
 const TechnologiesSection = dynamic(() => import('@/components/TechnologiesSection').then(m => ({ default: m.TechnologiesSection })))
+const FAQ = dynamic(() => import('@/components/FAQ'))
 
 export const metadata: Metadata = {
   title: 'Mykaele Procópio | Estética Avançada & Arquitetura Corporal em Fortaleza',
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#faf9f7] overflow-x-hidden">
+    <div id="main-content" role="main" className="min-h-screen bg-[#faf9f7] overflow-x-hidden">
       <HomeAnimations />
       <Header />
       <SectionNav />
@@ -70,6 +71,7 @@ export default function Home() {
       <EquipeAmbiente />
       <GaleriaVideos />
       <TechnologiesSection />
+      <FAQ />
       <AgendamentoSection />
       <Footer />
     </div>

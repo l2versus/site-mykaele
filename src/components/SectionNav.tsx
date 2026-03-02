@@ -13,6 +13,7 @@ const SECTIONS = [
   { id: 'equipe', label: 'Equipe' },
   { id: 'galeria', label: 'Galeria' },
   { id: 'tecnologias', label: 'Tecnologias' },
+  { id: 'faq', label: 'FAQ' },
   { id: 'agendamento', label: 'Agendar' },
 ]
 
@@ -54,6 +55,7 @@ export function SectionNav() {
 
   return (
     <nav
+      aria-label="Navegação por seções"
       className={`fixed right-5 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-end gap-3 transition-all duration-700 ${
         visible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'
       }`}

@@ -1,13 +1,21 @@
 // API de avaliações públicas
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { verifyToken } from '@/lib/auth'
 
-// GET - Buscar avaliações aprovadas (público) ou todas (admin)
+// GET - Buscar avaliações aprovadas (público) ou todas (admin autenticado)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const isAdmin = searchParams.get('admin') === 'true'
     const limit = parseInt(searchParams.get('limit') || '20')
+
+    // Admin access requires valid JWT with ADMIN role
+    let isAdmin = false
+    const auth = request.headers.get('authorization')
+    if (auth?.startsWith('Bearer ')) {
+      const user = verifyToken(auth.substring(7))
+      if (user?.role === 'ADMIN') isAdmin = true
+    }
 
     // Buscar feedbacks com score >= 7 para exibição pública
     // Para admin, buscar todos
@@ -54,7 +62,11 @@ export async function GET(request: NextRequest) {
     // Filtrar apenas os que têm comentário para exibição pública
     const filtered = isAdmin ? enriched : enriched.filter(r => r.texto.length > 10)
 
-    return NextResponse.json({ reviews: filtered })
+    return NextResponse.json({ reviews: filtered }, {
+      headers: isAdmin ? {} : {
+        'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
+      },
+    })
   } catch (error) {
     console.error('Erro ao buscar avaliações:', error)
     return NextResponse.json({ reviews: [] })
@@ -64,12 +76,23 @@ export async function GET(request: NextRequest) {
 // POST - Cliente envia avaliação após sessão
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { userId, appointmentId, score, comment, categories } = body
+    // Extract userId from JWT token
+    const auth = request.headers.get('authorization')
+    if (!auth?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+    const tokenUser = verifyToken(auth.substring(7))
+    if (!tokenUser) {
+      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    }
 
-    if (!userId || !appointmentId || !score) {
+    const body = await request.json()
+    const { appointmentId, score, comment, categories } = body
+    const userId = tokenUser.userId
+
+    if (!appointmentId || !score) {
       return NextResponse.json(
-        { error: 'userId, appointmentId e score são obrigatórios' },
+        { error: 'appointmentId e score são obrigatórios' },
         { status: 400 }
       )
     }

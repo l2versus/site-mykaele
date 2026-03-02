@@ -2,6 +2,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import Image from 'next/image'
 
 const HERO_VIDEOS = [
   '/media/videos/clinica-tour.mp4',
@@ -91,13 +92,14 @@ export function HeroSection() {
 
       {/* ═══ MOBILE: Foto retrato imersiva da Mykaele ═══ */}
       <div className="md:hidden absolute inset-0">
-        <img
+        <Image
           src={HERO_PHOTO}
           alt="Mykaele Procopio - Fisioterapeuta Dermatofuncional"
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          className="object-cover"
           style={{ objectPosition: 'center 20%' }}
-          fetchPriority="high"
-          draggable={false}
+          priority
+          sizes="100vw"
         />
         {/* Gradientes sobrepostos para legibilidade */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-black/10" />
@@ -141,7 +143,7 @@ export function HeroSection() {
             {/* Mobile: Nome e titulo sobre a foto */}
             <div className={`md:hidden transition-all duration-1000 delay-300 ${loaded ? 'opacity-100' : 'opacity-0 translate-y-3'}`}>
               {/* Logo pequena */}
-              <img src="/media/logo-branding/logocorreta.png" alt="" className="w-6 h-6 object-contain invert brightness-200 mb-6 opacity-50" draggable={false} />
+              <Image src="/media/logo-branding/logocorreta.png" alt="" width={24} height={24} className="object-contain invert brightness-200 mb-6 opacity-50" />
             </div>
 
             <div className={`transition-all duration-1000 delay-500 ${loaded ? 'opacity-100' : 'opacity-0 translate-y-3'}`}>

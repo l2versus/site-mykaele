@@ -1,4 +1,5 @@
 // src/components/Footer.tsx
+import Image from 'next/image'
 
 export function Footer() {
   return (
@@ -127,9 +128,11 @@ export function Footer() {
               <span className="text-[12px] text-white/30 font-light tracking-wider group-hover:text-white/50 transition-colors duration-300">
                 por
               </span>
-              <img
+              <Image
                 src="/media/logo-branding/logo-emmanuel.png"
                 alt="Emmanuel Bezerra — Desenvolvedor Full Stack"
+                width={120}
+                height={32}
                 className="h-8 w-auto object-contain brightness-200 opacity-65 group-hover:opacity-95 transition-all duration-500"
               />
             </a>
