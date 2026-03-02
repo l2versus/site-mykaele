@@ -232,7 +232,7 @@ export default function CreditosPage() {
       {/* ═══ Botão flutuante do carrinho ═══ */}
       <button
         onClick={() => setCartOpen(true)}
-        className={`fixed bottom-6 right-6 z-30 flex items-center gap-2 px-5 py-3.5 rounded-2xl shadow-2xl transition-all duration-300 ${
+        className={`fixed bottom-[5.5rem] right-4 z-50 flex items-center gap-2 px-5 py-3.5 rounded-2xl shadow-2xl transition-all duration-300 ${
           cart.length > 0
             ? 'bg-gradient-to-r from-[#d4a0a7] to-[#b76e79] shadow-[#b76e79]/40 hover:shadow-[#b76e79]/60 hover:scale-105'
             : 'bg-white/10 backdrop-blur-xl border border-white/15 hover:bg-white/15'
@@ -254,7 +254,7 @@ export default function CreditosPage() {
 
       {/* ═══ Toast de feedback ═══ */}
       {toast && (
-        <div className="fixed bottom-24 right-6 z-50 animate-[slideUp_0.3s_ease-out] flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-600/95 backdrop-blur-sm shadow-xl shadow-emerald-900/30 border border-emerald-500/30">
+        <div className="fixed bottom-36 right-4 z-50 animate-[slideUp_0.3s_ease-out] flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-600/95 backdrop-blur-sm shadow-xl shadow-emerald-900/30 border border-emerald-500/30">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-white flex-shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
           <div>
             <p className="text-white text-xs font-semibold">Adicionado ao carrinho!</p>

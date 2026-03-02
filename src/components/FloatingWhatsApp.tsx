@@ -93,7 +93,7 @@ export default function FloatingWhatsApp() {
     if (!dragStartRef.current) return
     const dx = clientX - dragStartRef.current.x
     const dy = clientY - dragStartRef.current.y
-    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+    if (!dragMovedRef.current && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
       dragMovedRef.current = true
       setIsDragging(true)
     }
@@ -115,7 +115,11 @@ export default function FloatingWhatsApp() {
       try { localStorage.setItem('myka_chat_pos', JSON.stringify(finalPos)) } catch {}
     }
     dragStartRef.current = null
-    setTimeout(() => setIsDragging(false), 50)
+    // Reset dragMoved after a short delay so onClick can check it first
+    setTimeout(() => {
+      setIsDragging(false)
+      dragMovedRef.current = false
+    }, 80)
   }, [btnPos])
 
   // Touch events
@@ -127,18 +131,23 @@ export default function FloatingWhatsApp() {
   }, [onDragMove])
   const onTouchEnd = useCallback(() => { onDragEnd() }, [onDragEnd])
 
-  // Mouse events
+  // Mouse events — always listen for move/up when dragStart is active
   useEffect(() => {
-    if (!isDragging) return
-    const onMouseMove = (e: MouseEvent) => onDragMove(e.clientX, e.clientY)
-    const onMouseUp = () => onDragEnd()
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragStartRef.current) return
+      onDragMove(e.clientX, e.clientY)
+    }
+    const onMouseUp = () => {
+      if (!dragStartRef.current) return
+      onDragEnd()
+    }
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('mouseup', onMouseUp)
     return () => {
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mouseup', onMouseUp)
     }
-  }, [isDragging, onDragMove, onDragEnd])
+  }, [onDragMove, onDragEnd])
 
   // Default position calculation
   const defaultStyle: React.CSSProperties = btnPos
@@ -521,7 +530,7 @@ export default function FloatingWhatsApp() {
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        onMouseDown={(e) => { onDragStart(e.clientX, e.clientY); setIsDragging(true) }}
+        onMouseDown={(e) => { onDragStart(e.clientX, e.clientY) }}
         aria-label="Abrir chat Myka IA"
         className={`z-[9999] w-14 h-14 rounded-full
           shadow-lg hover:shadow-xl
