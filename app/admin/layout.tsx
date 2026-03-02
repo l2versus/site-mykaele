@@ -65,6 +65,39 @@ function LeafLogo({ className = '', style = {} }: { className?: string; style?: 
 function LoginScreen({ onLogin }: { onLogin: (t: string, u: AdminUser) => void }) {
   const [email, setEmail] = useState(''); const [password, setPassword] = useState('')
   const [error, setError] = useState(''); const [loading, setLoading] = useState(false)
+  const [bioAvailable, setBioAvailable] = useState(false)
+  const [bioLoading, setBioLoading] = useState(false)
+
+  // Check biometric support
+  useEffect(() => {
+    (async () => {
+      try {
+        if (window.PublicKeyCredential && typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
+          const ok = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+          setBioAvailable(ok)
+        }
+      } catch { /* ignore */ }
+    })()
+  }, [])
+
+  const hasBioCreds = typeof window !== 'undefined' && !!localStorage.getItem('myka_admin_biometric')
+
+  const handleBiometric = async () => {
+    setBioLoading(true); setError('')
+    try {
+      const saved = localStorage.getItem('myka_admin_biometric')
+      if (!saved) { setError('Nenhuma credencial biométrica salva. Faça login com email/senha primeiro.'); setBioLoading(false); return }
+      const { email: savedEmail, password: savedPw } = JSON.parse(saved)
+      const challenge = new Uint8Array(32); crypto.getRandomValues(challenge)
+      await navigator.credentials.get({ publicKey: { challenge, timeout: 60000, rpId: window.location.hostname, userVerification: 'required', allowCredentials: [] } })
+      const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: savedEmail, password: savedPw }) })
+      const data = await res.json()
+      if (!res.ok) { localStorage.removeItem('myka_admin_biometric'); setError('Credencial expirada. Faça login com email/senha.'); return }
+      if (data.user.role !== 'ADMIN') { setError('Acesso restrito'); return }
+      onLogin(data.token, data.user)
+    } catch { setError('Biometria cancelada ou não reconhecida') } finally { setBioLoading(false) }
+  }
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true); setError('')
     try {
@@ -72,6 +105,10 @@ function LoginScreen({ onLogin }: { onLogin: (t: string, u: AdminUser) => void }
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Erro'); return }
       if (data.user.role !== 'ADMIN') { setError('Acesso restrito'); return }
+      // Save biometric credentials for next time
+      if (bioAvailable) {
+        try { localStorage.setItem('myka_admin_biometric', JSON.stringify({ email, password })) } catch { /* ignore */ }
+      }
       onLogin(data.token, data.user)
     } catch { setError('Erro de conexão') } finally { setLoading(false) }
   }
@@ -118,6 +155,30 @@ function LoginScreen({ onLogin }: { onLogin: (t: string, u: AdminUser) => void }
 
           <form onSubmit={submit} className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-4 py-5 sm:p-6 space-y-4 backdrop-blur-xl">
             {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-lg px-3 py-2">{error}</div>}
+
+            {/* ═══ Biometric Quick Login ═══ */}
+            {bioAvailable && hasBioCreds && (
+              <button type="button" onClick={handleBiometric} disabled={bioLoading}
+                className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl bg-[#b76e79]/10 border border-[#b76e79]/20 text-[#b76e79] font-semibold text-sm hover:bg-[#b76e79]/20 active:scale-[0.98] transition-all disabled:opacity-50 mb-1">
+                {bioLoading ? (
+                  <div className="w-5 h-5 border-2 border-[#b76e79]/30 border-t-[#b76e79] rounded-full animate-spin" />
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 11c0-1.1.9-2 2-2s2 .9 2 2v3c0 1.66-1.34 3-3 3h-2c-2.76 0-5-2.24-5-5v-1c0-3.87 3.13-7 7-7s7 3.13 7 7"/>
+                    <path d="M7 11v1c0 2.76 2.24 5 5 5h2c1.66 0 3-1.34 3-3v-3"/>
+                    <path d="M12 4C8.13 4 5 7.13 5 11v1"/>
+                    <path d="M19 11v1c0 3.87-3.13 7-7 7"/>
+                  </svg>
+                )}
+                {bioLoading ? 'Verificando...' : 'Entrar com Biometria'}
+              </button>
+            )}
+            {bioAvailable && hasBioCreds && (
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-white/[0.06]" /><span className="text-white/15 text-[9px] tracking-wider uppercase">ou</span><div className="flex-1 h-px bg-white/[0.06]" />
+              </div>
+            )}
+
             <div>
               <label className="block text-white/40 text-[11px] font-medium mb-1.5 uppercase tracking-wider">Email</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
