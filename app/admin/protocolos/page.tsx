@@ -22,7 +22,10 @@ export default function ProtocolosPage() {
     setLoading(true)
     try {
       const res = await fetchWithAuth('/api/admin/protocols')
-      if (res.ok) setProtocols(await res.json())
+      if (res.ok) {
+        const d = await res.json()
+        setProtocols(Array.isArray(d) ? d : d.protocols || [])
+      }
     } catch {}
     setLoading(false)
   }, [fetchWithAuth])

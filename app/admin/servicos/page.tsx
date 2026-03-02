@@ -25,7 +25,7 @@ export default function ServicosPage() {
   const load = useCallback(async () => {
     try {
       const res = await fetchWithAuth('/api/admin/services')
-      if (res.ok) { const d = await res.json(); setServices(d.services || d || []) }
+      if (res.ok) { const d = await res.json(); setServices(Array.isArray(d) ? d : d.services || []) }
     } catch {}
     setLoading(false)
   }, [fetchWithAuth])

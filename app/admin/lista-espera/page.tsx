@@ -20,7 +20,10 @@ export default function ListaEsperaPage() {
     setLoading(true)
     try {
       const res = await fetchWithAuth(`/api/admin/waitlist?status=${filter}`)
-      if (res.ok) setEntries(await res.json())
+      if (res.ok) {
+        const d = await res.json()
+        setEntries(Array.isArray(d) ? d : d.entries || [])
+      }
     } catch {}
     setLoading(false)
   }, [fetchWithAuth, filter])

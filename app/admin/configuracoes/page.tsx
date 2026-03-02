@@ -27,8 +27,8 @@ export default function ConfiguracoesPage() {
         fetchWithAuth('/api/admin/schedule'),
         fetchWithAuth('/api/admin/blocked-dates'),
       ])
-      if (sRes.ok) { const d = await sRes.json(); setSchedules(d.schedule || d || []) }
-      if (bRes.ok) { const d = await bRes.json(); setBlocked(d.blockedDates || d || []) }
+      if (sRes.ok) { const d = await sRes.json(); setSchedules(Array.isArray(d) ? d : d.schedule || []) }
+      if (bRes.ok) { const d = await bRes.json(); setBlocked(Array.isArray(d) ? d : d.blockedDates || []) }
     } catch {}
     setLoading(false)
   }, [fetchWithAuth])

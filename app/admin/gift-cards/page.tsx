@@ -25,7 +25,10 @@ export default function GiftCardsPage() {
     setLoading(true)
     try {
       const res = await fetchWithAuth('/api/admin/gift-cards')
-      if (res.ok) setCards(await res.json())
+      if (res.ok) {
+        const d = await res.json()
+        setCards(Array.isArray(d) ? d : d.cards || [])
+      }
     } catch {}
     setLoading(false)
   }, [fetchWithAuth])

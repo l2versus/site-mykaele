@@ -409,7 +409,7 @@ export default function FinanceiroPage() {
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    {data.payments.map(p => (
+                    {(data.payments || []).map(p => (
                       <div key={p.id} className="flex items-center justify-between py-2.5 px-2 border-b border-stone-100 last:border-0 rounded-md hover:bg-white group transition-all">
                         <div className="flex-1 min-w-0">
                           <div className="text-stone-600 text-xs font-medium truncate">{p.user?.name || p.description || 'Pagamento'}</div>
@@ -443,7 +443,7 @@ export default function FinanceiroPage() {
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    {data.expensesList.map(e => (
+                    {(data.expensesList || []).map(e => (
                       <div key={e.id} className="flex items-center justify-between py-2.5 px-2 border-b border-stone-100 last:border-0 rounded-md hover:bg-white group transition-all">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">

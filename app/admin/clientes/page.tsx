@@ -100,7 +100,7 @@ export default function ClientesPage() {
   const load = useCallback(async () => {
     try {
       const res = await fetchWithAuth('/api/admin/clients')
-      if (res.ok) { const d = await res.json(); setClients(d.clients || d || []) }
+      if (res.ok) { const d = await res.json(); setClients(Array.isArray(d) ? d : d.clients || []) }
     } catch {}
     setLoading(false)
   }, [fetchWithAuth])

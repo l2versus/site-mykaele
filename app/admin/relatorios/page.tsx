@@ -28,7 +28,21 @@ export default function RelatoriosPage() {
     setLoading(true)
     try {
       const res = await fetchWithAuth(`/api/admin/reports?from=${from}&to=${to}`)
-      if (res.ok) setData(await res.json())
+      if (res.ok) {
+        const d = await res.json()
+        setData({
+          summary: d.summary || { totalRevenue: 0, totalExpenses: 0, profit: 0, totalAppointments: 0, totalClients: 0, retentionRate: 0 },
+          serviceRevenue: Array.isArray(d.serviceRevenue) ? d.serviceRevenue : [],
+          monthlyRevenue: d.monthlyRevenue || {},
+          monthlyExpenses: d.monthlyExpenses || {},
+          dailyRevenue: d.dailyRevenue || {},
+          expenseByCategory: d.expenseByCategory || {},
+          statusCount: d.statusCount || {},
+          hourHeatmap: d.hourHeatmap || {},
+          newClientsPerMonth: d.newClientsPerMonth || {},
+          paymentMethods: d.paymentMethods || {},
+        })
+      }
     } catch {}
     setLoading(false)
   }, [fetchWithAuth, from, to])
