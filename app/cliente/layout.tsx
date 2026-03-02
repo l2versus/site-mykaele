@@ -366,6 +366,7 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
             </span>
           </button>
 
+          {/* Instagram login — desativado temporariamente
           <button onClick={() => handleSocial('instagram')} disabled={!!socialLoading}
             className="w-full flex items-center gap-3 px-4 py-3.5 bg-white/[0.03] border border-white/[0.05] rounded-2xl hover:bg-white/[0.06] hover:border-white/[0.1] transition-all group disabled:opacity-50">
             {socialLoading === 'instagram' ? (
@@ -382,6 +383,7 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
               {socialLoading === 'instagram' ? 'Conectando...' : mode === 'login' ? 'Entrar com Instagram' : 'Cadastrar com Instagram'}
             </span>
           </button>
+          */}
         </div>
 
         {/* Divider */}
