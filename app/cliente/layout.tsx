@@ -778,7 +778,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
         </header>
 
         {/* ─── Content ─── */}
-        <main className="px-5 py-6 max-w-lg mx-auto lg:max-w-2xl relative z-10">
+        <main className="px-5 py-6 max-w-lg mx-auto lg:max-w-4xl relative z-10">
           <PageTransition>{children}</PageTransition>
         </main>
 

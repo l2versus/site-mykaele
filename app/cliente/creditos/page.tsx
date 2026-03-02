@@ -265,13 +265,13 @@ export default function CreditosPage() {
 
       {/* ═══ Drawer lateral do carrinho ═══ */}
       {cartOpen && (
-        <div className="fixed inset-0 z-50" onClick={() => setCartOpen(false)}>
+        <div className="fixed inset-0 z-[60]" onClick={() => setCartOpen(false)}>
           {/* Overlay */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]" />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]" />
           
           {/* Drawer */}
           <div
-            className="absolute top-0 right-0 h-full w-full max-w-md bg-[#0e0b10]/98 backdrop-blur-xl border-l border-white/10 shadow-2xl animate-[slideInRight_0.3s_ease-out] flex flex-col"
+            className="absolute top-0 right-0 h-full w-[90vw] max-w-md bg-[#0e0b10] backdrop-blur-xl border-l border-white/10 shadow-2xl animate-[slideInRight_0.3s_ease-out] flex flex-col"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
