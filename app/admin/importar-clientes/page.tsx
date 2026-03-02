@@ -131,6 +131,65 @@ function formatPhone(phone: string): string {
   return phone
 }
 
+// Normalize phone for duplicate comparison (last 9 digits)
+function normalizePhone(phone: string): string {
+  const d = phone.replace(/\D/g, '')
+  return d.length >= 9 ? d.slice(-9) : d
+}
+
+// Parse bulk text (one contact per line) — supports many formats
+function parseBulkText(text: string): { name: string; phone: string; email: string; photo: string }[] {
+  const contacts: { name: string; phone: string; email: string; photo: string }[] = []
+  const lines = text.split(/\n/).map(l => l.trim()).filter(l => l.length > 0)
+
+  for (const line of lines) {
+    let name = '', phone = ''
+
+    // Try tab, dash, comma, pipe, semicolon as separators
+    const separators = [/\t/, /\s*[–—-]\s+/, /\s*[,;|]\s*/]
+    let parts: string[] | null = null
+
+    for (const sep of separators) {
+      const split = line.split(sep).map(s => s.trim()).filter(Boolean)
+      if (split.length >= 2) { parts = split; break }
+    }
+
+    const hasDigits = (s: string) => /[\d()+-]{8,}/.test(s.replace(/\s/g, ''))
+
+    if (parts && parts.length >= 2) {
+      if (hasDigits(parts[parts.length - 1])) {
+        phone = parts[parts.length - 1]
+        name = parts.slice(0, -1).join(' ')
+      } else if (hasDigits(parts[0])) {
+        phone = parts[0]
+        name = parts.slice(1).join(' ')
+      } else {
+        name = parts[0]
+        phone = parts.slice(1).join(' ')
+      }
+    } else {
+      // No separator found — try to split name from phone by digit boundary
+      const m = line.match(/^(.+?)\s+([\d()+-][\d()\s+-]{6,})$/)
+      if (m) {
+        name = m[1]; phone = m[2]
+      } else if (/^[\d()+-\s]{8,}$/.test(line)) {
+        phone = line
+      } else {
+        name = line
+      }
+    }
+
+    name = name.replace(/^["']|["']$/g, '').trim()
+    phone = phone.replace(/^["']|["']$/g, '').trim()
+
+    if (name || phone) {
+      contacts.push({ name, phone: phone ? formatPhone(phone) : '', email: '', photo: '' })
+    }
+  }
+
+  return contacts
+}
+
 export default function ImportarClientesPage() {
   const { fetchWithAuth } = useAdmin()
   const searchParams = useSearchParams()
@@ -147,6 +206,8 @@ export default function ImportarClientesPage() {
   const [importFeedback, setImportFeedback] = useState<string | null>(null)
   const [hasContactPicker, setHasContactPicker] = useState(false)
   const [expandedRow, setExpandedRow] = useState<string | null>(null)
+  const [showBulkPaste, setShowBulkPaste] = useState(false)
+  const [bulkText, setBulkText] = useState('')
 
   // Detect Contact Picker API (Android Chrome, some browsers)
   useEffect(() => {
@@ -188,15 +249,34 @@ export default function ImportarClientesPage() {
     }
   }
 
-  // Add multiple contacts to rows in a single batch update
+  // Add multiple contacts to rows in a single batch update (with duplicate detection)
   const addContactsToRows = (contacts: { name: string; phone: string; email: string; photo: string }[]) => {
     if (contacts.length === 0) return
+
+    let skipped = 0
 
     setRows(prev => {
       let updatedRows = [...prev]
       const newPhotos: Record<string, string> = {}
 
+      // Build set of existing phones for duplicate check
+      const existingPhones = new Set<string>()
+      for (const r of updatedRows) {
+        const norm = normalizePhone(r.phone)
+        if (norm.length >= 8) existingPhones.add(norm)
+      }
+
       for (const c of contacts) {
+        // Duplicate detection — skip if phone already in rows
+        if (c.phone) {
+          const norm = normalizePhone(c.phone)
+          if (norm.length >= 8 && existingPhones.has(norm)) {
+            skipped++
+            continue
+          }
+          if (norm.length >= 8) existingPhones.add(norm)
+        }
+
         // Find first empty row
         const emptyIdx = updatedRows.findIndex(r => !r.name.trim() && !r.phone.trim())
 
@@ -231,9 +311,12 @@ export default function ImportarClientesPage() {
       return updatedRows
     })
 
-    const count = contacts.length
-    setImportFeedback(`${count} contato${count > 1 ? 's' : ''} importado${count > 1 ? 's' : ''}! ✅`)
-    setTimeout(() => setImportFeedback(null), 5000)
+    const added = contacts.length - skipped
+    const parts: string[] = []
+    if (added > 0) parts.push(`${added} contato${added > 1 ? 's' : ''} importado${added > 1 ? 's' : ''}`)
+    if (skipped > 0) parts.push(`${skipped} duplicado${skipped > 1 ? 's' : ''} ignorado${skipped > 1 ? 's' : ''}`)
+    setImportFeedback(`${parts.join(', ')} ✅`)
+    setTimeout(() => setImportFeedback(null), 6000)
   }
 
   // Handle .vcf file selection — reads ALL files, parses ALL contacts, adds in ONE batch
@@ -265,6 +348,20 @@ export default function ImportarClientesPage() {
     addContactsToRows(allContacts)
 
     if (vcfInputRef.current) vcfInputRef.current.value = ''
+  }
+
+  // Process bulk pasted text
+  const processBulkPaste = () => {
+    if (!bulkText.trim()) return
+    const contacts = parseBulkText(bulkText)
+    if (contacts.length === 0) {
+      setImportFeedback('Nenhum contato encontrado no texto colado. Use um por linha: Nome - Telefone')
+      setTimeout(() => setImportFeedback(null), 5000)
+      return
+    }
+    addContactsToRows(contacts)
+    setBulkText('')
+    setShowBulkPaste(false)
   }
 
   // Send WhatsApp message with credentials
@@ -422,12 +519,23 @@ export default function ImportarClientesPage() {
         </div>
       </div>
 
-      {/* ── Mobile-first: BIG import contact button ── */}
+      {/* ── Mobile-first: Import options ── */}
       <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-xl p-4 space-y-3">
         <p className="text-white/60 text-xs sm:text-sm">
-          <strong className="text-white/80">Importar do celular:</strong> Selecione vários contatos de uma vez!
+          <strong className="text-white/80">Importar contatos:</strong> Cole uma lista, selecione do celular ou importe arquivo.
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
+          {/* Bulk paste (primary — easiest for WhatsApp contacts) */}
+          <button
+            onClick={() => setShowBulkPaste(!showBulkPaste)}
+            className="flex-1 flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl text-sm font-semibold bg-blue-500/20 border border-blue-500/30 text-blue-400 hover:bg-blue-500/30 active:scale-[0.98] transition-all"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            📋 Colar Lista
+          </button>
+
           {/* Contact Picker (Android Chrome) */}
           {hasContactPicker && (
             <button
@@ -437,29 +545,67 @@ export default function ImportarClientesPage() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
               </svg>
-              Escolher da Agenda
+              Da Agenda
             </button>
           )}
 
           {/* VCF file picker (iOS + Android) */}
           <button
             onClick={() => vcfInputRef.current?.click()}
-            className={`${hasContactPicker ? 'flex-1' : 'w-full'} flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl text-sm font-semibold bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 active:scale-[0.98] transition-all`}
+            className="flex-1 flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl text-sm font-semibold bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 active:scale-[0.98] transition-all"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
             </svg>
-            Importar Contatos do Celular
+            Arquivo .vcf
           </button>
         </div>
-        <div className="text-white/30 text-[10px] leading-relaxed space-y-1">
-          <p>📱 <strong className="text-white/40">No iPhone (vários de uma vez):</strong></p>
-          <p className="pl-4">1. Abra o app <strong className="text-white/50">Contatos</strong></p>
-          <p className="pl-4">2. Para cada contato: toque nele → <strong className="text-white/50">Compartilhar Contato</strong> → <strong className="text-white/50">Salvar em Arquivos</strong></p>
-          <p className="pl-4">3. Repita para todos os contatos que quiser (salve todos na mesma pasta)</p>
-          <p className="pl-4">4. Volte aqui, toque no botão acima e <strong className="text-white/50">selecione todos os arquivos de uma vez</strong></p>
-          <p className="pl-4 text-white/40 font-medium mt-1">💡 No seletor de arquivos, toque em "Selecionar" (canto superior) e marque todos!</p>
-        </div>
+
+        {/* ── Bulk paste textarea ── */}
+        {showBulkPaste && (
+          <div className="space-y-2 pt-1">
+            <textarea
+              value={bulkText}
+              onChange={e => setBulkText(e.target.value)}
+              rows={6}
+              placeholder={`Cole aqui sua lista de contatos (um por linha):\n\nMaria Silva - (85) 99999-1111\nJoana Costa - 85988887777\nAna Paula, 85977776666\nRenata Souza 85966665555`}
+              className="w-full px-3 py-3 bg-white/[0.04] border border-blue-500/20 rounded-xl text-white text-sm placeholder-white/25 focus:outline-none focus:border-blue-500/40 transition-all resize-y font-mono leading-relaxed"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-white/30 text-[10px]">
+                {bulkText.trim() ? `${bulkText.trim().split(/\n/).filter(l => l.trim()).length} linhas detectadas` : 'Formatos: Nome - Telefone, Nome\\tTelefone, Nome, Telefone'}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setShowBulkPaste(false); setBulkText('') }}
+                  className="px-3 py-2 rounded-lg text-xs font-medium bg-white/[0.04] border border-white/[0.08] text-white/50 hover:text-white/80 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={processBulkPaste}
+                  disabled={!bulkText.trim()}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-blue-500/20 border border-blue-500/30 text-blue-400 hover:bg-blue-500/30 active:scale-[0.98] transition-all disabled:opacity-40"
+                >
+                  Importar {bulkText.trim() ? bulkText.trim().split(/\n/).filter(l => l.trim()).length : 0} Contatos
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Guide: how to get contacts ── */}
+        {!showBulkPaste && (
+          <div className="text-white/30 text-[10px] leading-relaxed space-y-2">
+            <p className="text-white/50 font-semibold text-[11px]">📱 Como pegar seus contatos do WhatsApp:</p>
+            <div className="space-y-1 pl-1">
+              <p><strong className="text-blue-400/70">Mais fácil — Colar Lista:</strong> Abra seu grupo no WhatsApp → toque nos participantes → anote nome e telefone de cada um → cole tudo aqui no botão <strong className="text-blue-400/60">"Colar Lista"</strong></p>
+              <p><strong className="text-green-400/70">Android:</strong> App <strong className="text-white/40">Contatos</strong> → Menu (⋮) → <strong className="text-white/40">Exportar</strong> → salva um arquivo .vcf com todos → importe aqui</p>
+              <p><strong className="text-green-400/70">iPhone:</strong> <strong className="text-white/40">Ajustes</strong> → <strong className="text-white/40">Contatos</strong> → <strong className="text-white/40">Exportar todos</strong> (iOS 18+), ou selecione vários no app Contatos → <strong className="text-white/40">Compartilhar</strong> → <strong className="text-white/40">Salvar em Arquivos</strong></p>
+            </div>
+            <p className="text-white/20 text-[9px] mt-1">⚡ Duplicados são ignorados automaticamente pelo número de telefone.</p>
+          </div>
+        )}
       </div>
 
       {/* ── Import feedback banner ── */}
