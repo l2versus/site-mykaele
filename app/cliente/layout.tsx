@@ -72,12 +72,13 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
       if (typeof window === 'undefined' || !window.PublicKeyCredential) return
       try {
         const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-        // Also check if user has saved credentials
-        const hasCreds = !!localStorage.getItem('myka_biometric_user')
-        setBiometricAvailable(available && hasCreds)
+        // Show biometric button on any device that supports it
+        setBiometricAvailable(available)
       } catch {}
     })()
   }, [])
+
+  const hasBiometricCreds = typeof window !== 'undefined' && !!localStorage.getItem('myka_biometric_user')
 
   // Biometric login handler
   const handleBiometricLogin = async () => {
@@ -86,7 +87,12 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
     haptic('medium')
     try {
       const savedUser = localStorage.getItem('myka_biometric_user')
-      if (!savedUser) throw new Error('Nenhuma biometria cadastrada')
+      if (!savedUser) {
+        setError('Faça login uma vez com e-mail/senha para ativar a biometria no próximo acesso.')
+        haptic('light')
+        setBiometricLoading(false)
+        return
+      }
       const { email, token: savedToken } = JSON.parse(savedUser)
       
       // Verify the saved token is still valid
@@ -101,7 +107,6 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
       } else {
         // Token expired, need to re-authenticate
         localStorage.removeItem('myka_biometric_user')
-        setBiometricAvailable(false)
         setError('Sessão expirada. Faça login novamente para reativar a biometria.')
         haptic('error')
       }
@@ -303,6 +308,45 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
           </button>
         </div>
 
+        {/* ═══ Biometric Quick Login ═══ */}
+        {mode === 'login' && biometricAvailable && (
+          <div className="mb-5">
+            <button
+              onClick={handleBiometricLogin}
+              disabled={biometricLoading}
+              className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-2xl border transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 group"
+              style={{
+                background: hasBiometricCreds
+                  ? 'linear-gradient(135deg, rgba(183,110,121,0.18), rgba(183,110,121,0.06))'
+                  : 'linear-gradient(135deg, rgba(183,110,121,0.08), rgba(183,110,121,0.02))',
+                borderColor: hasBiometricCreds ? 'rgba(183,110,121,0.35)' : 'rgba(183,110,121,0.15)',
+              }}
+            >
+              {biometricLoading ? (
+                <div className="w-6 h-6 border-2 border-[#b76e79]/40 border-t-[#b76e79] rounded-full animate-spin" />
+              ) : (
+                <svg className="w-7 h-7 text-[#d4a0a7] group-hover:text-[#b76e79] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.864 4.243A7.5 7.5 0 0119.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 004.5 10.5a48.667 48.667 0 00-1.243 3.757M15.75 10.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                </svg>
+              )}
+              <div className="text-left">
+                <span className="text-[#d4a0a7] text-sm font-medium block group-hover:text-[#b76e79] transition-colors">
+                  {biometricLoading ? 'Verificando...' : hasBiometricCreds ? 'Entrar com Biometria' : 'Login com Biometria'}
+                </span>
+                <span className="text-white/20 text-[10px]">
+                  {hasBiometricCreds ? 'Face ID · Impressão Digital · PIN' : 'Faça login uma vez para ativar'}
+                </span>
+              </div>
+            </button>
+
+            <div className="flex items-center gap-3 mt-5 mb-0">
+              <div className="flex-1 h-px bg-white/[0.04]" />
+              <span className="text-white/10 text-[9px] font-medium tracking-wider uppercase">ou</span>
+              <div className="flex-1 h-px bg-white/[0.04]" />
+            </div>
+          </div>
+        )}
+
         {/* Social Buttons */}
         <div className="space-y-2.5 mb-6">
           <button onClick={() => handleSocial('google')} disabled={!!socialLoading}
@@ -346,41 +390,6 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
           <span className="text-white/10 text-[9px] font-medium tracking-wider uppercase">ou com e-mail</span>
           <div className="flex-1 h-px bg-white/[0.04]" />
         </div>
-
-        {/* ═══ Biometric Quick Login ═══ */}
-        {mode === 'login' && biometricAvailable && (
-          <div className="mb-6">
-            <button
-              onClick={handleBiometricLogin}
-              disabled={biometricLoading}
-              className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-2xl border transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 group"
-              style={{
-                background: 'linear-gradient(135deg, rgba(183,110,121,0.12), rgba(183,110,121,0.04))',
-                borderColor: 'rgba(183,110,121,0.25)',
-              }}
-            >
-              {biometricLoading ? (
-                <div className="w-6 h-6 border-2 border-[#b76e79]/40 border-t-[#b76e79] rounded-full animate-spin" />
-              ) : (
-                <svg className="w-7 h-7 text-[#d4a0a7] group-hover:text-[#b76e79] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.864 4.243A7.5 7.5 0 0119.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 004.5 10.5a48.667 48.667 0 00-1.243 3.757M15.75 10.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-                </svg>
-              )}
-              <div className="text-left">
-                <span className="text-[#d4a0a7] text-sm font-medium block group-hover:text-[#b76e79] transition-colors">
-                  {biometricLoading ? 'Verificando...' : 'Entrar com Biometria'}
-                </span>
-                <span className="text-white/20 text-[10px]">Face ID · Impressão Digital · PIN</span>
-              </div>
-            </button>
-
-            <div className="flex items-center gap-3 mt-5 mb-0">
-              <div className="flex-1 h-px bg-white/[0.04]" />
-              <span className="text-white/10 text-[9px] font-medium tracking-wider uppercase">ou</span>
-              <div className="flex-1 h-px bg-white/[0.04]" />
-            </div>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="relative overflow-hidden rounded-3xl">
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-white/[0.01]" />

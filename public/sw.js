@@ -37,6 +37,9 @@ self.addEventListener('fetch', (event) => {
     // Skip non-GET
     if (request.method !== 'GET') return
 
+    // Skip video/audio files — let browser handle range requests natively
+    if (url.pathname.match(/\.(mp4|mov|webm|ogg|m4v|avi|mkv|mp3|m4a)$/i)) return
+
     // API calls: network-first with 3s timeout
     if (url.pathname.startsWith('/api/')) {
         event.respondWith(
