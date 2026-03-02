@@ -162,88 +162,107 @@ export default function ImportarClientesPage() {
       const photo = searchParams.get('photo') || ''
 
       if (name || phone) {
-        setRows(prev => {
-          const firstEmpty = prev.find(r => !r.name.trim() && !r.phone.trim())
-          if (firstEmpty) {
-            return prev.map(r => {
-              if (r.id !== firstEmpty.id) return r
-              const updated = { ...r, name, phone: formatPhone(phone), email }
-              if (name.length >= 2) updated.tempPassword = generateTempPassword(name)
-              if (photo) setContactPhotos(p => ({ ...p, [r.id]: photo }))
-              return updated
-            })
-          }
-          const newRow = { ...EMPTY_ROW(), name, phone: formatPhone(phone), email, tempPassword: name.length >= 2 ? generateTempPassword(name) : '' }
-          if (photo) setContactPhotos(p => ({ ...p, [newRow.id]: photo }))
-          return [...prev, newRow]
-        })
-        setImportFeedback(`Contato "${name}" importado!`)
-        setTimeout(() => setImportFeedback(null), 4000)
+        addContactsToRows([{ name, phone: formatPhone(phone), email, photo }])
       }
       window.history.replaceState({}, '', '/admin/importar-clientes')
     }
   }, [searchParams])
 
-  // Contact Picker API (Android Chrome)
+  // Contact Picker API (Android Chrome) — multiple selection
   const pickContact = async () => {
     try {
       const props = ['name', 'tel', 'email']
       // @ts-expect-error Contact Picker API
-      const contacts = await navigator.contacts.select(props, { multiple: false })
-      if (contacts && contacts.length > 0) {
-        const c = contacts[0]
-        const name = c.name?.[0] || ''
-        const phone = c.tel?.[0] || ''
-        const email = c.email?.[0] || ''
-        addContactToRows(name, formatPhone(phone), email, '')
+      const picked = await navigator.contacts.select(props, { multiple: true })
+      if (picked && picked.length > 0) {
+        const batch = picked.map((c: { name?: string[]; tel?: string[]; email?: string[] }) => ({
+          name: c.name?.[0] || '',
+          phone: formatPhone(c.tel?.[0] || ''),
+          email: c.email?.[0] || '',
+          photo: '',
+        }))
+        addContactsToRows(batch)
       }
     } catch (e) {
       console.error('Contact Picker error:', e)
     }
   }
 
-  // Shared logic to add a contact to rows
-  const addContactToRows = (name: string, phone: string, email: string, photo: string) => {
+  // Add multiple contacts to rows in a single batch update
+  const addContactsToRows = (contacts: { name: string; phone: string; email: string; photo: string }[]) => {
+    if (contacts.length === 0) return
+
     setRows(prev => {
-      const firstEmpty = prev.find(r => !r.name.trim() && !r.phone.trim())
-      if (firstEmpty) {
-        return prev.map(r => {
-          if (r.id !== firstEmpty.id) return r
-          const updated = { ...r, name, phone, email }
-          if (name.length >= 2) updated.tempPassword = generateTempPassword(name)
-          if (photo) setContactPhotos(p => ({ ...p, [r.id]: photo }))
-          return updated
-        })
+      let updatedRows = [...prev]
+      const newPhotos: Record<string, string> = {}
+
+      for (const c of contacts) {
+        // Find first empty row
+        const emptyIdx = updatedRows.findIndex(r => !r.name.trim() && !r.phone.trim())
+
+        if (emptyIdx >= 0) {
+          const row = updatedRows[emptyIdx]
+          updatedRows[emptyIdx] = {
+            ...row,
+            name: c.name,
+            phone: c.phone,
+            email: c.email,
+            tempPassword: c.name.length >= 2 ? generateTempPassword(c.name) : '',
+          }
+          if (c.photo) newPhotos[row.id] = c.photo
+        } else {
+          const newRow = {
+            ...EMPTY_ROW(),
+            name: c.name,
+            phone: c.phone,
+            email: c.email,
+            tempPassword: c.name.length >= 2 ? generateTempPassword(c.name) : '',
+          }
+          if (c.photo) newPhotos[newRow.id] = c.photo
+          updatedRows = [...updatedRows, newRow]
+        }
       }
-      const newRow = { ...EMPTY_ROW(), name, phone, email, tempPassword: name.length >= 2 ? generateTempPassword(name) : '' }
-      if (photo) setContactPhotos(p => ({ ...p, [newRow.id]: photo }))
-      return [...prev, newRow]
+
+      // Batch update photos
+      if (Object.keys(newPhotos).length > 0) {
+        setContactPhotos(p => ({ ...p, ...newPhotos }))
+      }
+
+      return updatedRows
     })
-    setImportFeedback(`Contato "${name}" adicionado!`)
-    setTimeout(() => setImportFeedback(null), 3000)
+
+    const count = contacts.length
+    setImportFeedback(`${count} contato${count > 1 ? 's' : ''} importado${count > 1 ? 's' : ''}! ✅`)
+    setTimeout(() => setImportFeedback(null), 5000)
   }
 
-  // Handle .vcf file selection
+  // Handle .vcf file selection — reads ALL files, parses ALL contacts, adds in ONE batch
   const handleVcfFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
 
-    let totalImported = 0
+    // Read all files in parallel
+    const allContacts: { name: string; phone: string; email: string; photo: string }[] = []
 
-    for (const file of Array.from(files)) {
+    const fileReads = Array.from(files).map(async (file) => {
       const text = await file.text()
-      const contacts = parseVCard(text)
+      return parseVCard(text)
+    })
 
-      for (const contact of contacts) {
-        addContactToRows(contact.name, formatPhone(contact.phone), contact.email, contact.photo)
-        totalImported++
+    const results = await Promise.all(fileReads)
+    for (const contacts of results) {
+      for (const c of contacts) {
+        allContacts.push({
+          name: c.name,
+          phone: formatPhone(c.phone),
+          email: c.email,
+          photo: c.photo,
+        })
       }
     }
 
-    if (totalImported > 0) {
-      setImportFeedback(`${totalImported} contato(s) importado(s)!`)
-      setTimeout(() => setImportFeedback(null), 4000)
-    }
+    // Add ALL contacts in a single batch update
+    addContactsToRows(allContacts)
 
     if (vcfInputRef.current) vcfInputRef.current.value = ''
   }
@@ -406,7 +425,7 @@ export default function ImportarClientesPage() {
       {/* ── Mobile-first: BIG import contact button ── */}
       <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-xl p-4 space-y-3">
         <p className="text-white/60 text-xs sm:text-sm">
-          <strong className="text-white/80">Importar do celular:</strong> Puxe nome e telefone direto da agenda
+          <strong className="text-white/80">Importar do celular:</strong> Selecione vários contatos de uma vez!
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
           {/* Contact Picker (Android Chrome) */}
@@ -430,16 +449,16 @@ export default function ImportarClientesPage() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
-            Importar Contato do Celular
+            Importar Contatos do Celular
           </button>
         </div>
         <div className="text-white/30 text-[10px] leading-relaxed space-y-1">
-          <p>📱 <strong className="text-white/40">No iPhone:</strong></p>
+          <p>📱 <strong className="text-white/40">No iPhone (vários de uma vez):</strong></p>
           <p className="pl-4">1. Abra o app <strong className="text-white/50">Contatos</strong></p>
-          <p className="pl-4">2. Toque no contato que deseja importar</p>
-          <p className="pl-4">3. Role para baixo e toque em <strong className="text-white/50">Compartilhar Contato</strong></p>
-          <p className="pl-4">4. Toque em <strong className="text-white/50">Salvar em Arquivos</strong></p>
-          <p className="pl-4">5. Volte aqui e toque no botão acima — selecione o arquivo salvo</p>
+          <p className="pl-4">2. Para cada contato: toque nele → <strong className="text-white/50">Compartilhar Contato</strong> → <strong className="text-white/50">Salvar em Arquivos</strong></p>
+          <p className="pl-4">3. Repita para todos os contatos que quiser (salve todos na mesma pasta)</p>
+          <p className="pl-4">4. Volte aqui, toque no botão acima e <strong className="text-white/50">selecione todos os arquivos de uma vez</strong></p>
+          <p className="pl-4 text-white/40 font-medium mt-1">💡 No seletor de arquivos, toque em "Selecionar" (canto superior) e marque todos!</p>
         </div>
       </div>
 
