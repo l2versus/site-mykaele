@@ -227,9 +227,9 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0e0b10] via-[#100d14] to-[#0e0b10] flex relative overflow-hidden">
+    <div className="min-h-screen min-h-[100dvh] w-full max-w-[100vw] bg-gradient-to-b from-[#0e0b10] via-[#100d14] to-[#0e0b10] flex relative overflow-hidden">
       {/* Pattern watermark — cor real + blur + degradê escuro */}
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute inset-0 opacity-[0.12] blur-[1px]" style={{ backgroundImage: 'url(/media/logo-branding/pattern-leaf.png)', backgroundSize: '280px', backgroundRepeat: 'repeat' }} />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0e0b10]/80 via-[#0e0b10]/60 to-[#0e0b10]/90" />
       </div>
@@ -279,11 +279,11 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
       </div>
 
       {/* ── Right Panel: Auth Form ── */}
-      <div className="flex-1 flex items-center justify-center px-5 relative z-10">
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-5 relative z-10 min-w-0">
         {/* Glow sutil */}
-        <div className="absolute top-1/4 right-1/3 w-[250px] h-[250px] bg-[#b76e79]/[0.015] rounded-full blur-[110px] pointer-events-none" />
+        <div className="absolute top-1/4 right-1/3 w-[180px] sm:w-[250px] h-[180px] sm:h-[250px] bg-[#b76e79]/[0.015] rounded-full blur-[110px] pointer-events-none" />
 
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-[min(28rem,100%)]">
           {/* Brand */}
           <div className="text-center mb-10">
             <div className="mb-5 flex justify-center">

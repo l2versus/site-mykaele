@@ -74,9 +74,9 @@ function LoginScreen({ onLogin }: { onLogin: (t: string, u: AdminUser) => void }
     } catch { setError('Erro de conexão') } finally { setLoading(false) }
   }
   return (
-    <div className="min-h-screen bg-[#09090b] flex relative overflow-hidden">
+    <div className="min-h-screen min-h-[100dvh] w-full max-w-[100vw] bg-[#09090b] flex relative overflow-hidden">
       {/* Pattern watermark — cor real + blur + degradê escuro */}
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute inset-0 opacity-[0.12] blur-[1px]" style={{ backgroundImage: 'url(/media/logo-branding/pattern-leaf.png)', backgroundSize: '280px', backgroundRepeat: 'repeat' }} />
         <div className="absolute inset-0 bg-gradient-to-b from-[#09090b]/80 via-[#09090b]/60 to-[#09090b]/90" />
       </div>
@@ -98,11 +98,11 @@ function LoginScreen({ onLogin }: { onLogin: (t: string, u: AdminUser) => void }
       </div>
 
       {/* ── Right Panel: Login Form ── */}
-      <div className="flex-1 flex items-center justify-center px-6 relative z-10">
-        <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-[#b76e79]/[0.02] rounded-full blur-[120px] pointer-events-none" />
-        <LeafLogo className="absolute top-8 right-8 w-[100px] h-[100px] text-[#b76e79]/[0.02] rotate-12 pointer-events-none" />
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 relative z-10 min-w-0">
+        <div className="absolute top-1/4 left-1/4 w-[200px] sm:w-[300px] h-[200px] sm:h-[300px] bg-[#b76e79]/[0.02] rounded-full blur-[120px] pointer-events-none" />
+        <LeafLogo className="absolute top-8 right-4 sm:right-8 w-16 sm:w-[100px] h-16 sm:h-[100px] text-[#b76e79]/[0.02] rotate-12 pointer-events-none" />
 
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-[min(24rem,100%)]">
           <div className="lg:hidden text-center mb-8">
             <div className="flex justify-center mb-4"><LeafLogo className="w-10 h-14 text-[#b76e79]/50" /></div>
             <h1 className="text-xl font-light text-white/90 tracking-tight">Mykaele Procópio</h1>
@@ -114,7 +114,7 @@ function LoginScreen({ onLogin }: { onLogin: (t: string, u: AdminUser) => void }
             <p className="text-white/30 text-xs mt-1.5">Acesse sua área de gestão</p>
           </div>
 
-          <form onSubmit={submit} className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 space-y-4 backdrop-blur-xl">
+          <form onSubmit={submit} className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-4 py-5 sm:p-6 space-y-4 backdrop-blur-xl">
             {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-lg px-3 py-2">{error}</div>}
             <div>
               <label className="block text-white/40 text-[11px] font-medium mb-1.5 uppercase tracking-wider">Email</label>
@@ -138,7 +138,7 @@ function LoginScreen({ onLogin }: { onLogin: (t: string, u: AdminUser) => void }
 
       {/* Dev credit badge */}
       <a href="https://www.instagram.com/emmanuelbezerra_" target="_blank" rel="noopener noreferrer"
-        className="fixed bottom-3 left-4 z-50 flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/[0.05] backdrop-blur-md border border-white/[0.08] group hover:bg-white/[0.1] hover:border-white/[0.15] transition-all duration-300">
+        className="fixed bottom-3 left-3 sm:left-4 z-50 flex items-center gap-2 px-3 sm:px-3.5 py-2 rounded-full bg-white/[0.05] backdrop-blur-md border border-white/[0.08] group hover:bg-white/[0.1] hover:border-white/[0.15] transition-all duration-300 max-w-[calc(100vw-1.5rem)]">
         <span className="text-[10px] text-white/25 tracking-wider font-light group-hover:text-white/40 transition-colors">dev</span>
         <span className="text-[10px] text-rose-400/40">&#9829;</span>
         <img src="/media/logo-branding/logo-emmanuel.png" alt="Emmanuel Bezerra" className="h-6 w-auto object-contain brightness-200 opacity-45 group-hover:opacity-70 transition-opacity duration-300" />
