@@ -115,6 +115,15 @@ export default function AppShowcase() {
   const [activeVideo, setActiveVideo] = useState(0)
   const [progress, setProgress] = useState(0)
   const [modalIdx, setModalIdx] = useState<number | null>(null)
+  const [isMobile, setIsMobile] = useState(true)
+
+  // Detect mobile vs desktop to render only one set of videos (avoids ref conflicts)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   // Fechar modal com ESC
   useEffect(() => {
@@ -198,7 +207,7 @@ export default function AppShowcase() {
         <div className="max-w-[1400px] mx-auto px-5 md:px-10">
 
           {/* ── MOBILE LAYOUT (< lg) ── */}
-          <div className="lg:hidden">
+          {isMobile && <div>
 
             {/* Header */}
             <div className={`text-center mb-8 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
@@ -280,10 +289,10 @@ export default function AppShowcase() {
               </a>
               <p className="text-[10px] text-[#555] mt-3 font-light">Sem loja de apps · Celular, tablet ou PC</p>
             </div>
-          </div>
+          </div>}
 
           {/* ── DESKTOP LAYOUT (>= lg) ── */}
-          <div className="hidden lg:block">
+          {!isMobile && <div>
             <div className="grid grid-cols-12 gap-16 items-center">
 
               {/* Left — Features */}
@@ -389,7 +398,7 @@ export default function AppShowcase() {
                 </div>
               </div>
             </div>
-          </div>
+          </div>}
 
         </div>
       </div>

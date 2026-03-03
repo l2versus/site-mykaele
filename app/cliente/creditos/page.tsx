@@ -134,10 +134,10 @@ export default function CreditosPage() {
   const totalSessions = activePackages.reduce((sum, p) => sum + (p.totalSessions - p.usedSessions), 0)
 
   const handleContact = () => {
-    if (contactType === 'whatsapp' && user?.phone) {
-      const text = `Olá Mykaele! Tenho dúvida sobre meus créditos. ${message}`
+    if (contactType === 'whatsapp') {
+      const text = `Olá Myka! Tenho dúvida sobre meus créditos. ${message}`
       const encodedText = encodeURIComponent(text)
-      window.open(`https://wa.me/55${user.phone.replace(/\D/g, '')}?text=${encodedText}`, '_blank')
+      window.open(`https://wa.me/5585999086924?text=${encodedText}`, '_blank')
     } else if (contactType === 'email') {
       window.location.href = `mailto:mykaele@spa.com?subject=Dúvida sobre Créditos&body=${encodeURIComponent(message)}`
     }

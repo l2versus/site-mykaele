@@ -22,9 +22,10 @@ const N8N_URL = process.env.N8N_CHATBOT_WEBHOOK_URL || ''
 // 1. KNOWLEDGE BASE — tudo sobre o negócio
 // ═══════════════════════════════════════════
 const KNOWLEDGE = {
-  nome: 'Mykaele Procópio',
+  nome: 'Myka',
+  nomeCompleto: 'Mykaele Procópio',
   negocio: 'Home Spa Premium — Estética Avançada & Arquitetura Corporal',
-  descricao: 'Mykaele é fisioterapeuta dermatofuncional especializada em arquitetura corporal. Atendimento premium em domicílio ou no Home Spa.',
+  descricao: 'Myka é fisioterapeuta dermatofuncional especializada em arquitetura corporal. Atendimento premium em domicílio ou no Home Spa.',
   endereco: 'Rua Francisco Martiniano Barbosa, 888, Sapiranga, Fortaleza-CE',
   telefone: '(85) 99908-6924',
   whatsapp: '5585999086924',
@@ -67,10 +68,10 @@ const INTENT_PATTERNS: Array<{ intent: string; patterns: string[]; weight: numbe
   { intent: 'location', patterns: ['endereco','endereço','localização','localizacao','onde fica','como chego','local','endereço','mapa','rua'], weight: 2 },
   { intent: 'hours', patterns: ['horario','horário','funciona','abre','fecha','atendimento','que horas','expediente'], weight: 2 },
   { intent: 'payment', patterns: ['pagamento','pagar','parcela','pix','cartao','cartão','boleto','financia','crédito','credito','mercado pago'], weight: 2 },
-  { intent: 'about', patterns: ['sobre','quem é','quem e','sobre a mykaele','formação','experiencia','experiência','curriculo','currículo'], weight: 1.5 },
+  { intent: 'about', patterns: ['sobre','quem é','quem e','sobre a myka','sobre a mykaele','formação','experiencia','experiência','curriculo','currículo'], weight: 1.5 },
   { intent: 'aftercare', patterns: ['cuidado','pós','pos','depois da sessão','recomendaç','recomendac','water','agua','água','protetor'], weight: 1.5 },
   { intent: 'results', patterns: ['resultado','antes e depois','antes depois','funciona mesmo','depoimento','testemunho','foto'], weight: 1.5 },
-  { intent: 'human', patterns: ['falar com alguem','falar com humano','atendente','pessoa real','falar com mykaele','ligar'], weight: 2 },
+  { intent: 'human', patterns: ['falar com alguem','falar com humano','atendente','pessoa real','falar com myka','falar com mykaele','ligar'], weight: 2 },
 ]
 
 function detectIntent(message: string): DetectedIntent {
@@ -138,7 +139,7 @@ async function generateResponse(
 
     case 'bye':
       return {
-        response: 'Até mais! 👋💕\n\nFoi um prazer te atender. Quando quiser voltar, estarei aqui!\n\n✨ Mykaele Procópio Home Spa',
+        response: 'Até mais! 👋💕\n\nFoi um prazer te atender. Quando quiser voltar, estarei aqui!\n\n✨ Myka Home Spa',
         buttons: [],
       }
 
@@ -154,7 +155,7 @@ async function generateResponse(
 
     case 'location':
       return {
-        response: `📍 *Localização*\n\n${KNOWLEDGE.endereco}\n\n🏠 Também atendemos em domicílio (Home Spa)! A Mykaele vai até você com todo o equipamento premium.\n\n💡 Para atendimento domiciliar, pode haver uma taxa de deslocamento dependendo da localização.`,
+        response: `📍 *Localização*\n\n${KNOWLEDGE.endereco}\n\n🏠 Também atendemos em domicílio (Home Spa)! A Myka vai até você com todo o equipamento premium.\n\n💡 Para atendimento domiciliar, pode haver uma taxa de deslocamento dependendo da localização.`,
         buttons: [
           { label: 'Agendar atendimento', action: 'flow_schedule', emoji: '📅' },
           { label: 'Falar no WhatsApp', action: 'flow_whatsapp', emoji: '📱' },
@@ -184,7 +185,7 @@ async function generateResponse(
 
     case 'about':
       return {
-        response: `✨ *Sobre a Mykaele Procópio*\n\n${KNOWLEDGE.descricao}\n\n🎓 Diferenciais:\n${KNOWLEDGE.diferenciais.map(d => `  • ${d}`).join('\n')}\n\n💖 Cada protocolo é personalizado para suas necessidades e objetivos!`,
+        response: `✨ *Sobre a Myka*\n\n${KNOWLEDGE.descricao}\n\n🎓 Diferenciais:\n${KNOWLEDGE.diferenciais.map(d => `  • ${d}`).join('\n')}\n\n💖 Cada protocolo é personalizado para suas necessidades e objetivos!`,
         buttons: [
           { label: 'Ver serviços', action: 'flow_services', emoji: '✨' },
           { label: 'Agendar avaliação', action: 'flow_schedule', emoji: '📅' },
@@ -194,10 +195,10 @@ async function generateResponse(
 
     case 'aftercare':
       return {
-        response: `🩹 *Cuidados Pós-Sessão*\n\n${KNOWLEDGE.cuidados_pos.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\n⚠️ Esses são cuidados gerais. A Mykaele vai te passar orientações específicas para o seu procedimento!\n\n💧 A hidratação é o mais importante de tudo!`,
+        response: `🩹 *Cuidados Pós-Sessão*\n\n${KNOWLEDGE.cuidados_pos.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\n⚠️ Esses são cuidados gerais. A Myka vai te passar orientações específicas para o seu procedimento!\n\n💧 A hidratação é o mais importante de tudo!`,
         buttons: [
           { label: 'Agendar retorno', action: 'flow_schedule', emoji: '📅' },
-          { label: 'Falar com Mykaele', action: 'flow_whatsapp', emoji: '📱' },
+          { label: 'Falar com Myka', action: 'flow_whatsapp', emoji: '📱' },
           { label: 'Voltar ao menu', action: 'main_menu', emoji: '🏠' },
         ],
       }
@@ -214,7 +215,7 @@ async function generateResponse(
 
     case 'human':
       return {
-        response: `📱 *Falar com a Mykaele*\n\nClaro! Você pode falar diretamente com a Mykaele pelo WhatsApp:\n\n📞 ${KNOWLEDGE.telefone}\n\n💬 Ou clique no botão abaixo para abrir a conversa direto!`,
+        response: `📱 *Falar com a Myka*\n\nClaro! Você pode falar diretamente com a Myka pelo WhatsApp:\n\n📞 ${KNOWLEDGE.telefone}\n\n💬 Ou clique no botão abaixo para abrir a conversa direto!`,
         buttons: [
           { label: 'Abrir WhatsApp', action: 'flow_whatsapp', emoji: '💬' },
           { label: 'Voltar ao menu', action: 'main_menu', emoji: '🏠' },
@@ -253,7 +254,7 @@ async function handleFlowAction(action: string): Promise<{ response: string; but
         buttons: [
           { label: 'Ir para agendamento', action: 'link_schedule', emoji: '🔗' },
           { label: 'Ver serviços primeiro', action: 'flow_services', emoji: '✨' },
-          { label: 'Falar com Mykaele', action: 'flow_whatsapp', emoji: '📱' },
+          { label: 'Falar com Myka', action: 'flow_whatsapp', emoji: '📱' },
           { label: 'Voltar ao menu', action: 'main_menu', emoji: '🏠' },
         ],
       }
@@ -288,7 +289,7 @@ async function handleFlowAction(action: string): Promise<{ response: string; but
       }
 
       return {
-        response: `🌟 *Nossos Serviços*\n\nOferecemos protocolos de:\n\n✨ Arquitetura Corporal\n✨ Drenagem Linfática\n✨ Tratamentos Faciais\n✨ Massagens Terapêuticas\n✨ E muito mais!\n\n💡 Para valores detalhados, confira no nosso site ou fale com a Mykaele!`,
+        response: `🌟 *Nossos Serviços*\n\nOferecemos protocolos de:\n\n✨ Arquitetura Corporal\n✨ Drenagem Linfática\n✨ Tratamentos Faciais\n✨ Massagens Terapêuticas\n✨ E muito mais!\n\n💡 Para valores detalhados, confira no nosso site ou fale com a Myka!`,
         buttons: [
           { label: 'Agendar sessão', action: 'flow_schedule', emoji: '📅' },
           { label: 'Ver pacotes', action: 'flow_packages', emoji: '🎁' },
@@ -347,7 +348,7 @@ async function handleFlowAction(action: string): Promise<{ response: string; but
 
     case 'flow_whatsapp':
       return {
-        response: `📱 *Falar com a Mykaele*\n\n📞 ${KNOWLEDGE.telefone}\n\nClique no botão abaixo para abrir o WhatsApp direto! 💬`,
+        response: `📱 *Falar com a Myka*\n\n📞 ${KNOWLEDGE.telefone}\n\nClique no botão abaixo para abrir o WhatsApp direto! 💬`,
         buttons: [
           { label: 'Abrir WhatsApp', action: 'link_whatsapp', emoji: '💬' },
           { label: 'Voltar ao menu', action: 'main_menu', emoji: '🏠' },
@@ -356,27 +357,27 @@ async function handleFlowAction(action: string): Promise<{ response: string; but
 
     case 'flow_location':
       return {
-        response: `📍 *Como Funciona*\n\n🏠 *Home Spa (domicílio)*\nA Mykaele vai até você com todos os equipamentos premium!\n\n🏢 *Espaço Mykaele*\n${KNOWLEDGE.endereco}\n\n⏰ ${KNOWLEDGE.horarios}`,
+        response: `📍 *Como Funciona*\n\n🏠 *Home Spa (domicílio)*\nA Myka vai até você com todos os equipamentos premium!\n\n🏢 *Espaço Myka*\n${KNOWLEDGE.endereco}\n\n⏰ ${KNOWLEDGE.horarios}`,
         buttons: [
           { label: 'Agendar sessão', action: 'flow_schedule', emoji: '📅' },
-          { label: 'Falar com Mykaele', action: 'flow_whatsapp', emoji: '📱' },
+          { label: 'Falar com Myka', action: 'flow_whatsapp', emoji: '📱' },
           { label: 'Voltar ao menu', action: 'main_menu', emoji: '🏠' },
         ],
       }
 
     case 'flow_aftercare':
       return {
-        response: `🩹 *Cuidados Pós-Sessão*\n\n${KNOWLEDGE.cuidados_pos.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\n⚠️ A Mykaele também passa orientações personalizadas após cada sessão!`,
+        response: `🩹 *Cuidados Pós-Sessão*\n\n${KNOWLEDGE.cuidados_pos.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\n⚠️ A Myka também passa orientações personalizadas após cada sessão!`,
         buttons: [
           { label: 'Agendar retorno', action: 'flow_schedule', emoji: '📅' },
-          { label: 'Falar com Mykaele', action: 'flow_whatsapp', emoji: '📱' },
+          { label: 'Falar com Myka', action: 'flow_whatsapp', emoji: '📱' },
           { label: 'Voltar ao menu', action: 'main_menu', emoji: '🏠' },
         ],
       }
 
     case 'flow_about':
       return {
-        response: `✨ *Mykaele Procópio*\n\n${KNOWLEDGE.descricao}\n\n🎓 *Diferenciais:*\n${KNOWLEDGE.diferenciais.map(d => `  • ${d}`).join('\n')}\n\n💖 Mais de centenas de clientes transformadas!`,
+        response: `✨ *Myka*\n\n${KNOWLEDGE.descricao}\n\n🎓 *Diferenciais:*\n${KNOWLEDGE.diferenciais.map(d => `  • ${d}`).join('\n')}\n\n💖 Mais de centenas de clientes transformadas!`,
         buttons: [
           { label: 'Ver serviços', action: 'flow_services', emoji: '✨' },
           { label: 'Agendar avaliação', action: 'flow_schedule', emoji: '📅' },

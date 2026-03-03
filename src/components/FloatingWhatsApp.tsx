@@ -264,7 +264,7 @@ export default function FloatingWhatsApp() {
       return
     }
     if (btn.action === 'link_whatsapp') {
-      window.open('https://wa.me/5585999086924?text=Ol%C3%A1%20Mykaele!%20Vim%20pelo%20site%20%E2%9C%A8', '_blank')
+      window.open('https://wa.me/5585999086924?text=Ol%C3%A1%20Myka!%20Vim%20pelo%20site%20%E2%9C%A8', '_blank')
       return
     }
 
@@ -512,7 +512,7 @@ export default function FloatingWhatsApp() {
         {/* Footer — WhatsApp direto */}
         <div className="px-3 py-1.5 text-center shrink-0 border-t" style={{ background: THEME.bg, borderColor: THEME.primary + '15' }}>
           <a
-            href="https://wa.me/5585999086924?text=Ol%C3%A1%20Mykaele!%20Vim%20pelo%20site%20%E2%9C%A8"
+            href="https://wa.me/5585999086924?text=Ol%C3%A1%20Myka!%20Vim%20pelo%20site%20%E2%9C%A8"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[10px] hover:underline transition-colors"
