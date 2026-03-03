@@ -1,4 +1,4 @@
-// src/components/AppShowcase.tsx
+      // src/components/AppShowcase.tsx
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'

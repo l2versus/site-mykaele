@@ -316,21 +316,20 @@ NEXTAUTH_URL="https://seu-dominio.com"
 NEXT_PUBLIC_APP_URL="https://seu-dominio.com"
 ```
 
-### 3️⃣ Deploy Vercel
+### 3️⃣ Deploy Coolify
 
-```bash
-# Login Vercel
-npm i -g vercel
-vercel login
-
-# Deploy
-vercel
-
-# Variáveis de ambiente (UI ou CLI)
-vercel env add DATABASE_URL
-vercel env add JWT_SECRET
-# ... adicionar todas as variáveis
-```
+1. Acesse o painel do Coolify
+2. Crie um novo recurso → GitHub → selecione `l2versus/site-mykaele`
+3. Coolify detecta o `Dockerfile` automaticamente
+4. Configure as variáveis de ambiente no painel:
+   - `DATABASE_URL`
+   - `JWT_SECRET`
+   - `NEXT_PUBLIC_APP_URL`
+   - `MERCADO_PAGO_ACCESS_TOKEN`
+   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+   - Demais variáveis listadas no `docker-compose.yml`
+5. Clique em **Deploy** — o build Docker roda automaticamente
+6. Deploys subsequentes são automáticos a cada push na branch `main`
 
 ### 4️⃣ Monitoramento
 

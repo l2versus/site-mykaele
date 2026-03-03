@@ -420,15 +420,15 @@ RESULTADO:
                    │
                    ▼
 ┌─────────────────────────────────────────────────────────┐
-│  STAGING (Vercel Preview)                               │
-│  git push → Vercel deploys automatically                │
+│  STAGING (Coolify Preview)                              │
+│  git push → Coolify deploys automatically               │
 │  Teste end-to-end antes de produção                     │
 └──────────────────┬──────────────────────────────────────┘
                    │
                    ▼
 ┌─────────────────────────────────────────────────────────┐
-│  PRODUCTION (Vercel + PostgreSQL)                        │
-│  npm start                                              │
+│  PRODUCTION (Coolify + Docker + PostgreSQL)              │
+│  Docker container via Dockerfile                        │
 │  Database migrations via Prisma                         │
 │  Monitoring + Sentry for errors                         │
 └─────────────────────────────────────────────────────────┘

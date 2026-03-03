@@ -359,10 +359,10 @@ open http://localhost:3000
 4. APIs seguem padrão RESTful
 
 ### 🎯 Para DevOps
-1. Pronto para deploy em Vercel
+1. Pronto para deploy em Coolify (Docker)
 2. Migrations automatizadas
 3. Environment variables bem estruturadas
-4. Docker compatible
+4. Dockerfile + docker-compose.yml configurados
 
 ---
 

@@ -2,6 +2,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { IFoodRatingBadge } from '@/components/StarRatingInput'
 
 const METODO_VIDEO = '/media/videos/metodo-banner.mp4'
 
@@ -30,11 +31,26 @@ const STATS = [
   { valor: '48h', label: 'Ação Prolongada' },
 ]
 
+interface RatingSummary {
+  averageRating: number
+  totalReviews: number
+}
+
 export function ServicesSection() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const sectionRef = useRef<HTMLDivElement>(null)
   const [isVisible, setIsVisible] = useState(false)
   const [scrollY, setScrollY] = useState(0)
+  const [ratingSummary, setRatingSummary] = useState<RatingSummary>({ averageRating: 4.9, totalReviews: 0 })
+
+  useEffect(() => {
+    fetch('/api/reviews/summary')
+      .then(r => r.json())
+      .then(data => {
+        if (data.overall) setRatingSummary(data.overall)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -136,15 +152,19 @@ export function ServicesSection() {
 
               {/* CTA */}
               <div className={`transition-all duration-1000 delay-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                <a
-                  href="#agendamento"
-                  className="group inline-flex items-center gap-4 px-8 py-4 bg-[#b76e79] text-white text-[10px] font-semibold tracking-[0.3em] uppercase hover:bg-[#a05d67] transition-all duration-500"
-                >
-                  Agendar Avaliação
-                  <svg className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
-                  </svg>
-                </a>
+                <div className="flex items-center gap-4 flex-wrap mb-6">
+                  <a
+                    href="#agendamento"
+                    className="group inline-flex items-center gap-4 px-8 py-4 bg-[#b76e79] text-white text-[10px] font-semibold tracking-[0.3em] uppercase hover:bg-[#a05d67] transition-all duration-500"
+                  >
+                    Agendar Avaliação
+                    <svg className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                    </svg>
+                  </a>
+                  {/* iFood-style rating badge */}
+                  <IFoodRatingBadge rating={ratingSummary.averageRating} count={ratingSummary.totalReviews || undefined} variant="dark" />
+                </div>
               </div>
             </div>
           </div>
@@ -199,7 +219,20 @@ export function ServicesSection() {
       {/* ===== STATS BAR — Números de impacto ===== */}
       <div className="relative bg-[#0a0a0a] border-t border-white/5">
         <div className="max-w-[1400px] mx-auto px-6 md:px-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/5">
+          <div className="grid grid-cols-2 md:grid-cols-5 divide-x divide-white/5">
+            {/* Star Rating Highlight — estilo iFood */}
+            <div className="py-10 md:py-14 text-center reveal-blur">
+              <div className="flex items-center justify-center gap-1 mb-2">
+                {[1,2,3,4,5].map(i => (
+                  <svg key={i} className={`w-5 h-5 md:w-6 md:h-6 ${i <= Math.round(ratingSummary.averageRating) ? 'text-[#b76e79]' : 'text-white/10'}`} fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                ))}
+              </div>
+              <span className="text-[10px] tracking-[0.25em] uppercase text-white/30 font-medium">
+                {ratingSummary.averageRating.toFixed(1)} · Avaliação
+              </span>
+            </div>
             {STATS.map((s, i) => (
               <div key={i} className="py-10 md:py-14 text-center reveal-blur">
                 <span className="block text-2xl md:text-3xl font-light text-[#b76e79] mb-2 counter" data-target={s.valor}>
@@ -231,7 +264,8 @@ export function ServicesSection() {
               <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#b76e79]/40 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-700" />
               <div className="p-10">
                 <span className="text-xs font-medium tracking-[0.25em] uppercase text-[#8a8580] block mb-6">Formato I</span>
-                <h4 className="text-lg font-light text-[#2d2d2d] mb-4">Atendimento em Clínica</h4>
+                <h4 className="text-lg font-light text-[#2d2d2d] mb-2">Atendimento em Clínica</h4>
+                <div className="mb-4"><IFoodRatingBadge rating={ratingSummary.averageRating} count={ratingSummary.totalReviews || undefined} variant="light" /></div>
                 <p className="text-sm text-[#6a6560] font-light leading-relaxed mb-5">
                   Instalações de alto padrão projetadas para o conforto
                   e privacidade absoluta durante cada protocolo.
@@ -249,7 +283,8 @@ export function ServicesSection() {
                   <span className="text-xs font-medium tracking-[0.25em] uppercase text-[#8a8580]">Formato II</span>
                   <span className="text-[8px] font-medium tracking-[0.15em] uppercase text-[#b76e79] border border-[#b76e79]/20 px-2 py-0.5 rounded-sm">Exclusivo</span>
                 </div>
-                <h4 className="text-lg font-light text-[#2d2d2d] mb-4">Serviço Home Spa</h4>
+                <h4 className="text-lg font-light text-[#2d2d2d] mb-2">Serviço Home Spa</h4>
+                <div className="mb-4"><IFoodRatingBadge rating={ratingSummary.averageRating} count={ratingSummary.totalReviews || undefined} variant="light" /></div>
                 <p className="text-sm text-[#6a6560] font-light leading-relaxed mb-5">
                   A infraestrutura clínica transposta para a privacidade
                   e o conforto da sua residência em Fortaleza.

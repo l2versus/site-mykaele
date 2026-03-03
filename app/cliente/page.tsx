@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useClient } from './ClientContext'
 import Link from 'next/link'
 import { SkeletonBox, SkeletonCard, SkeletonAppointment, SkeletonKPI } from '@/components/Skeleton'
+import dynamic from 'next/dynamic'
+
+const FeedbackModal = dynamic(() => import('@/components/FeedbackModal'), { ssr: false })
 
 /* ─── Types ─── */
 interface Protocol {
@@ -22,6 +25,7 @@ interface BodyMetrics {
   deltas: { weight: number | null; waist: number | null; hip: number | null; bodyFat: number | null } | null
 }
 interface AnamneseStatus { completed: boolean; completedAt?: string; pct: number }
+interface PendingReview { id: string; scheduledAt: string; serviceName: string; duration: number }
 
 const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
@@ -129,7 +133,19 @@ export default function ClienteHome() {
   const [monthlyActivity, setMonthlyActivity] = useState<MonthAct[]>([])
   const [bodyMetrics, setBodyMetrics] = useState<BodyMetrics | null>(null)
   const [anamnese, setAnamnese] = useState<AnamneseStatus | null>(null)
+  const [pendingReviews, setPendingReviews] = useState<PendingReview[]>([])
+  const [feedbackSession, setFeedbackSession] = useState<PendingReview | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const loadPendingReviews = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth('/api/patient/pending-reviews')
+      if (res.ok) {
+        const data = await res.json()
+        setPendingReviews(data.pendingReviews || [])
+      }
+    } catch { /* */ }
+  }, [fetchWithAuth])
 
   useEffect(() => {
     (async () => {
@@ -159,6 +175,18 @@ export default function ClienteHome() {
       } catch { /* */ }
       setLoading(false)
     })()
+    loadPendingReviews()
+  }, [fetchWithAuth, loadPendingReviews])
+
+  const handleSubmitFeedback = useCallback(async (data: { appointmentId: string; score: number; comment: string; categories: string[] }) => {
+    const res = await fetchWithAuth('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error('Erro ao enviar')
+    // Atualizar lista de pendentes
+    setPendingReviews(prev => prev.filter(r => r.id !== data.appointmentId))
   }, [fetchWithAuth])
 
   const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite' }
@@ -575,6 +603,54 @@ export default function ClienteHome() {
         </div>
       )}
 
+      {/* ═══ Pending Reviews — Estilo iFood ═══ */}
+      {pendingReviews.length > 0 && (
+        <div className="relative overflow-hidden rounded-3xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/5" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-radial from-amber-400/8 to-transparent rounded-full -translate-y-10 translate-x-10" />
+          <div className="relative border border-amber-500/15 rounded-3xl p-6">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center">
+                <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-white/80">Avalie suas sessões</h3>
+                <p className="text-[10px] text-amber-400/50">Ganhe 30 pontos por avaliação!</p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              {pendingReviews.map(session => (
+                <button
+                  key={session.id}
+                  onClick={() => setFeedbackSession(session)}
+                  className="w-full flex items-center gap-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-amber-500/20 rounded-2xl px-4 py-3.5 transition-all group/review"
+                >
+                  <div className="flex-1 text-left">
+                    <div className="text-white/70 text-[12px] font-medium group-hover/review:text-white/90 transition-colors">{session.serviceName}</div>
+                    <div className="text-white/20 text-[10px] mt-0.5">
+                      {new Date(session.scheduledAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {[1,2,3,4,5].map(i => (
+                      <svg key={i} className="w-3.5 h-3.5 text-white/10 group-hover/review:text-amber-400/40 transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <svg className="w-4 h-4 text-white/10 group-hover/review:text-amber-400/50 group-hover/review:translate-x-0.5 transition-all" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ═══ Quick Links ═══ */}
       <div className="grid grid-cols-2 gap-3">
         <Link href="/cliente/agendamentos" className="group relative overflow-hidden rounded-2xl">
@@ -585,13 +661,22 @@ export default function ClienteHome() {
           </div>
         </Link>
         <Link href="/" className="group relative overflow-hidden rounded-2xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01]" />
-          <div className="relative border border-white/[0.05] group-hover:border-white/[0.1] rounded-2xl p-4 transition-all flex items-center gap-3">
-            <span className="text-lg">🌐</span>
-            <div className="text-white/30 text-[11px] font-medium group-hover:text-white/50 transition-colors">Site Mykaele</div>
+          <div className="absolute inset-0 bg-gradient-to-br from-[#b76e79]/10 to-[#d4a0a7]/5" />
+          <div className="relative border border-[#b76e79]/15 group-hover:border-[#b76e79]/30 rounded-2xl p-4 transition-all flex items-center gap-3">
+            <span className="text-lg">🏠</span>
+            <div className="text-[#d4a0a7]/50 text-[11px] font-medium group-hover:text-[#d4a0a7]/80 transition-colors">Ir para Home</div>
           </div>
         </Link>
       </div>
+
+      {/* ═══ Feedback Modal ═══ */}
+      {feedbackSession && (
+        <FeedbackModal
+          session={feedbackSession}
+          onClose={() => setFeedbackSession(null)}
+          onSubmit={handleSubmitFeedback}
+        />
+      )}
     </div>
   )
 }
