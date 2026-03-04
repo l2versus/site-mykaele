@@ -149,6 +149,14 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
           return
         }
 
+        // Se veio do Google e não tem telefone, mostrar modal para vincular
+        if (oauthProvider === 'google' && !user.phone) {
+          localStorage.setItem('_pending_oauth_token', oauthToken)
+          localStorage.setItem('_pending_oauth_user', JSON.stringify(user))
+          setShowPhoneLink(true)
+          return
+        }
+
         onLogin(oauthToken, user)
       } catch {
         setError('Erro ao processar login social')
@@ -160,6 +168,11 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
   const [showEmailLink, setShowEmailLink] = useState(false)
   const [linkForm, setLinkForm] = useState({ email: '', name: '', phone: '' })
   const [linkLoading, setLinkLoading] = useState(false)
+
+  // Modal para vincular telefone (Google Auth sem telefone)
+  const [showPhoneLink, setShowPhoneLink] = useState(false)
+  const [phoneForm, setPhoneForm] = useState('')
+  const [phoneLinkLoading, setPhoneLinkLoading] = useState(false)
 
   const handleLinkEmail = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -190,6 +203,45 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
       localStorage.removeItem('_pending_oauth_user')
       localStorage.removeItem('_pending_oauth_provider')
       setShowEmailLink(false)
+      onLogin(token, user)
+    }
+  }
+
+  // Handler para vincular telefone
+  const handleLinkPhone = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPhoneLinkLoading(true); setError('')
+    try {
+      const token = localStorage.getItem('_pending_oauth_token')!
+      const res = await fetch('/api/auth/link-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ phone: phoneForm }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Erro ao vincular telefone'); setPhoneLinkLoading(false); return }
+      
+      localStorage.removeItem('_pending_oauth_token')
+      localStorage.removeItem('_pending_oauth_user')
+      setShowPhoneLink(false)
+      
+      // Se houve merge, usar o novo token e user
+      if (data.merged) {
+        onLogin(data.token, data.user)
+      } else {
+        onLogin(token, data.user)
+      }
+    } catch { setError('Erro de conexão') } finally { setPhoneLinkLoading(false) }
+  }
+
+  const skipPhoneLink = () => {
+    const token = localStorage.getItem('_pending_oauth_token')
+    const userStr = localStorage.getItem('_pending_oauth_user')
+    if (token && userStr) {
+      const user = JSON.parse(userStr)
+      localStorage.removeItem('_pending_oauth_token')
+      localStorage.removeItem('_pending_oauth_user')
+      setShowPhoneLink(false)
       onLogin(token, user)
     }
   }
@@ -515,6 +567,47 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
               <button onClick={skipEmailLink}
                 className="w-full py-2.5 text-white/20 text-xs hover:text-white/40 transition-colors">
                 Pular por enquanto →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Vincular telefone (Google Auth sem telefone cadastrado) ── */}
+      {showPhoneLink && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-[fadeIn_0.3s]">
+          <div className="w-full max-w-md mx-4 relative overflow-hidden rounded-3xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1520] to-[#0e0b10]" />
+            <div className="relative border border-white/[0.08] rounded-3xl p-7 space-y-5">
+              <div className="text-center">
+                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center bg-white/10">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5">
+                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                  </svg>
+                </div>
+                <h2 className="text-lg font-light text-white/90">Bem-vinda! 🌸</h2>
+                <p className="text-white/30 text-xs mt-1.5">Já é cliente Mykaele Procópio?<br/>Informe seu telefone cadastrado para vincular sua conta.</p>
+              </div>
+
+              {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-xl px-4 py-3">{error}</div>}
+
+              <form onSubmit={handleLinkPhone} className="space-y-3">
+                <div>
+                  <label className="block text-white/35 text-[11px] mb-1.5 font-medium">Seu telefone/WhatsApp</label>
+                  <input type="tel" value={phoneForm} onChange={e => setPhoneForm(e.target.value)} required
+                    className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/[0.06] rounded-2xl text-white placeholder-white/15 text-sm focus:outline-none focus:border-[#b76e79]/40 focus:ring-1 focus:ring-[#b76e79]/15 transition-all"
+                    placeholder="(85) 98888-6319" />
+                  <p className="text-[10px] text-white/20 mt-1.5">Se você já foi atendida, informe o mesmo número para manter seu histórico</p>
+                </div>
+                <button type="submit" disabled={phoneLinkLoading}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#b76e79] to-[#c28a93] text-white font-medium shadow-xl shadow-[#b76e79]/20 hover:shadow-[#b76e79]/35 transition-all disabled:opacity-50">
+                  {phoneLinkLoading ? 'Verificando...' : 'Vincular conta'}
+                </button>
+              </form>
+
+              <button onClick={skipPhoneLink}
+                className="w-full py-2.5 text-white/20 text-xs hover:text-white/40 transition-colors">
+                Sou cliente nova →
               </button>
             </div>
           </div>
