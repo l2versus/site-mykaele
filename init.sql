@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS "User" (
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "User_phone_key" ON "User"("phone");
 CREATE UNIQUE INDEX IF NOT EXISTS "User_googleId_key" ON "User"("googleId");
 CREATE UNIQUE INDEX IF NOT EXISTS "User_instagramId_key" ON "User"("instagramId");
 

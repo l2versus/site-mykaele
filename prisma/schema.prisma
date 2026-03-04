@@ -14,7 +14,7 @@ model User {
   email               String    @unique
   password            String
   name                String
-  phone               String?
+  phone               String?   @unique
   cpfRg               String?
   address             String?
   addressCep          String?

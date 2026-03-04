@@ -143,6 +143,8 @@ export async function DELETE(
       prisma.sessionFeedback.deleteMany({ where: { userId: id } }),
       prisma.waitlist.deleteMany({ where: { userId: id } }),
       prisma.digitalReceipt.deleteMany({ where: { userId: id } }),
+      // Email verification tokens
+      prisma.emailVerificationToken.deleteMany({ where: { userId: id } }),
       // Agora pode deletar o usuário (appointments, packages, payments têm cascade)
       prisma.user.delete({ where: { id } })
     ])

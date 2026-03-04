@@ -28,6 +28,9 @@ sqlite3 "$DB_PATH" "ALTER TABLE User ADD COLUMN forcePasswordChange INTEGER NOT 
 sqlite3 "$DB_PATH" "ALTER TABLE User ADD COLUMN emailVerified INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
 sqlite3 "$DB_PATH" "ALTER TABLE User ADD COLUMN emailVerifiedAt DATETIME;" 2>/dev/null || true
 
+# Criar índice único no phone (se não existir)
+sqlite3 "$DB_PATH" "CREATE UNIQUE INDEX IF NOT EXISTS User_phone_key ON User(phone);" 2>/dev/null || true
+
 # Criar tabela EmailVerificationToken se não existir
 sqlite3 "$DB_PATH" "CREATE TABLE IF NOT EXISTS EmailVerificationToken (
     id TEXT PRIMARY KEY NOT NULL,
