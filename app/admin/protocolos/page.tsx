@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useAdmin } from '../AdminContext'
 
 interface Protocol {
@@ -88,7 +89,7 @@ export default function ProtocolosPage() {
           <h1 className="text-2xl font-bold text-stone-800">Protocolos de Tratamento</h1>
           <p className="text-stone-400 text-sm mt-0.5">Configure protocolos com etapas e intervalos</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="px-4 py-2.5 bg-[#b76e79] text-white text-sm font-semibold rounded-xl hover:bg-[#a25d68] transition-colors shadow-md">
+        <button type="button" onClick={() => setShowForm(true)} className="px-4 py-3 bg-[#b76e79] text-white text-sm font-semibold rounded-xl hover:bg-[#a25d68] active:scale-[0.97] transition-all shadow-md min-h-[44px] touch-manipulation cursor-pointer">
           + Novo Protocolo
         </button>
       </div>
@@ -125,9 +126,9 @@ export default function ProtocolosPage() {
                       <span>Intervalo: {p.intervalDays} dias</span>
                     </div>
                   </div>
-                  <div className="flex gap-1.5">
-                    <button onClick={() => edit(p)} className="px-3 py-1.5 text-[10px] font-semibold bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors">Editar</button>
-                    <button onClick={() => remove(p.id)} className="px-3 py-1.5 text-[10px] font-semibold bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors">Excluir</button>
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    <button type="button" onClick={() => edit(p)} className="px-3 py-2 text-[10px] font-semibold bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 active:scale-[0.97] transition-all min-h-[40px] touch-manipulation cursor-pointer">Editar</button>
+                    <button type="button" onClick={() => remove(p.id)} className="px-3 py-2 text-[10px] font-semibold bg-red-50 text-red-500 rounded-lg hover:bg-red-100 active:scale-[0.97] transition-all min-h-[40px] touch-manipulation cursor-pointer">Excluir</button>
                   </div>
                 </div>
                 {/* Steps Preview */}
@@ -152,9 +153,9 @@ export default function ProtocolosPage() {
       )}
 
       {/* Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/30 backdrop-blur-sm p-4 overflow-y-auto" onClick={resetForm}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 my-4 sm:my-8 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      {showForm && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/30 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto touch-manipulation" onClick={resetForm}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-5 sm:p-6 space-y-4 my-2 sm:my-8" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-stone-800">{editId ? 'Editar' : 'Novo'} Protocolo</h2>
             <div className="space-y-3">
               <input placeholder="Nome do protocolo" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm text-stone-700 focus:outline-none focus:border-[#b76e79]/40" />
@@ -190,12 +191,13 @@ export default function ProtocolosPage() {
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
-              <button onClick={resetForm} className="flex-1 py-2.5 text-sm font-semibold text-stone-500 bg-stone-100 rounded-xl hover:bg-stone-200 transition-colors">Cancelar</button>
-              <button onClick={save} className="flex-1 py-2.5 text-sm font-semibold text-white bg-[#b76e79] rounded-xl hover:bg-[#a25d68] transition-colors">Salvar</button>
+            <div className="flex gap-2 pt-2 sticky bottom-0 bg-white pb-1">
+              <button type="button" onClick={resetForm} className="flex-1 py-3 text-sm font-semibold text-stone-500 bg-stone-100 rounded-xl hover:bg-stone-200 active:scale-[0.97] transition-all min-h-[48px] touch-manipulation cursor-pointer">Cancelar</button>
+              <button type="button" onClick={save} className="flex-1 py-3 text-sm font-semibold text-white bg-[#b76e79] rounded-xl hover:bg-[#a25d68] active:scale-[0.97] transition-all min-h-[48px] touch-manipulation cursor-pointer">Salvar</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useAdmin } from '../AdminContext'
 
 interface PackageOption { id: string; name: string; sessions: number; price: number; active: boolean }
@@ -68,12 +69,12 @@ export default function ServicosPage() {
 
   return (
     <div className="space-y-5 animate-[fadeIn_0.3s_ease-out]">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-semibold text-stone-800">Servicos</h1>
           <p className="text-stone-400 text-xs mt-0.5">Gerencie servicos, precos e pacotes</p>
         </div>
-        <button onClick={startCreate} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#b76e79] text-white text-xs font-semibold hover:bg-[#a25d67] shadow-sm transition-all">
+        <button type="button" onClick={startCreate} className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#b76e79] text-white text-xs font-semibold hover:bg-[#a25d67] active:scale-[0.97] shadow-sm transition-all touch-manipulation cursor-pointer min-h-[44px]">
           <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14"/></svg>
           Novo Servico
         </button>
@@ -81,8 +82,9 @@ export default function ServicosPage() {
 
       {toast && <div className="fixed top-4 right-4 z-50 bg-emerald-500/90 text-white text-xs px-4 py-2.5 rounded-lg backdrop-blur animate-[fadeIn_0.2s]">{toast}</div>}
 
-      {creating && (
-        <div className="bg-white border-2 border-[#b76e79]/20 rounded-2xl p-5 space-y-4 animate-[fadeIn_0.2s]">
+      {creating && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/30 backdrop-blur-sm p-4 overflow-y-auto touch-manipulation" onClick={() => setCreating(false)}>
+        <div className="bg-white border-2 border-[#b76e79]/20 rounded-2xl p-5 space-y-4 animate-[fadeIn_0.2s] w-full max-w-lg my-4 sm:my-8" onClick={e => e.stopPropagation()}>
           <h2 className="text-stone-700 text-sm font-bold">Criar Novo Servico</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="sm:col-span-2"><label className="text-stone-400 text-[9px] uppercase tracking-wider block mb-1">Nome *</label>
@@ -116,11 +118,13 @@ export default function ServicosPage() {
                 <button onClick={() => removePkg(i)} className="p-2 text-red-400 hover:text-red-600"><svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
               </div>))}
           </div>
-          <div className="flex gap-2 justify-end">
-            <button onClick={() => setCreating(false)} className="px-4 py-2 rounded-lg text-xs text-stone-400 border border-stone-200">Cancelar</button>
-            <button onClick={save} disabled={saving || !form.name || !form.price} className="px-5 py-2 rounded-lg text-xs bg-[#b76e79] text-white font-semibold disabled:opacity-30 hover:bg-[#a25d67] transition-all">{saving ? 'Criando...' : 'Criar Servico'}</button>
+          <div className="flex gap-2 justify-end sticky bottom-0 bg-white pt-3 pb-1">
+            <button type="button" onClick={() => setCreating(false)} className="px-4 py-3 rounded-lg text-xs text-stone-400 border border-stone-200 min-h-[44px] touch-manipulation cursor-pointer active:bg-stone-50">Cancelar</button>
+            <button type="button" onClick={save} disabled={saving || !form.name || !form.price} className="px-5 py-3 rounded-lg text-xs bg-[#b76e79] text-white font-semibold disabled:opacity-30 hover:bg-[#a25d67] active:scale-[0.97] transition-all min-h-[44px] touch-manipulation cursor-pointer">{saving ? 'Criando...' : 'Criar Servico'}</button>
           </div>
         </div>
+        </div>,
+        document.body
       )}
 
       {loading ? <div className="flex justify-center py-12"><div className="w-7 h-7 border-2 border-[#b76e79] border-t-transparent rounded-full animate-spin" /></div> : (
