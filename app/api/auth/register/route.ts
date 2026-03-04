@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword, generateToken } from '@/lib/auth'
 import { registerSchema } from '@/utils/validation'
 import { sendNewRegistrationNotification } from '@/lib/whatsapp'
+import { sendVerificationEmail, generateVerificationToken } from '@/lib/email'
 import { rateLimit, getClientIP, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
@@ -112,6 +113,26 @@ export async function POST(request: NextRequest) {
       clientEmail: user.email,
       provider: 'email',
     }).catch(() => {}) // fire-and-forget
+
+    // ═══ Enviar email de verificação ═══
+    try {
+      const verificationToken = generateVerificationToken()
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24h
+
+      await prisma.emailVerificationToken.create({
+        data: {
+          token: verificationToken,
+          userId: user.id,
+          email: user.email,
+          expiresAt
+        }
+      })
+
+      sendVerificationEmail(user.email, user.name, verificationToken)
+        .catch(err => console.error('[Register] Email verification error:', err))
+    } catch (emailErr) {
+      console.error('[Register] Failed to create verification token:', emailErr)
+    }
 
     return NextResponse.json(
       {

@@ -12,6 +12,7 @@ export interface ClientUser {
   role: string
   avatar?: string
   forcePasswordChange?: boolean
+  emailVerified?: boolean
 }
 
 export interface ClientContextType {

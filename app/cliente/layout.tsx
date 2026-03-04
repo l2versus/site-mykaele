@@ -42,6 +42,97 @@ const NAV_ITEMS = [
   { href: '/cliente/perfil', label: 'Perfil', icon: Icons.profile },
 ]
 
+/* ─── Email Verification Banner ─── */
+function EmailVerificationBanner() {
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+
+  // Verificar se já foi dispensado nesta sessão
+  useEffect(() => {
+    const was = sessionStorage.getItem('email_verification_dismissed')
+    if (was) setDismissed(true)
+  }, [])
+
+  const handleResend = async () => {
+    setSending(true)
+    try {
+      const token = localStorage.getItem('client_token')
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSent(true)
+        haptic('success')
+      } else {
+        alert(data.error || 'Erro ao enviar email')
+        haptic('error')
+      }
+    } catch {
+      alert('Erro de conexão')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleDismiss = () => {
+    setDismissed(true)
+    sessionStorage.setItem('email_verification_dismissed', '1')
+  }
+
+  if (dismissed) return null
+
+  return (
+    <div className="mx-5 mt-3 mb-0">
+      <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4">
+        {/* Dismiss button */}
+        <button onClick={handleDismiss} className="absolute top-2 right-2 p-1.5 text-white/20 hover:text-white/40 transition-colors">
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center">
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" className="text-amber-400">
+              <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white/80 text-sm font-medium mb-1">Confirme seu email</p>
+            <p className="text-white/40 text-xs leading-relaxed mb-3">
+              {sent 
+                ? 'Email enviado! Verifique sua caixa de entrada e spam.'
+                : 'Para garantir acesso completo ao app, confirme seu email.'}
+            </p>
+            {!sent && (
+              <button 
+                onClick={handleResend} 
+                disabled={sending}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-medium transition-all disabled:opacity-50"
+              >
+                {sending ? (
+                  <>
+                    <div className="w-3 h-3 border border-amber-300/40 border-t-amber-300 rounded-full animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                      <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                    Reenviar email
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ─── Auth Screen ─── */
 function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) => void }) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
@@ -877,6 +968,11 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
             </div>
           </div>
         </header>
+
+        {/* ─── Banner: Verificar Email ─── */}
+        {!user.emailVerified && (
+          <EmailVerificationBanner />
+        )}
 
         {/* ─── Content ─── */}
         <main className="px-5 py-6 max-w-lg mx-auto lg:max-w-4xl relative z-10">
