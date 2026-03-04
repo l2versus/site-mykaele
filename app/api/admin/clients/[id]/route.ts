@@ -128,7 +128,18 @@ export async function DELETE(
       }, { status: 400 })
     }
 
-    await prisma.user.delete({ where: { id } })
+    // Deletar registros relacionados que não têm cascade automatico
+    await prisma.$transaction([
+      // Fidelidade
+      prisma.loyaltyPoints.deleteMany({ where: { userId: id } }),
+      prisma.loyaltyTransaction.deleteMany({ where: { userId: id } }),
+      // Indicações
+      prisma.referralCode.deleteMany({ where: { userId: id } }),
+      prisma.referral.deleteMany({ where: { referrerId: id } }),
+      prisma.referral.deleteMany({ where: { referredUserId: id } }),
+      // Agora pode deletar o usuário (appointments, packages, payments têm cascade)
+      prisma.user.delete({ where: { id } })
+    ])
 
     return NextResponse.json({ success: true })
   } catch (error) {
