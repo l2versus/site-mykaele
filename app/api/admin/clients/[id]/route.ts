@@ -107,54 +107,85 @@ export async function DELETE(
   }
 
   const { id } = await params
+  const errors: string[] = []
 
   try {
     const client = await prisma.user.findUnique({
       where: { id },
-      include: {
-        appointments: {
-          where: { status: { in: ['PENDING', 'CONFIRMED'] } }
-        }
-      }
+      select: { id: true, role: true }
     })
 
     if (!client) {
       return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 })
     }
 
-    if (client.appointments.length > 0) {
+    // Verificar agendamentos pendentes
+    const pendingAppts = await prisma.appointment.count({
+      where: { userId: id, status: { in: ['PENDING', 'CONFIRMED'] } }
+    })
+    if (pendingAppts > 0) {
       return NextResponse.json({
         error: 'Não é possível excluir cliente com agendamentos pendentes'
       }, { status: 400 })
     }
 
-    // Deletar registros relacionados que não têm cascade automatico
-    // Usar deletes individuais com try/catch para robustez
-    const safeDelete = async (fn: () => Promise<unknown>) => {
-      try { await fn() } catch { /* tabela pode não existir ainda */ }
+    // ═══ Limpar registros relacionados (cada um com try/catch individual) ═══
+    const cleanups: Array<{ name: string; fn: () => Promise<unknown> }> = [
+      { name: 'loyaltyTransaction', fn: () => prisma.loyaltyTransaction.deleteMany({ where: { userId: id } }) },
+      { name: 'loyaltyPoints', fn: () => prisma.loyaltyPoints.deleteMany({ where: { userId: id } }) },
+      { name: 'referral_referrer', fn: () => prisma.referral.deleteMany({ where: { referrerId: id } }) },
+      { name: 'referral_referred', fn: () => prisma.referral.deleteMany({ where: { referredUserId: id } }) },
+      { name: 'referralCode', fn: () => prisma.referralCode.deleteMany({ where: { userId: id } }) },
+      { name: 'anamnese', fn: () => prisma.anamnese.deleteMany({ where: { userId: id } }) },
+      { name: 'bodyMeasurement', fn: () => prisma.bodyMeasurement.deleteMany({ where: { userId: id } }) },
+      { name: 'sessionFeedback', fn: () => prisma.sessionFeedback.deleteMany({ where: { userId: id } }) },
+      { name: 'waitlist', fn: () => prisma.waitlist.deleteMany({ where: { userId: id } }) },
+      { name: 'digitalReceipt', fn: () => prisma.digitalReceipt.deleteMany({ where: { userId: id } }) },
+      { name: 'emailVerificationToken', fn: () => prisma.emailVerificationToken.deleteMany({ where: { userId: id } }) },
+      { name: 'giftCard_purchaser', fn: () => prisma.giftCard.updateMany({ where: { purchaserId: id }, data: { purchaserId: null } }) },
+      { name: 'giftCard_redeemed', fn: () => prisma.giftCard.updateMany({ where: { redeemedById: id }, data: { redeemedById: null } }) },
+    ]
+
+    for (const cleanup of cleanups) {
+      try {
+        await cleanup.fn()
+      } catch (e) {
+        errors.push(`${cleanup.name}: ${e instanceof Error ? e.message : String(e)}`)
+      }
     }
 
-    // Fidelidade
-    await safeDelete(() => prisma.loyaltyPoints.deleteMany({ where: { userId: id } }))
-    await safeDelete(() => prisma.loyaltyTransaction.deleteMany({ where: { userId: id } }))
-    // Indicações
-    await safeDelete(() => prisma.referralCode.deleteMany({ where: { userId: id } }))
-    await safeDelete(() => prisma.referral.deleteMany({ where: { referrerId: id } }))
-    await safeDelete(() => prisma.referral.deleteMany({ where: { referredUserId: id } }))
-    // Outros registros sem cascade
-    await safeDelete(() => prisma.anamnese.deleteMany({ where: { userId: id } }))
-    await safeDelete(() => prisma.bodyMeasurement.deleteMany({ where: { userId: id } }))
-    await safeDelete(() => prisma.sessionFeedback.deleteMany({ where: { userId: id } }))
-    await safeDelete(() => prisma.waitlist.deleteMany({ where: { userId: id } }))
-    await safeDelete(() => prisma.digitalReceipt.deleteMany({ where: { userId: id } }))
-    await safeDelete(() => prisma.emailVerificationToken.deleteMany({ where: { userId: id } }))
+    // ═══ Deletar o usuário (cascade deleta appointments, packages, payments) ═══
+    try {
+      await prisma.user.delete({ where: { id } })
+    } catch (prismaErr) {
+      // Fallback: deletar via SQL direto
+      console.error('Prisma delete failed, trying raw SQL:', prismaErr)
+      try {
+        await prisma.$executeRawUnsafe(`DELETE FROM "Appointment" WHERE "userId" = '${id}'`)
+        await prisma.$executeRawUnsafe(`DELETE FROM "Package" WHERE "userId" = '${id}'`)
+        await prisma.$executeRawUnsafe(`DELETE FROM "Payment" WHERE "userId" = '${id}'`)
+        await prisma.$executeRawUnsafe(`DELETE FROM "User" WHERE "id" = '${id}'`)
+      } catch (rawErr) {
+        const msg = rawErr instanceof Error ? rawErr.message : String(rawErr)
+        console.error('Raw SQL delete also failed:', msg)
+        return NextResponse.json(
+          { error: 'Erro ao excluir cliente', detail: msg, cleanupErrors: errors },
+          { status: 500 }
+        )
+      }
+    }
 
-    // Agora deletar o usuário (appointments, packages, payments têm cascade)
-    await prisma.user.delete({ where: { id } })
+    if (errors.length > 0) {
+      console.warn('DELETE client cleanup warnings:', errors)
+    }
 
     return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('DELETE client error:', error)
-    return NextResponse.json({ error: 'Erro ao excluir cliente' }, { status: 500 })
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error)
+    console.error('DELETE client error:', { id, message: errMsg, cleanupErrors: errors })
+    return NextResponse.json(
+      { error: 'Erro ao excluir cliente', detail: errMsg, cleanupErrors: errors },
+      { status: 500 }
+    )
   }
 }
