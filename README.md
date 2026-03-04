@@ -12,7 +12,7 @@
 > Seus concorrentes já estão automatizando agendamentos, fidelizando clientes e vendendo online.  
 > Enquanto você ainda usa caderninho e WhatsApp manual, eles estão faturando mais — com menos esforço.
 
----
+---         
 
 **Sistema completo, testado em produção e pronto para faturar.**  
 Sua marca. Seu domínio. Seus clientes. Zero código necessário para operar.

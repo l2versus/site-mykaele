@@ -675,6 +675,32 @@ export default function ImportarClientesPage() {
       {/* ── Client Rows ── */}
       {!summary && (
         <>
+          {/* ── Sticky top action bar (mobile — when many rows) ── */}
+          {rows.length > 3 && (
+            <div className="sticky top-14 z-20 bg-[#0e0b10]/95 backdrop-blur-lg border border-white/[0.06] rounded-xl px-4 py-3 flex items-center justify-between gap-3 shadow-lg sm:hidden">
+              <div className="text-white/50 text-xs">
+                <span className="text-white/80 font-semibold">{rows.filter(r => r.name.trim()).length}</span> contatos
+                {rows.filter(r => r.name.trim() && r.email.trim()).length > 0 && (
+                  <> · <span className="text-green-400">{rows.filter(r => r.name.trim() && r.email.trim()).length} prontos</span></>
+                )}
+              </div>
+              <button
+                onClick={handleImport}
+                disabled={loading || rows.filter(r => r.name.trim() && r.email.trim()).length === 0}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-[#b76e79] to-[#c28a93] text-white shadow-lg shadow-[#b76e79]/20 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Importando...
+                  </span>
+                ) : (
+                  `Salvar ${rows.filter(r => r.name.trim() && r.email.trim()).length} Cliente(s)`
+                )}
+              </button>
+            </div>
+          )}
+
           <div className="space-y-3">
             {rows.map((row, index) => {
               const isExpanded = expandedRow === row.id || (!expandedRow && index === 0)
@@ -981,6 +1007,45 @@ export default function ImportarClientesPage() {
               </button>
             </div>
           </div>
+
+          {/* ── Fixed bottom action bar (mobile — always visible when scrolling many contacts) ── */}
+          {rows.length > 3 && (
+            <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0e0b10]/95 backdrop-blur-lg border-t border-white/[0.08] px-4 py-3 sm:hidden safe-area-bottom">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex gap-2">
+                  <button
+                    onClick={addRow}
+                    className="px-3 py-2.5 rounded-xl text-xs font-medium bg-white/[0.06] border border-white/[0.1] text-white/60 active:scale-[0.96] transition-all min-h-[44px]"
+                  >
+                    + Cliente
+                  </button>
+                  <button
+                    onClick={resetForm}
+                    className="px-3 py-2.5 rounded-xl text-xs font-medium bg-white/[0.04] border border-white/[0.08] text-white/40 active:scale-[0.96] transition-all min-h-[44px]"
+                  >
+                    Limpar
+                  </button>
+                </div>
+                <button
+                  onClick={handleImport}
+                  disabled={loading || rows.filter(r => r.name.trim() && r.email.trim()).length === 0}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-[#b76e79] to-[#c28a93] text-white shadow-lg shadow-[#b76e79]/25 active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Salvando...
+                    </span>
+                  ) : (
+                    `Salvar ${rows.filter(r => r.name.trim() && r.email.trim()).length} Cliente(s)`
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Spacer for fixed bottom bar on mobile */}
+          {rows.length > 3 && <div className="h-20 sm:hidden" />}
 
           {/* ── WhatsApp template ── */}
           <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 sm:p-4">
