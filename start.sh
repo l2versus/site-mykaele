@@ -23,8 +23,23 @@ node /app/seed-admins.mjs 2>&1 || echo "Seed admins falhou, continuando..."
 # Garantir DATABASE_URL para o Next.js
 export DATABASE_URL="file:/app/data/mykaele.db"
 
-# Migrar coluna forcePasswordChange se não existir (bancos antigos)
+# Migrar colunas se não existirem (bancos antigos)
 sqlite3 "$DB_PATH" "ALTER TABLE User ADD COLUMN forcePasswordChange INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
+sqlite3 "$DB_PATH" "ALTER TABLE User ADD COLUMN emailVerified INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
+sqlite3 "$DB_PATH" "ALTER TABLE User ADD COLUMN emailVerifiedAt DATETIME;" 2>/dev/null || true
+
+# Criar tabela EmailVerificationToken se não existir
+sqlite3 "$DB_PATH" "CREATE TABLE IF NOT EXISTS EmailVerificationToken (
+    id TEXT PRIMARY KEY NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    userId TEXT NOT NULL,
+    email TEXT NOT NULL,
+    expiresAt DATETIME NOT NULL,
+    usedAt DATETIME,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);" 2>/dev/null || true
+sqlite3 "$DB_PATH" "CREATE INDEX IF NOT EXISTS EmailVerificationToken_token_idx ON EmailVerificationToken(token);" 2>/dev/null || true
+sqlite3 "$DB_PATH" "CREATE INDEX IF NOT EXISTS EmailVerificationToken_userId_idx ON EmailVerificationToken(userId);" 2>/dev/null || true
 
 echo "=== Iniciando servidor Next.js ==="
 exec node server.js

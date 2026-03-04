@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS "User" (
     "balance" REAL NOT NULL DEFAULT 0,
     "cashbackBalance" REAL NOT NULL DEFAULT 0,
     "forcePasswordChange" INTEGER NOT NULL DEFAULT 0,
+    "emailVerified" INTEGER NOT NULL DEFAULT 0,
+    "emailVerifiedAt" DATETIME,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -421,8 +423,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS "DigitalReceipt_appointmentId_key" ON "Digital
 CREATE INDEX IF NOT EXISTS "DigitalReceipt_userId_idx" ON "DigitalReceipt"("userId");
 CREATE INDEX IF NOT EXISTS "DigitalReceipt_createdAt_idx" ON "DigitalReceipt"("createdAt");
 
+-- ═══ Verificação de Email ═══
+CREATE TABLE IF NOT EXISTS "EmailVerificationToken" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "token" TEXT NOT NULL UNIQUE,
+    "userId" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "expiresAt" DATETIME NOT NULL,
+    "usedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "EmailVerificationToken_token_idx" ON "EmailVerificationToken"("token");
+CREATE INDEX IF NOT EXISTS "EmailVerificationToken_userId_idx" ON "EmailVerificationToken"("userId");
+
 -- Adicionar colunas novas a tabelas existentes (ALTER TABLE para upgrade)
 ALTER TABLE "User" ADD COLUMN "cashbackBalance" REAL NOT NULL DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN "emailVerified" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN "emailVerifiedAt" DATETIME;
 ALTER TABLE "Appointment" ADD COLUMN "depositAmount" REAL NOT NULL DEFAULT 0;
 ALTER TABLE "Appointment" ADD COLUMN "depositPaid" INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE "Appointment" ADD COLUMN "recurringGroupId" TEXT;
