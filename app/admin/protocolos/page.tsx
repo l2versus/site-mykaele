@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAdmin } from '../AdminContext'
 
 interface Protocol {
-  id: number; name: string; description: string | null; serviceId: number
-  totalSteps: number; intervalDays: number; steps: string; isActive: boolean; createdAt: string
+  id: string; name: string; description: string | null; serviceId: string | null
+  totalSteps: number; intervalDays: number; steps: string; active: boolean; createdAt: string
 }
 
 interface Step { order: number; title: string; description: string; products?: string }
@@ -14,7 +14,7 @@ export default function ProtocolosPage() {
   const [protocols, setProtocols] = useState<Protocol[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [editId, setEditId] = useState<number | null>(null)
+  const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState({ name: '', description: '', serviceId: '', intervalDays: '7', isActive: true })
   const [steps, setSteps] = useState<Step[]>([{ order: 1, title: '', description: '', products: '' }])
 
@@ -35,8 +35,9 @@ export default function ProtocolosPage() {
   const save = async () => {
     if (!form.name || !form.serviceId) return
     const body = {
-      ...form, serviceId: +form.serviceId, intervalDays: +form.intervalDays,
-      totalSteps: steps.length, steps: JSON.stringify(steps),
+      name: form.name, description: form.description, serviceId: form.serviceId,
+      intervalDays: +form.intervalDays, active: form.isActive,
+      totalSteps: steps.length, steps,
       ...(editId ? { id: editId } : {})
     }
     try {
@@ -48,18 +49,25 @@ export default function ProtocolosPage() {
     } catch {}
   }
 
-  const remove = async (id: number) => {
+  const remove = async (id: string) => {
     if (!confirm('Excluir protocolo?')) return
     try {
-      const res = await fetchWithAuth(`/api/admin/protocols?id=${id}`, { method: 'DELETE' })
+      const res = await fetchWithAuth('/api/admin/protocols', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      })
       if (res.ok) load()
     } catch {}
   }
 
   const edit = (p: Protocol) => {
     setEditId(p.id)
-    setForm({ name: p.name, description: p.description || '', serviceId: String(p.serviceId), intervalDays: String(p.intervalDays), isActive: p.isActive })
-    try { setSteps(JSON.parse(p.steps)) } catch { setSteps([{ order: 1, title: '', description: '', products: '' }]) }
+    setForm({ name: p.name, description: p.description || '', serviceId: p.serviceId || '', intervalDays: String(p.intervalDays), isActive: p.active })
+    try {
+      const parsed = typeof p.steps === 'string' ? JSON.parse(p.steps) : p.steps
+      setSteps(Array.isArray(parsed) ? parsed : [{ order: 1, title: '', description: '', products: '' }])
+    } catch { setSteps([{ order: 1, title: '', description: '', products: '' }]) }
     setShowForm(true)
   }
 
@@ -96,15 +104,19 @@ export default function ProtocolosPage() {
         <div className="space-y-3">
           {protocols.map(p => {
             let parsedSteps: Step[] = []
-            try { parsedSteps = JSON.parse(p.steps) } catch {}
+            try {
+              let parsed = typeof p.steps === 'string' ? JSON.parse(p.steps) : p.steps
+              if (typeof parsed === 'string') parsed = JSON.parse(parsed) // handle double-encoded
+              parsedSteps = Array.isArray(parsed) ? parsed : []
+            } catch {}
             return (
               <div key={p.id} className="bg-white rounded-xl border border-stone-100 shadow-sm p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-stone-800 font-semibold">{p.name}</h3>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${p.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-400'}`}>
-                        {p.isActive ? 'Ativo' : 'Inativo'}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${p.active ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-400'}`}>
+                        {p.active ? 'Ativo' : 'Inativo'}
                       </span>
                     </div>
                     {p.description && <p className="text-stone-400 text-xs mt-1">{p.description}</p>}
@@ -141,8 +153,8 @@ export default function ProtocolosPage() {
 
       {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 overflow-y-auto" onClick={resetForm}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 my-8" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/30 backdrop-blur-sm p-4 overflow-y-auto" onClick={resetForm}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 my-4 sm:my-8 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-stone-800">{editId ? 'Editar' : 'Novo'} Protocolo</h2>
             <div className="space-y-3">
               <input placeholder="Nome do protocolo" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm text-stone-700 focus:outline-none focus:border-[#b76e79]/40" />
