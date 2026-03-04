@@ -137,6 +137,12 @@ export async function DELETE(
       prisma.referralCode.deleteMany({ where: { userId: id } }),
       prisma.referral.deleteMany({ where: { referrerId: id } }),
       prisma.referral.deleteMany({ where: { referredUserId: id } }),
+      // Outros registros sem cascade
+      prisma.anamnese.deleteMany({ where: { userId: id } }),
+      prisma.bodyMeasurement.deleteMany({ where: { userId: id } }),
+      prisma.sessionFeedback.deleteMany({ where: { userId: id } }),
+      prisma.waitlist.deleteMany({ where: { userId: id } }),
+      prisma.digitalReceipt.deleteMany({ where: { userId: id } }),
       // Agora pode deletar o usuário (appointments, packages, payments têm cascade)
       prisma.user.delete({ where: { id } })
     ])

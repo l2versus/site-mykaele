@@ -336,6 +336,14 @@ function AuthScreen({ onLogin }: { onLogin: (token: string, user: ClientUser) =>
         <div className="absolute top-1/4 right-1/3 w-[180px] sm:w-[250px] h-[180px] sm:h-[250px] bg-[#b76e79]/[0.015] rounded-full blur-[110px] pointer-events-none" />
 
         <div className="w-full max-w-[min(28rem,100%)]">
+          {/* Botão Voltar */}
+          <a href="/" className="inline-flex items-center gap-2 text-white/30 hover:text-white/60 text-xs mb-6 transition-colors group">
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" className="group-hover:-translate-x-1 transition-transform">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Voltar ao site
+          </a>
+
           {/* Brand */}
           <div className="text-center mb-10">
             <div className="mb-5 flex justify-center">
