@@ -129,25 +129,28 @@ export async function DELETE(
     }
 
     // Deletar registros relacionados que não têm cascade automatico
-    await prisma.$transaction([
-      // Fidelidade
-      prisma.loyaltyPoints.deleteMany({ where: { userId: id } }),
-      prisma.loyaltyTransaction.deleteMany({ where: { userId: id } }),
-      // Indicações
-      prisma.referralCode.deleteMany({ where: { userId: id } }),
-      prisma.referral.deleteMany({ where: { referrerId: id } }),
-      prisma.referral.deleteMany({ where: { referredUserId: id } }),
-      // Outros registros sem cascade
-      prisma.anamnese.deleteMany({ where: { userId: id } }),
-      prisma.bodyMeasurement.deleteMany({ where: { userId: id } }),
-      prisma.sessionFeedback.deleteMany({ where: { userId: id } }),
-      prisma.waitlist.deleteMany({ where: { userId: id } }),
-      prisma.digitalReceipt.deleteMany({ where: { userId: id } }),
-      // Email verification tokens
-      prisma.emailVerificationToken.deleteMany({ where: { userId: id } }),
-      // Agora pode deletar o usuário (appointments, packages, payments têm cascade)
-      prisma.user.delete({ where: { id } })
-    ])
+    // Usar deletes individuais com try/catch para robustez
+    const safeDelete = async (fn: () => Promise<unknown>) => {
+      try { await fn() } catch { /* tabela pode não existir ainda */ }
+    }
+
+    // Fidelidade
+    await safeDelete(() => prisma.loyaltyPoints.deleteMany({ where: { userId: id } }))
+    await safeDelete(() => prisma.loyaltyTransaction.deleteMany({ where: { userId: id } }))
+    // Indicações
+    await safeDelete(() => prisma.referralCode.deleteMany({ where: { userId: id } }))
+    await safeDelete(() => prisma.referral.deleteMany({ where: { referrerId: id } }))
+    await safeDelete(() => prisma.referral.deleteMany({ where: { referredUserId: id } }))
+    // Outros registros sem cascade
+    await safeDelete(() => prisma.anamnese.deleteMany({ where: { userId: id } }))
+    await safeDelete(() => prisma.bodyMeasurement.deleteMany({ where: { userId: id } }))
+    await safeDelete(() => prisma.sessionFeedback.deleteMany({ where: { userId: id } }))
+    await safeDelete(() => prisma.waitlist.deleteMany({ where: { userId: id } }))
+    await safeDelete(() => prisma.digitalReceipt.deleteMany({ where: { userId: id } }))
+    await safeDelete(() => prisma.emailVerificationToken.deleteMany({ where: { userId: id } }))
+
+    // Agora deletar o usuário (appointments, packages, payments têm cascade)
+    await prisma.user.delete({ where: { id } })
 
     return NextResponse.json({ success: true })
   } catch (error) {
