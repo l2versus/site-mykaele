@@ -365,19 +365,14 @@ export default function ImportarClientesPage() {
   }
 
   // Send WhatsApp message with credentials
-  const sendWhatsApp = (row: ClientRow) => {
-    const phone = row.phone.replace(/\D/g, '')
-    const fullPhone = phone.startsWith('55') ? phone : `55${phone}`
-    const msg = encodeURIComponent(
-      `Olá ${row.name.split(' ')[0]}! ✨\n` +
-      `Seu acesso ao app da Mykaele Procópio Home Spa está pronto!\n\n` +
-      `Email: ${row.email}\nSenha temporária: ${row.tempPassword}\n\n` +
-      `Acesse: mykaprocopio.com.br/cliente\n` +
-      `No primeiro login, você será solicitada a criar uma nova senha.\n\n` +
-      `Qualquer dúvida, estou à disposição! ❤️`
-    )
-    window.open(`https://wa.me/${fullPhone}?text=${msg}`, '_blank')
-  }
+const sendWhatsApp = (row: ClientRow) => {
+  const phone = row.phone.replace(/\D/g, '')
+  const fullPhone = phone.startsWith('55') ? phone : `55${phone}`
+
+  const message = `Ol\u00e1 ${row.name.split(' ')[0]}! \u2728\nSeu acesso ao app da Mykaele Proc\u00f3pio Home Spa est\u00e1 pronto!\n\nEmail: ${row.email}\nSenha tempor\u00e1ria: ${row.tempPassword}\n\nAcesse: mykaprocopio.com.br/cliente\nNo primeiro login, voc\u00ea ser\u00e1 solicitada a criar uma nova senha.\n\nQualquer d\u00favida, estou \u00e0 disposi\u00e7\u00e3o! \u2764\ufe0f`
+
+  window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`, '_blank')
+}
 
   // Carregar serviços e pacotes disponíveis
   const loadData = useCallback(async () => {
