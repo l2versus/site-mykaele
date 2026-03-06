@@ -123,7 +123,7 @@ export default function FinanceiroPage() {
 
   // Forms
   const [expForm, setExpForm] = useState({ description: '', amount: '', category: 'MATERIAL' })
-  const [revForm, setRevForm] = useState({ description: '', amount: '', method: 'PIX' })
+  const [revForm, setRevForm] = useState({ description: '', amount: '', method: 'PIX', gateway: '', feeAmount: '' })
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
 
@@ -174,12 +174,12 @@ export default function FinanceiroPage() {
     try {
       const res = await fetchWithAuth('/api/admin/finances', {
         method: 'POST',
-        body: JSON.stringify({ type: 'revenue', description: revForm.description, amount: parseFloat(revForm.amount), method: revForm.method })
+        body: JSON.stringify({ type: 'revenue', description: revForm.description, amount: parseFloat(revForm.amount), method: revForm.method, ...(revForm.gateway && { gateway: revForm.gateway }), ...(revForm.feeAmount && { feeAmount: parseFloat(revForm.feeAmount) }) })
       })
       if (res.ok) {
         await load()
         setShowAddRevenue(false)
-        setRevForm({ description: '', amount: '', method: 'PIX' })
+        setRevForm({ description: '', amount: '', method: 'PIX', gateway: '', feeAmount: '' })
         showFeedback('Receita registrada com sucesso')
       } else showFeedback('Erro ao registrar receita', 'error')
     } catch { showFeedback('Erro de conexão', 'error') }
@@ -212,12 +212,12 @@ export default function FinanceiroPage() {
     try {
       const res = await fetchWithAuth(`/api/admin/finances?id=${editingPayment.id}&type=payment`, {
         method: 'PATCH',
-        body: JSON.stringify({ description: revForm.description, amount: parseFloat(revForm.amount), method: revForm.method })
+        body: JSON.stringify({ description: revForm.description, amount: parseFloat(revForm.amount), method: revForm.method, ...(revForm.gateway && { gateway: revForm.gateway }), ...(revForm.feeAmount && { feeAmount: parseFloat(revForm.feeAmount) }) })
       })
       if (res.ok) {
         await load()
         setEditingPayment(null)
-        setRevForm({ description: '', amount: '', method: 'PIX' })
+        setRevForm({ description: '', amount: '', method: 'PIX', gateway: '', feeAmount: '' })
         showFeedback('Receita atualizada')
       } else showFeedback('Erro ao atualizar', 'error')
     } catch { showFeedback('Erro de conexão', 'error') }
@@ -246,7 +246,7 @@ export default function FinanceiroPage() {
   }
 
   const openEditPayment = (p: Payment) => {
-    setRevForm({ description: p.description || p.user?.name || '', amount: String(p.amount), method: p.method })
+    setRevForm({ description: p.description || p.user?.name || '', amount: String(p.amount), method: p.method, gateway: (p as any).gateway || '', feeAmount: (p as any).feeAmount ? String((p as any).feeAmount) : '' })
     setEditingPayment(p)
   }
 
@@ -286,7 +286,7 @@ export default function FinanceiroPage() {
           <p className="text-stone-400 text-xs mt-0.5">Fluxo de caixa e indicadores</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
-          <button onClick={() => { setRevForm({ description: '', amount: '', method: 'PIX' }); setEditingPayment(null); setShowAddRevenue(true) }}
+          <button onClick={() => { setRevForm({ description: '', amount: '', method: 'PIX', gateway: '', feeAmount: '' }); setEditingPayment(null); setShowAddRevenue(true) }}
             className="px-3.5 py-2 rounded-lg text-xs bg-emerald-500/12 border border-emerald-500/20 text-emerald-400 font-medium hover:bg-emerald-500/20 transition-all flex items-center gap-1.5">
             {Ico.plus} Receita
           </button>
@@ -402,7 +402,7 @@ export default function FinanceiroPage() {
                 (data.payments?.length || 0) === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-stone-300 text-xs mb-3">Nenhuma receita registrada</p>
-                    <button onClick={() => { setRevForm({ description: '', amount: '', method: 'PIX' }); setEditingPayment(null); setShowAddRevenue(true) }}
+                    <button onClick={() => { setRevForm({ description: '', amount: '', method: 'PIX', gateway: '', feeAmount: '' }); setEditingPayment(null); setShowAddRevenue(true) }}
                       className="px-3 py-1.5 rounded-md text-[11px] text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/10 transition-all">
                       + Registrar receita
                     </button>
@@ -547,6 +547,30 @@ export default function FinanceiroPage() {
                   ))}
                 </div>
               </div>
+              {/* ─── Gateway & Taxa da Maquininha (só para cartão) ─── */}
+              {(revForm.method === 'CARTAO_CREDITO' || revForm.method === 'CARTAO_DEBITO') && (
+                <>
+                  <div>
+                    <label className="block text-stone-400 text-[10px] font-medium mb-1 uppercase tracking-wider">Gateway / Maquininha</label>
+                    <select value={revForm.gateway} onChange={e => setRevForm({ ...revForm, gateway: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-lg text-stone-800 text-sm focus:outline-none focus:border-emerald-500/40 transition-all">
+                      <option value="">Selecione a maquininha</option>
+                      <option value="INFINITEPAY">InfinitePay</option>
+                      <option value="MERCADO_PAGO">Mercado Pago</option>
+                      <option value="STONE">Stone</option>
+                      <option value="SUMUP">SumUp</option>
+                      <option value="PAGSEGURO">PagSeguro</option>
+                      <option value="OUTRO">Outro</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-stone-400 text-[10px] font-medium mb-1 uppercase tracking-wider">Taxa da Maquininha (R$)</label>
+                    <input type="number" step="0.01" min="0" value={revForm.feeAmount} onChange={e => setRevForm({ ...revForm, feeAmount: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-lg text-stone-800 text-sm focus:outline-none focus:border-amber-500/40 transition-all" placeholder="Ex: 4.90" />
+                    <p className="text-stone-400 text-[10px] mt-1">Valor real cobrado pela operadora nesta transação.</p>
+                  </div>
+                </>
+              )}
               <div className="flex gap-2 justify-end pt-2">
                 <button onClick={() => { setShowAddRevenue(false); setEditingPayment(null) }} className="px-3 py-1.5 rounded-md text-xs text-stone-400 border border-stone-200 hover:bg-stone-50 transition-all">Cancelar</button>
                 <button onClick={editingPayment ? updatePayment : addRevenue} disabled={saving || !revForm.description || !revForm.amount}

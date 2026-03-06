@@ -8,6 +8,7 @@ import { CartProvider, useCart } from './CartContext'
 import PageTransition from '@/components/PageTransition'
 import NotificationPrompt from '@/components/NotificationPrompt'
 import { haptic } from '@/hooks/useHaptic'
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 
 /* ─── SVG Icons ─── */
 const Icons = {
@@ -861,6 +862,128 @@ function PhotoDrawerProvider({ children }: { children: ReactNode }) {
   return <PhotoDrawerContext.Provider value={{ open, toggle }}>{children}</PhotoDrawerContext.Provider>
 }
 
+/* ─── Cart Drawer Global ─── */
+function CartDrawer() {
+  const { items, removeItem, clearCart, total } = useCart()
+  const [isOpen, setIsOpen] = useState(false)
+  useBodyScrollLock(isOpen)
+
+  const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
+  const totalSessions = items.reduce((sum, i) => sum + i.sessions, 0)
+
+  return (
+    <>
+      {/* Botão carrinho no header — renderizado via portal no ClientShell */}
+      <button
+        onClick={() => setIsOpen(true)}
+        className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.06] transition-all group"
+        aria-label="Abrir carrinho"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover:text-white/80 transition-colors">
+          <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+        </svg>
+        {items.length > 0 && (
+          <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#b76e79] text-white text-[10px] font-bold">
+            {items.length}
+          </span>
+        )}
+      </button>
+
+      {/* Drawer overlay + panel */}
+      {isOpen && (
+        <div className="fixed inset-0 z-[60]" onClick={() => setIsOpen(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]" />
+          <div
+            className="absolute top-0 right-0 h-full w-[90vw] max-w-md bg-[#0e0b10] border-l border-white/10 shadow-2xl animate-[slideInRight_0.3s_ease-out] flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4a0a7]/20 to-[#b76e79]/10 flex items-center justify-center">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#d4a0a7]">
+                    <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-white/90 font-semibold text-sm">Seu Carrinho</h3>
+                  <p className="text-white/40 text-[10px]">{items.length} item(s) · {totalSessions} sessão(ões)</p>
+                </div>
+              </div>
+              <button onClick={() => setIsOpen(false)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Items */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+              {items.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/20">
+                      <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                    </svg>
+                  </div>
+                  <p className="text-white/25 text-sm">Carrinho vazio</p>
+                  <p className="text-white/15 text-xs mt-1">Adicione créditos para começar</p>
+                </div>
+              ) : (
+                items.map((item) => (
+                  <div key={item.packageOptionId} className="group relative bg-white/[0.03] hover:bg-white/[0.05] rounded-xl p-4 border border-white/[0.06] transition-all">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white/90 text-sm font-medium truncate">{item.name}</p>
+                        <p className="text-white/30 text-xs mt-0.5">{item.sessions} sessão(ões)</p>
+                      </div>
+                      <div className="flex items-center gap-2.5 ml-3">
+                        <p className="text-white font-bold text-sm">{fmtCur(item.price)}</p>
+                        <button onClick={() => removeItem(item.packageOptionId)} className="w-7 h-7 rounded-lg hover:bg-red-500/10 flex items-center justify-center transition-all opacity-40 hover:opacity-100">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-400">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer */}
+            {items.length > 0 && (
+              <div className="border-t border-white/10 px-6 py-5 space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-white/40">
+                    <span>Subtotal ({items.length} item{items.length > 1 ? 's' : ''})</span>
+                    <span>{fmtCur(total)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/80 font-semibold">Total</span>
+                    <span className="text-white text-2xl font-bold">{fmtCur(total)}</span>
+                  </div>
+                </div>
+                <a href="/cliente/carrinho" onClick={() => setIsOpen(false)}
+                  className="block w-full py-3.5 rounded-xl bg-gradient-to-r from-[#d4a0a7] to-[#b76e79] text-white text-center font-bold shadow-lg shadow-[#b76e79]/25 hover:shadow-[#b76e79]/40 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                  Ir para o Carrinho
+                </a>
+                <button onClick={() => { clearCart(); setIsOpen(false) }}
+                  className="w-full py-2 text-white/30 hover:text-red-400 text-xs font-medium transition-colors">
+                  Limpar carrinho
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 /* ─── Client Shell — Layout com foto lateral persistente ─── */
 function ClientShell({ user, pathname, children }: { user: ClientUser; pathname: string; children: ReactNode }) {
   const { open, toggle } = useContext(PhotoDrawerContext)
@@ -964,6 +1087,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
               </div>
             </div>
             <div className="flex items-center gap-2.5">
+              <CartDrawer />
               <LeafLogo className="w-3 h-4.5 text-[#b76e79]/25" />
             </div>
           </div>
@@ -1056,6 +1180,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
       <style jsx global>{`
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
       `}</style>
     </div>
   )

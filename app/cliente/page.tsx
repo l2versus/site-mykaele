@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useClient } from './ClientContext'
 import Link from 'next/link'
+import { InfoTooltip } from '@/components/InfoTooltip'
 import { SkeletonBox, SkeletonCard, SkeletonAppointment, SkeletonKPI } from '@/components/Skeleton'
 import dynamic from 'next/dynamic'
 
@@ -307,7 +308,7 @@ export default function ClienteHome() {
         <div className="absolute inset-0 bg-gradient-to-br from-[#d4a0a7]/40 via-[#b76e79]/30 to-[#8b4a52]/25 transition-all duration-500" />
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl opacity-60 transition-opacity" />
         <div className="relative border border-white/15 rounded-3xl p-6 transition-all">
-          <div className="text-[#d4a0a7]/40 text-[9px] font-semibold tracking-[0.3em] uppercase mb-3">SALDO DE CRÉDITOS</div>
+          <div className="text-[#d4a0a7]/40 text-[9px] font-semibold tracking-[0.3em] uppercase mb-3">SALDO DE CRÉDITOS <InfoTooltip text="São as sessões que você comprou antecipadamente. Use-as para agendar sem pagar novamente." /></div>
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <div className="text-white font-bold text-4xl tracking-tight">
@@ -461,16 +462,16 @@ export default function ClienteHome() {
       {stats && (
         <div className="grid grid-cols-3 gap-3">
           {[
-            { value: stats.completedSessions, label: 'Sessões', color: 'from-emerald-500/12 to-emerald-600/3', borderColor: 'border-emerald-500/10', textColor: 'text-emerald-400', icon: '✅' },
-            { value: stats.activePackages, label: 'Protocolos', color: 'from-purple-500/12 to-purple-600/3', borderColor: 'border-purple-500/10', textColor: 'text-purple-400', icon: '⚡' },
-            { value: stats.upcomingSessions, label: 'Agendados', color: 'from-amber-500/12 to-amber-600/3', borderColor: 'border-amber-500/10', textColor: 'text-amber-400', icon: '📆' },
+            { value: stats.completedSessions, label: 'Sessões', tooltip: 'Total de sessões já realizadas com a Mykaele.', color: 'from-emerald-500/12 to-emerald-600/3', borderColor: 'border-emerald-500/10', textColor: 'text-emerald-400', icon: '✅' },
+            { value: stats.activePackages, label: 'Protocolos', tooltip: 'Protocolos de tratamento ativos no momento.', color: 'from-purple-500/12 to-purple-600/3', borderColor: 'border-purple-500/10', textColor: 'text-purple-400', icon: '⚡' },
+            { value: stats.upcomingSessions, label: 'Agendados', tooltip: 'Sessões agendadas que ainda vão acontecer.', color: 'from-amber-500/12 to-amber-600/3', borderColor: 'border-amber-500/10', textColor: 'text-amber-400', icon: '📆' },
           ].map((s, i) => (
             <div key={i} className="relative overflow-hidden rounded-2xl">
               <div className={`absolute inset-0 bg-gradient-to-br ${s.color}`} />
               <div className={`relative border ${s.borderColor} rounded-2xl p-4 text-center`}>
                 <div className="text-sm mb-1.5">{s.icon}</div>
                 <div className={`text-xl font-bold ${s.textColor}`}>{s.value}</div>
-                <div className="text-white/20 text-[9px] mt-1 tracking-wide">{s.label}</div>
+                <div className="text-white/20 text-[9px] mt-1 tracking-wide">{s.label} <InfoTooltip text={s.tooltip} /></div>
               </div>
             </div>
           ))}

@@ -2,6 +2,7 @@
 
 import { useClient } from '../ClientContext'
 import { useState, useEffect, useCallback } from 'react'
+import { InfoTooltip } from '@/components/InfoTooltip'
 
 // ═══ Types ═══
 interface LoyaltyOverview {
@@ -413,7 +414,7 @@ export default function FidelidadePage() {
               <p className="text-3xl font-bold tabular-nums">{(overview?.loyalty?.points || 0).toLocaleString('pt-BR')}</p>
             </div>
             <div className="text-right">
-              <p className="text-white/70 text-sm font-semibold">{tierInfo.emoji} Tier {tierInfo.name}</p>
+              <p className="text-white/70 text-sm font-semibold">{tierInfo.emoji} Tier {tierInfo.name} <InfoTooltip text="Seu nível VIP! Quanto mais sessões e indicações, mais benefícios exclusivos você desbloqueia." /></p>
               <p className="text-white/50 text-xs">{(overview?.loyalty?.totalEarned || 0).toLocaleString('pt-BR')} pts acumulados</p>
             </div>
           </div>

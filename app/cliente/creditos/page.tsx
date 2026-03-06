@@ -3,6 +3,7 @@
 import { useClient } from '../ClientContext'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { InfoTooltip } from '@/components/InfoTooltip'
 
 // Serviços e pacotes disponíveis para compra de créditos
 const creditOptions = {
@@ -229,29 +230,6 @@ export default function CreditosPage() {
         
       </div>
 
-      {/* ═══ Botão flutuante do carrinho ═══ */}
-      <button
-        onClick={() => setCartOpen(true)}
-        className={`fixed bottom-[5.5rem] right-4 z-50 flex items-center gap-2 px-5 py-3.5 rounded-2xl shadow-2xl transition-all duration-300 ${
-          cart.length > 0
-            ? 'bg-gradient-to-r from-[#d4a0a7] to-[#b76e79] shadow-[#b76e79]/40 hover:shadow-[#b76e79]/60 hover:scale-105'
-            : 'bg-white/10 backdrop-blur-xl border border-white/15 hover:bg-white/15'
-        } ${cartBounce ? 'scale-110' : ''}`}
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white">
-          <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-        </svg>
-        {cart.length > 0 ? (
-          <>
-            <span className="text-white font-bold text-sm">{fmtCur(cartTotal)}</span>
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/25 text-white text-xs font-bold">{cart.length}</span>
-          </>
-        ) : (
-          <span className="text-white/70 text-sm font-medium">Carrinho</span>
-        )}
-      </button>
-
       {/* ═══ Toast de feedback ═══ */}
       {toast && (
         <div className="fixed bottom-36 right-4 z-50 animate-[slideUp_0.3s_ease-out] flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-600/95 backdrop-blur-sm shadow-xl shadow-emerald-900/30 border border-emerald-500/30">
@@ -259,112 +237,6 @@ export default function CreditosPage() {
           <div>
             <p className="text-white text-xs font-semibold">Adicionado ao carrinho!</p>
             <p className="text-emerald-200/70 text-[10px] truncate max-w-[200px]">{toast}</p>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ Drawer lateral do carrinho ═══ */}
-      {cartOpen && (
-        <div className="fixed inset-0 z-[60]" onClick={() => setCartOpen(false)}>
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]" />
-          
-          {/* Drawer */}
-          <div
-            className="absolute top-0 right-0 h-full w-[90vw] max-w-md bg-[#0e0b10] backdrop-blur-xl border-l border-white/10 shadow-2xl animate-[slideInRight_0.3s_ease-out] flex flex-col"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4a0a7]/20 to-[#b76e79]/10 flex items-center justify-center">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#d4a0a7]">
-                    <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-white/90 font-semibold text-sm">Seu Carrinho</h3>
-                  <p className="text-white/40 text-[10px]">{cart.length} item(s) · {cartSessions} sessão(ões)</p>
-                </div>
-              </div>
-              <button onClick={() => setCartOpen(false)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            </div>
-
-            {/* Items */}
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-              {cart.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/20">
-                      <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-                      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-                    </svg>
-                  </div>
-                  <p className="text-white/25 text-sm">Carrinho vazio</p>
-                  <p className="text-white/15 text-xs mt-1">Adicione créditos para começar</p>
-                </div>
-              ) : (
-                cart.map((item, idx) => (
-                  <div key={idx} className="group relative bg-white/[0.03] hover:bg-white/[0.05] rounded-xl p-4 border border-white/[0.06] transition-all">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white/90 text-sm font-medium truncate">{item.name}</p>
-                        <p className="text-white/30 text-xs mt-0.5">{item.sessions} sessão(ões)</p>
-                      </div>
-                      <div className="flex items-center gap-2.5 ml-3">
-                        <p className="text-white font-bold text-sm">{fmtCur(item.price)}</p>
-                        <button
-                          onClick={() => removeFromCart(idx)}
-                          className="w-7 h-7 rounded-lg bg-red-500/0 hover:bg-red-500/10 flex items-center justify-center transition-all opacity-40 hover:opacity-100"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-400">
-                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Footer com total e botão de compra */}
-            {cart.length > 0 && (
-              <div className="border-t border-white/10 px-6 py-5 space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-white/40">
-                    <span>Subtotal ({cart.length} item{cart.length > 1 ? 's' : ''})</span>
-                    <span>{fmtCur(cartTotal)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/80 font-semibold">Total</span>
-                    <span className="text-white text-2xl font-bold">{fmtCur(cartTotal)}</span>
-                  </div>
-                </div>
-                <button 
-                  onClick={handleCheckout}
-                  disabled={checkoutLoading}
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#d4a0a7] to-[#b76e79] text-white font-bold shadow-lg shadow-[#b76e79]/25 hover:shadow-[#b76e79]/40 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-60 disabled:hover:scale-100 flex items-center justify-center gap-2">
-                  {checkoutLoading ? (
-                    <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Processando...</>
-                  ) : (
-                    <>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                      Finalizar Compra
-                    </>
-                  )}
-                </button>
-                {checkoutError && (
-                  <p className="text-red-400 text-[11px] text-center bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{checkoutError}</p>
-                )}
-                <p className="text-white/25 text-[10px] text-center">PIX · Cartão de crédito · Boleto · Mercado Pago</p>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -392,7 +264,7 @@ export default function CreditosPage() {
 
       {/* Meus Créditos */}
       <div className="space-y-3">
-        <h3 className="text-white/90 text-sm font-semibold">Meus Créditos Ativos</h3>
+        <h3 className="text-white/90 text-sm font-semibold">Meus Créditos Ativos <InfoTooltip text="Pacotes que você comprou e ainda tem sessões para usar. Agende diretamente pelo app!" /></h3>
         {activePackages.length === 0 ? (
           <div className="text-center py-8 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
             <p className="text-white/25 text-sm">Nenhum crédito disponível</p>
