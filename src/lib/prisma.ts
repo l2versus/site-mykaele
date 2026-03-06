@@ -1,19 +1,29 @@
-// src/lib/prisma.ts
 import { PrismaClient } from '@prisma/client'
-import { PrismaLibSql } from '@prisma/adapter-libsql'
+import { PrismaPg } from '@prisma/adapter-pg'
+import pg from 'pg'
 
+const { Pool } = pg
+
+// Configura a conexão nativa com a URL do seu .env
+const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL 
+})
+
+// Cria o adaptador do Prisma 7
+const adapter = new PrismaPg(pool)
+
+// Função que cria o cliente já com o adaptador
 const prismaClientSingleton = () => {
-  const dbUrl = process.env.DATABASE_URL || (process.env.NODE_ENV === 'production' ? 'file:/app/data/mykaele.db' : 'file:./dev.db')
-  const adapter = new PrismaLibSql({ url: dbUrl })
   return new PrismaClient({ adapter })
 }
 
-type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClientSingleton | undefined
+// Previne múltiplas conexões abertas no modo de desenvolvimento (Hot Reload)
+declare global {
+  var prismaGlobal: undefined | ReturnType<typeof prismaClientSingleton>
 }
 
-export const prisma = globalForPrisma.prisma ?? prismaClientSingleton()
+const prisma = globalThis.prismaGlobal ?? prismaClientSingleton()
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+export default prisma
+
+if (process.env.NODE_ENV !== 'production') globalThis.prismaGlobal = prisma

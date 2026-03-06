@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {
@@ -43,7 +43,6 @@ model User {
   payments     Payment[]
 }
 
-// Token de Verificação de Email
 model EmailVerificationToken {
   id        String    @id @default(cuid())
   token     String    @unique
@@ -126,13 +125,13 @@ model Appointment {
   travelFee          Float     @default(0)
   price              Float     @default(0)
   paidFromBalance    Boolean   @default(false)
-  paymentStatus      String    @default("PENDING_PAYMENT") // PENDING_PAYMENT, PAID_ONLINE, PAID_IN_PERSON, UNPAID
-  paymentMethod      String? // MERCADO_PAGO, PIX, CASH, CARD, PACKAGE
-  paymentId          String? // link to Payment record when paid
+  paymentStatus      String    @default("PENDING_PAYMENT")
+  paymentMethod      String?
+  paymentId          String?
   depositAmount      Float     @default(0)
   depositPaid        Boolean   @default(false)
   recurringGroupId   String?
-  splitPayments      String? // JSON: [{method: "PIX", amount: 100}, {method: "CARD", amount: 150}]
+  splitPayments      String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -163,7 +162,7 @@ model Payment {
   id            String   @id @default(cuid())
   userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  appointmentId String? // link to appointment if payment is for a specific session
+  appointmentId String?
   amount        Float
   method        String
   description   String?
@@ -191,41 +190,36 @@ model Expense {
   @@index([date])
 }
 
-// ═══ Body Measurements ═══
 model BodyMeasurement {
   id     String   @id @default(cuid())
   userId String
   date   DateTime @default(now())
 
-  // Anthropometric
-  weight     Float? // kg
-  height     Float? // cm
-  bodyFat    Float? // %
-  muscleMass Float? // %
-  bmi        Float? // auto-calculated
+  weight     Float?
+  height     Float?
+  bodyFat    Float?
+  muscleMass Float?
+  bmi        Float?
 
-  // Circumferences (cm)
-  bust       Float? // busto / tórax
-  waist      Float? // cintura
-  abdomen    Float? // abdômen
-  hip        Float? // quadril
-  armLeft    Float? // braço esquerdo
-  armRight   Float? // braço direito
-  thighLeft  Float? // coxa esquerda
-  thighRight Float? // coxa direita
-  calfLeft   Float? // panturrilha esquerda
-  calfRight  Float? // panturrilha direita
+  bust       Float?
+  waist      Float?
+  abdomen    Float?
+  hip        Float?
+  armLeft    Float?
+  armRight   Float?
+  thighLeft  Float?
+  thighRight Float?
+  calfLeft   Float?
+  calfRight  Float?
 
-  // Goals
   goalWeight  Float?
   goalWaist   Float?
   goalHip     Float?
   goalBodyFat Float?
 
-  // Meta
   notes      String?
-  measuredBy String? // Name of professional
-  sessionId  String? // optional link to appointment
+  measuredBy String?
+  sessionId  String?
   photoFront String?
   photoSide  String?
   photoBack  String?
@@ -237,36 +231,32 @@ model BodyMeasurement {
   @@index([date])
 }
 
-// ═══ Session Satisfaction (NPS) ═══
 model SessionFeedback {
   id            String   @id @default(cuid())
   userId        String
   appointmentId String   @unique
-  score         Int // 1-10
+  score         Int
   comment       String?
-  categories    String? // JSON: ["atendimento","resultado","conforto"]
+  categories    String?
   createdAt     DateTime @default(now())
 
   @@index([userId])
 }
 
-// ═══ Post-Session Care Guidelines ═══
 model CareGuideline {
   id          String  @id @default(cuid())
   serviceId   String?
   title       String
   description String
-  timing      String  @default("24h") // "imediato","24h","48h","7d"
-  priority    Int     @default(0) // 0=normal,1=important,2=critical
+  timing      String  @default("24h")
+  priority    Int     @default(0)
   active      Boolean @default(true)
 }
 
-// ═══ Anamnese (Ficha do Paciente) ═══
 model Anamnese {
   id     String @id @default(cuid())
   userId String @unique
 
-  // Dados Pessoais
   birthDate  String?
   gender     String?
   bloodType  String?
@@ -274,14 +264,12 @@ model Anamnese {
   height     Float?
   occupation String?
 
-  // Condições de Saúde
   allergies         String?
   medications       String?
   chronicConditions String?
   surgeries         String?
   healthNotes       String?
 
-  // Flags booleanas
   hasAllergies       Boolean @default(false)
   hasDiabetes        Boolean @default(false)
   hasHypertension    Boolean @default(false)
@@ -295,7 +283,6 @@ model Anamnese {
   hasVaricoseVeins   Boolean @default(false)
   hasRecentSurgery   Boolean @default(false)
 
-  // Estilo de Vida
   smokingStatus   String?
   alcoholUse      String?
   exerciseLevel   String?
@@ -303,13 +290,11 @@ model Anamnese {
   waterIntake     String?
   dietDescription String?
 
-  // Metas e Expectativas
   mainGoals          String?
   bodyAreas          String?
   previousTreatments String?
   expectations       String?
 
-  // Consentimento
   consentGiven Boolean   @default(false)
   completedAt  DateTime?
 
@@ -317,39 +302,35 @@ model Anamnese {
   updatedAt DateTime @updatedAt
 }
 
-// ═══════════════════════════════════════════
-// PROGRAMA DE FIDELIDADE & INDICAÇÃO
-// ═══════════════════════════════════════════
-
 model ReferralCode {
   id         String   @id @default(cuid())
   userId     String   @unique
-  code       String   @unique // ex: "MYKA-ANA2024"
-  usageCount Int      @default(0) // quantas vezes foi usado
+  code       String   @unique
+  usageCount Int      @default(0)
   active     Boolean  @default(true)
   createdAt  DateTime @default(now())
 }
 
 model Referral {
   id             String    @id @default(cuid())
-  referrerId     String // quem indicou
-  referredUserId String // quem foi indicado
-  referralCodeId String // código usado
-  status         String    @default("PENDING") // PENDING, CONFIRMED, REWARDED
+  referrerId     String
+  referredUserId String
+  referralCodeId String
+  status         String    @default("PENDING")
   rewardedAt     DateTime?
   createdAt      DateTime  @default(now())
 
-  @@unique([referredUserId]) // cada pessoa só pode ser indicada 1 vez
+  @@unique([referredUserId])
   @@index([referrerId])
 }
 
 model LoyaltyPoints {
   id          String   @id @default(cuid())
   userId      String   @unique
-  points      Int      @default(0) // pontos atuais
-  totalEarned Int      @default(0) // total já acumulado
-  totalSpent  Int      @default(0) // total já resgatado
-  tier        String   @default("BRONZE") // BRONZE, SILVER, GOLD, DIAMOND
+  points      Int      @default(0)
+  totalEarned Int      @default(0)
+  totalSpent  Int      @default(0)
+  tier        String   @default("BRONZE")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -357,10 +338,10 @@ model LoyaltyPoints {
 model LoyaltyTransaction {
   id          String   @id @default(cuid())
   userId      String
-  points      Int // positivo = ganho, negativo = gasto
-  type        String // REFERRAL_BONUS, REFERRED_BONUS, SESSION_COMPLETE, REVIEW_BONUS, BIRTHDAY_BONUS, TIER_BONUS, REDEMPTION, ADMIN_ADJUSTMENT
+  points      Int
+  type        String
   description String
-  referenceId String? // ID do referral, appointment, etc
+  referenceId String?
   createdAt   DateTime @default(now())
 
   @@index([userId])
@@ -369,41 +350,35 @@ model LoyaltyTransaction {
 
 model LoyaltyReward {
   id          String   @id @default(cuid())
-  name        String // "Desconto de R$50 na próxima sessão"
+  name        String
   description String?
-  pointsCost  Int // quantos pontos custa
-  type        String // DISCOUNT, FREE_SESSION, FREE_ADDON, GIFT, UPGRADE
-  value       Float // valor em R$ do desconto ou benefício
+  pointsCost  Int
+  type        String
+  value       Float
   active      Boolean  @default(true)
-  stock       Int? // null = ilimitado
-  imageEmoji  String? // emoji ou URL
+  stock       Int?
+  imageEmoji  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
-// ═══════════════════════════════════════════
-// ESTOQUE DE INSUMOS & FORNECEDORES
-// ═══════════════════════════════════════════
-
 model InventoryItem {
   id          String  @id @default(cuid())
-  name        String  @unique // "Chá de Hibisco", "Kest Comprimido", etc
+  name        String  @unique
   description String?
-  category    String  @default("MATERIAL") // MATERIAL, DESCARTAVEL, COSMÉTICO, EQUIPAMENTO
-  unit        String  @default("un") // un, ml, g, kg, cx, pct
-  quantity    Float   @default(0) // quantidade atual em estoque
-  minQuantity Float   @default(5) // alerta quando abaixo disso
-  costPerUnit Float   @default(0) // custo unitário R$
+  category    String  @default("MATERIAL")
+  unit        String  @default("un")
+  quantity    Float   @default(0)
+  minQuantity Float   @default(5)
+  costPerUnit Float   @default(0)
   active      Boolean @default(true)
 
-  // Fornecedor
-  supplierName  String? // nome do fornecedor
-  supplierPhone String? // WhatsApp do fornecedor
+  supplierName  String?
+  supplierPhone String?
   supplierEmail String?
-  supplierNotes String? // observações (marca preferida, prazo entrega, etc)
+  supplierNotes String?
 
-  // Pedido automático
-  autoOrderQty  Float? // quantidade padrão para pedir (ex: 50 unidades)
+  autoOrderQty  Float?
   lastOrderedAt DateTime?
 
   movements StockMovement[]
@@ -418,28 +393,24 @@ model StockMovement {
   id              String        @id @default(cuid())
   inventoryItemId String
   item            InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
-  type            String // IN (entrada), OUT (saída/uso), ADJUSTMENT
-  quantity        Float // positivo = entrada, negativo = saída
-  reason          String? // "Compra", "Uso em sessão", "Descarte", "Ajuste"
-  cost            Float? // custo total desta movimentação (para entradas)
-  expenseId       String? // link para despesa gerada
+  type            String
+  quantity        Float
+  reason          String?
+  cost            Float?
+  expenseId       String?
   createdAt       DateTime      @default(now())
 
   @@index([inventoryItemId])
   @@index([createdAt])
 }
 
-// ═══════════════════════════════════════════
-// LISTA DE ESPERA
-// ═══════════════════════════════════════════
-
 model Waitlist {
   id        String   @id @default(cuid())
   userId    String
   serviceId String
-  date      String // preferred YYYY-MM-DD
-  timeSlot  String? // preferred HH:MM
-  status    String   @default("WAITING") // WAITING, NOTIFIED, BOOKED, CANCELLED
+  date      String
+  timeSlot  String?
+  status    String   @default("WAITING")
   notes     String?
   priority  Int      @default(0)
   createdAt DateTime @default(now())
@@ -449,10 +420,6 @@ model Waitlist {
   @@index([serviceId])
   @@index([userId])
 }
-
-// ═══════════════════════════════════════════
-// GIFT CARDS / VOUCHERS
-// ═══════════════════════════════════════════
 
 model GiftCard {
   id             String    @id @default(cuid())
@@ -464,7 +431,7 @@ model GiftCard {
   recipientEmail String?
   recipientPhone String?
   message        String?
-  status         String    @default("ACTIVE") // ACTIVE, USED, EXPIRED, CANCELLED
+  status         String    @default("ACTIVE")
   expiresAt      DateTime?
   redeemedById   String?
   redeemedAt     DateTime?
@@ -475,10 +442,6 @@ model GiftCard {
   @@index([status])
 }
 
-// ═══════════════════════════════════════════
-// PROTOCOLOS DE TRATAMENTO
-// ═══════════════════════════════════════════
-
 model TreatmentProtocol {
   id           String   @id @default(cuid())
   name         String
@@ -487,23 +450,19 @@ model TreatmentProtocol {
   totalSteps   Int      @default(1)
   intervalDays Int      @default(7)
   active       Boolean  @default(true)
-  steps        String? // JSON: [{step:1,title:"...",description:"...",products:"..."}]
+  steps        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
-
-// ═══════════════════════════════════════════
-// COMANDA DIGITAL / RECIBO
-// ═══════════════════════════════════════════
 
 model DigitalReceipt {
   id            String    @id @default(cuid())
   appointmentId String    @unique
   userId        String
-  content       String // JSON with all receipt data
+  content       String
   totalAmount   Float
   paymentMethod String?
-  splitDetails  String? // JSON for split payments
+  splitDetails  String?
   signedAt      DateTime?
   createdAt     DateTime  @default(now())
 
