@@ -20,8 +20,13 @@ node /app/seed-prod.mjs 2>&1 || echo "Seed falhou, continuando..."
 echo ">> Configurando admins..."
 node /app/seed-admins.mjs 2>&1 || echo "Seed admins falhou, continuando..."
 
-# Garantir DATABASE_URL para o Next.js
-export DATABASE_URL="file:/app/data/mykaele.db"
+# Usar DATABASE_URL do ambiente se existir, senão fallback para SQLite
+if [ -z "$DATABASE_URL" ]; then
+  export DATABASE_URL="file:/app/data/mykaele.db"
+  echo ">> Usando SQLite local"
+else
+  echo ">> Usando PostgreSQL: DATABASE_URL configurada"
+fi
 
 # Migrar colunas se não existirem (bancos antigos)
 sqlite3 "$DB_PATH" "ALTER TABLE User ADD COLUMN forcePasswordChange INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
