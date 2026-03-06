@@ -106,34 +106,68 @@ export async function PUT(req: NextRequest) {
 
     const appointment = await prisma.appointment.update({ where: { id }, data })
 
-    // ═══ Award loyalty points on session completion ═══
+    // ═══ Award loyalty points on session completion (idempotent) ═══
     if (status === 'COMPLETED') {
       try {
-        const POINTS_SESSION = 50
-        const TIER_THRESHOLDS = { BRONZE: 0, SILVER: 500, GOLD: 1500, DIAMOND: 5000 }
         const calcTier = (t: number) => t >= 5000 ? 'DIAMOND' : t >= 1500 ? 'GOLD' : t >= 500 ? 'SILVER' : 'BRONZE'
 
-        let loyalty = await prisma.loyaltyPoints.upsert({
-          where: { userId: current.userId },
-          create: { userId: current.userId, points: 0, totalEarned: 0, totalSpent: 0, tier: 'BRONZE' },
-          update: {},
+        // IDEMPOTÊNCIA: Se já deu pontos para este appointment, não dá de novo
+        const alreadyAwarded = await prisma.loyaltyTransaction.findFirst({
+          where: { type: 'SESSION_COMPLETE', referenceId: id },
         })
-        const newTier = calcTier(loyalty.totalEarned + POINTS_SESSION)
-        await prisma.$transaction([
-          prisma.loyaltyPoints.update({
+        if (alreadyAwarded) {
+          console.log(`[Loyalty] Pontos já concedidos para appointment ${id}, skip.`)
+        } else {
+          // PONTOS FRACIONADOS: Se veio de pacote, calcula valor proporcional
+          let pointsToAward = Math.round(current.price || 0) // 1 ponto por R$1 do serviço
+          if (pointsToAward <= 0) pointsToAward = 50 // fallback mínimo
+
+          // Buscar se este appointment veio de um pacote ativo
+          const userPackage = await prisma.package.findFirst({
+            where: { userId: current.userId, status: 'ACTIVE', packageOption: { service: { id: current.serviceId } } },
+            include: { packageOption: true },
+          })
+          if (userPackage) {
+            // Pontos fracionados: valor total do pacote / número de sessões
+            pointsToAward = Math.round(userPackage.packageOption.price / userPackage.packageOption.sessions)
+          }
+
+          // Garantir que LoyaltyPoints existe (sem race condition)
+          await prisma.loyaltyPoints.upsert({
             where: { userId: current.userId },
-            data: { points: { increment: POINTS_SESSION }, totalEarned: { increment: POINTS_SESSION }, tier: newTier },
-          }),
-          prisma.loyaltyTransaction.create({
-            data: {
-              userId: current.userId,
-              points: POINTS_SESSION,
-              type: 'SESSION_COMPLETE',
-              description: `💆 Pontos por sessão: ${current.service?.name || 'Atendimento'}`,
-              referenceId: id,
-            },
-          }),
-        ])
+            create: { userId: current.userId, points: 0, totalEarned: 0, totalSpent: 0, tier: 'BRONZE' },
+            update: {},
+          })
+
+          const loyalty = await prisma.loyaltyPoints.findUnique({ where: { userId: current.userId } })
+          const newTier = calcTier((loyalty?.totalEarned || 0) + pointsToAward)
+
+          try {
+            await prisma.$transaction([
+              prisma.loyaltyPoints.update({
+                where: { userId: current.userId },
+                data: { points: { increment: pointsToAward }, totalEarned: { increment: pointsToAward }, tier: newTier },
+              }),
+              prisma.loyaltyTransaction.create({
+                data: {
+                  userId: current.userId,
+                  points: pointsToAward,
+                  type: 'SESSION_COMPLETE',
+                  description: `💆 +${pointsToAward} pts por sessão: ${current.service?.name || 'Atendimento'}${userPackage ? ' (pacote)' : ''}`,
+                  referenceId: id,
+                },
+              }),
+            ])
+            console.log(`[Loyalty] ${pointsToAward} pontos concedidos para user ${current.userId} (apt ${id})`)
+          } catch (txErr: unknown) {
+            // P2002 = unique constraint (type+referenceId) — webhook duplicado, ignorar
+            if (txErr && typeof txErr === 'object' && 'code' in txErr && (txErr as { code: string }).code === 'P2002') {
+              console.log(`[Loyalty] Duplicata ignorada (P2002) para appointment ${id}`)
+            } else {
+              throw txErr
+            }
+          }
+        }
       } catch (loyaltyErr) {
         console.error('Loyalty points award error (non-blocking):', loyaltyErr)
       }

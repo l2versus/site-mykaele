@@ -165,6 +165,8 @@ model Payment {
   appointmentId String?
   amount        Float
   method        String
+  gateway       String? // Ex: INFINITEPAY, MERCADO_PAGO, STONE, CASH
+  feeAmount     Float? // Taxa da maquininha (ex: 1.99% de R$200 = R$3.98)
   description   String?
   status        String   @default("APPROVED")
   category      String   @default("REVENUE")
@@ -339,13 +341,16 @@ model LoyaltyTransaction {
   id          String   @id @default(cuid())
   userId      String
   points      Int
-  type        String
+  type        String // SESSION_COMPLETE, PURCHASE, REFERRAL, REDEMPTION, MANUAL_ADD, MANUAL_SUBTRACT, ADMIN_ADJUSTMENT
   description String
-  referenceId String?
+  reason      String? // Justificativa obrigatória em ajustes manuais (auditoria)
+  referenceId String? // appointmentId, packageId, etc. — usado para idempotência
   createdAt   DateTime @default(now())
 
+  @@unique([type, referenceId]) // Impede duplicatas: mesmo tipo + mesma referência = skip
   @@index([userId])
   @@index([createdAt])
+  @@index([referenceId])
 }
 
 model LoyaltyReward {
@@ -453,6 +458,14 @@ model TreatmentProtocol {
   steps        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model SiteSettings {
+  id        String   @id @default("singleton")
+  whatsapp  String   @default("")
+  heroTitle String   @default("")
+  aboutText String   @default("")
+  updatedAt DateTime @updatedAt
 }
 
 model DigitalReceipt {

@@ -278,14 +278,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ reward }, { status: 201 })
     }
 
-    // ─── ADJUST POINTS ───
+    // ─── ADJUST POINTS (com reason para auditoria) ───
     if (action === 'adjust_points') {
-      const { userId, points, description } = body
+      const { userId, points, description, reason } = body
       if (!userId || !points) {
         return NextResponse.json({ error: 'userId e points obrigatórios' }, { status: 400 })
       }
 
       const pointsNum = parseInt(points)
+
+      // Reason é OBRIGATÓRIO para ajustes manuais (auditoria)
+      if (!reason && !description) {
+        return NextResponse.json({ error: 'Motivo (reason) obrigatório para ajustes manuais' }, { status: 400 })
+      }
+
       let loyalty = await prisma.loyaltyPoints.findUnique({ where: { userId } })
       if (!loyalty) {
         loyalty = await prisma.loyaltyPoints.create({
@@ -293,16 +299,21 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      const TIER_THRESHOLDS = { BRONZE: 0, SILVER: 500, GOLD: 1500, DIAMOND: 5000 }
+      // Impedir saldo negativo
+      if (pointsNum < 0 && loyalty.points + pointsNum < 0) {
+        return NextResponse.json({ error: `Saldo insuficiente. Atual: ${loyalty.points} pontos` }, { status: 400 })
+      }
+
       function calcTier(total: number) {
-        if (total >= TIER_THRESHOLDS.DIAMOND) return 'DIAMOND'
-        if (total >= TIER_THRESHOLDS.GOLD) return 'GOLD'
-        if (total >= TIER_THRESHOLDS.SILVER) return 'SILVER'
+        if (total >= 5000) return 'DIAMOND'
+        if (total >= 1500) return 'GOLD'
+        if (total >= 500) return 'SILVER'
         return 'BRONZE'
       }
 
       const newTotal = pointsNum > 0 ? loyalty.totalEarned + pointsNum : loyalty.totalEarned
       const newTier = calcTier(newTotal)
+      const txType = pointsNum > 0 ? 'MANUAL_ADD' : 'MANUAL_SUBTRACT'
 
       await prisma.$transaction([
         prisma.loyaltyPoints.update({
@@ -317,8 +328,9 @@ export async function POST(req: NextRequest) {
           data: {
             userId,
             points: pointsNum,
-            type: 'ADMIN_ADJUSTMENT',
-            description: description || `Ajuste administrativo: ${pointsNum > 0 ? '+' : ''}${pointsNum} pontos`,
+            type: txType,
+            description: description || `Ajuste manual: ${pointsNum > 0 ? '+' : ''}${pointsNum} pontos`,
+            reason: reason || description || 'Ajuste administrativo',
           },
         }),
       ])
