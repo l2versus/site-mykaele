@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useAdmin } from '../AdminContext'
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 
 interface Client {
   id: string; name: string; email: string; phone?: string; balance: number; createdAt: string
@@ -96,6 +97,17 @@ export default function ClientesPage() {
   const [evoSaving, setEvoSaving] = useState(false)
   const [evoError, setEvoError] = useState('')
   const [evoSuccess, setEvoSuccess] = useState('')
+
+  // Estado para modal de ajuste de pontos de fidelidade
+  const [pointsModal, setPointsModal] = useState<Client | null>(null)
+  const [pointsAction, setPointsAction] = useState<'add' | 'subtract'>('add')
+  const [pointsAmount, setPointsAmount] = useState('')
+  const [pointsReason, setPointsReason] = useState('')
+  const [pointsSaving, setPointsSaving] = useState(false)
+  const [pointsError, setPointsError] = useState('')
+  const [pointsSuccess, setPointsSuccess] = useState('')
+
+  useBodyScrollLock(!!editModal || !!creditModal || !!evoModal || !!pointsModal || !!msgModal)
 
   const load = useCallback(async () => {
     try {
@@ -319,6 +331,49 @@ export default function ClientesPage() {
     }
   }
 
+  // ═══ Ajuste de Pontos de Fidelidade ═══
+  const openPointsModal = (c: Client) => {
+    setPointsModal(c)
+    setPointsAction('add')
+    setPointsAmount('')
+    setPointsReason('')
+    setPointsError('')
+    setPointsSuccess('')
+  }
+
+  const submitPointsAdjust = async () => {
+    if (!pointsModal) return
+    const amount = parseInt(pointsAmount)
+    if (!amount || amount <= 0) { setPointsError('Informe uma quantidade válida (> 0)'); return }
+    if (!pointsReason.trim()) { setPointsError('Motivo é obrigatório'); return }
+
+    setPointsSaving(true)
+    setPointsError('')
+    setPointsSuccess('')
+    try {
+      const points = pointsAction === 'subtract' ? -amount : amount
+      const res = await fetchWithAuth('/api/admin/loyalty', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'adjust_points',
+          userId: pointsModal.id,
+          points,
+          reason: pointsReason.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setPointsSuccess(data.message || 'Pontos ajustados com sucesso!')
+        setTimeout(() => setPointsModal(null), 2000)
+      } else {
+        setPointsError(data.error || 'Erro ao ajustar pontos')
+      }
+    } catch {
+      setPointsError('Erro de conexão')
+    }
+    setPointsSaving(false)
+  }
+
   const quickMsgs = [
     { label: 'Lembrete de sess\u00e3o', msg: (c: Client) => `Ol\u00e1 ${c.name.split(' ')[0]}! \u2728\n\nPassando para lembrar da sua sess\u00e3o agendada. Qualquer d\u00fanvida, estou \u00e0 disposi\u00e7\u00e3o!\n\nMykaele Proc\u00f3pio - Home Spa` },
     { label: 'Reagendar', msg: (c: Client) => `Ol\u00e1 ${c.name.split(' ')[0]}!\n\nPreciso reagendar sua pr\u00f3xima sess\u00e3o. Podemos combinar um novo hor\u00e1rio?\n\nMykaele Proc\u00f3pio - Home Spa` },
@@ -491,6 +546,11 @@ export default function ClientesPage() {
                         </button>
                         </>
                       )}
+                      <button onClick={() => openPointsModal(c)}
+                        className="px-3 py-2.5 sm:px-2.5 sm:py-1.5 rounded-md text-[11px] sm:text-[10px] font-medium bg-[#b76e79]/10 text-[#b76e79] border border-[#b76e79]/15 hover:bg-[#b76e79]/20 active:scale-[0.97] transition-all flex items-center gap-1 touch-manipulation min-h-[40px] sm:min-h-0">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        Ajustar Pontos
+                      </button>
                       <button onClick={() => deleteClient(c)}
                         className="px-3 py-2.5 sm:px-2.5 sm:py-1.5 rounded-md text-[11px] sm:text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/15 hover:bg-red-500/20 active:scale-[0.97] transition-all flex items-center gap-1 ml-auto touch-manipulation min-h-[40px] sm:min-h-0">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -821,6 +881,73 @@ export default function ClientesPage() {
               >
                 {creditSaving && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                 Inserir Créditos
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ══════════════ MODAL AJUSTE DE PONTOS ══════════════ */}
+      {pointsModal && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center px-4" onClick={() => setPointsModal(null)}>
+          <div className="bg-white border border-stone-200 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#b76e79]/10 flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="text-[#b76e79]"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </div>
+              <div>
+                <h3 className="text-stone-800 text-base font-semibold">Ajustar Pontos de Fidelidade</h3>
+                <p className="text-stone-400 text-xs">para {pointsModal.name}</p>
+              </div>
+            </div>
+
+            {pointsError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">{pointsError}</div>}
+            {pointsSuccess && <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-600 text-xs flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>{pointsSuccess}</div>}
+
+            {/* Ação: Adicionar ou Subtrair */}
+            <div className="flex gap-2 mb-4">
+              <button onClick={() => setPointsAction('add')}
+                className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-medium transition-all ${pointsAction === 'add' ? 'bg-emerald-500/10 text-emerald-600 border-2 border-emerald-500/30' : 'bg-stone-50 text-stone-400 border-2 border-transparent hover:text-stone-600'}`}>
+                <span className="block text-base mb-0.5">+</span>
+                Adicionar
+              </button>
+              <button onClick={() => setPointsAction('subtract')}
+                className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-medium transition-all ${pointsAction === 'subtract' ? 'bg-red-500/10 text-red-600 border-2 border-red-500/30' : 'bg-stone-50 text-stone-400 border-2 border-transparent hover:text-stone-600'}`}>
+                <span className="block text-base mb-0.5">-</span>
+                Subtrair
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-stone-500 text-xs font-medium mb-1">Quantidade de pontos *</label>
+                <input type="number" min="1" value={pointsAmount} onChange={e => setPointsAmount(e.target.value)} placeholder="Ex: 50"
+                  className="w-full px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-lg text-stone-800 text-sm focus:outline-none focus:border-[#b76e79]/40" />
+              </div>
+              <div>
+                <label className="block text-stone-500 text-xs font-medium mb-1">Motivo (obrigatório) *</label>
+                <textarea value={pointsReason} onChange={e => setPointsReason(e.target.value)} rows={2} placeholder="Ex: Bonificação por indicação, Correção de erro..."
+                  className="w-full px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-lg text-stone-800 text-sm focus:outline-none focus:border-[#b76e79]/40 resize-none" />
+              </div>
+            </div>
+
+            {pointsAmount && parseInt(pointsAmount) > 0 && (
+              <div className="mt-4 p-3 bg-stone-50 rounded-lg border border-stone-200">
+                <div className="text-stone-500 text-xs">
+                  Será {pointsAction === 'add' ? 'adicionado' : 'subtraído'}: <span className={`font-bold ${pointsAction === 'add' ? 'text-emerald-600' : 'text-red-600'}`}>{pointsAction === 'add' ? '+' : '-'}{pointsAmount} pontos</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end mt-6">
+              <button onClick={() => setPointsModal(null)} className="px-4 py-2 rounded-lg text-sm text-stone-400 border border-stone-200 hover:bg-stone-50 transition-all">
+                Cancelar
+              </button>
+              <button onClick={submitPointsAdjust} disabled={pointsSaving || !!pointsSuccess}
+                className={`px-5 py-2 rounded-lg text-sm text-white font-medium disabled:opacity-50 transition-all flex items-center gap-2 ${pointsAction === 'add' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}`}>
+                {pointsSaving && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                {pointsAction === 'add' ? 'Adicionar Pontos' : 'Subtrair Pontos'}
               </button>
             </div>
           </div>

@@ -272,6 +272,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
           {/* Nav */}
           <nav className="flex-1 p-2 space-y-0.5 mt-1 overflow-y-auto">
+            <a href="/" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] text-white/30 hover:text-white/50 hover:bg-white/[0.04] transition-all mb-1 border-b border-white/[0.04] pb-2.5">
+              <span className="flex-shrink-0"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+              <span className={!sb ? 'lg:hidden' : ''}>Voltar para Site</span>
+            </a>
             {NAV.map(item => {
               const active = pathname === item.href
               return (
