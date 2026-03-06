@@ -16,8 +16,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Gerar Prisma Client (DATABASE_URL precisa existir para prisma.config.mjs)
-ENV DATABASE_URL="file:./dev.db"
+# Gerar Prisma Client para PostgreSQL
+ENV DATABASE_URL="postgres://localhost:5432/placeholder"
 RUN npx prisma generate
 
 # Build Next.js (NEXT_PUBLIC vars precisam estar no build)
@@ -49,8 +49,21 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
-COPY --from=builder /app/node_modules/@libsql ./node_modules/@libsql
-COPY --from=builder /app/node_modules/libsql ./node_modules/libsql
+COPY --from=builder /app/node_modules/pg ./node_modules/pg
+COPY --from=builder /app/node_modules/pg-pool ./node_modules/pg-pool
+COPY --from=builder /app/node_modules/pg-protocol ./node_modules/pg-protocol
+COPY --from=builder /app/node_modules/pg-types ./node_modules/pg-types
+COPY --from=builder /app/node_modules/pgpass ./node_modules/pgpass
+COPY --from=builder /app/node_modules/postgres-array ./node_modules/postgres-array
+COPY --from=builder /app/node_modules/postgres-bytea ./node_modules/postgres-bytea
+COPY --from=builder /app/node_modules/postgres-date ./node_modules/postgres-date
+COPY --from=builder /app/node_modules/postgres-interval ./node_modules/postgres-interval
+COPY --from=builder /app/node_modules/obuf ./node_modules/obuf
+COPY --from=builder /app/node_modules/pg-int8 ./node_modules/pg-int8
+COPY --from=builder /app/node_modules/buffer-writer ./node_modules/buffer-writer
+COPY --from=builder /app/node_modules/packet-reader ./node_modules/packet-reader
+COPY --from=builder /app/node_modules/pg-connection-string ./node_modules/pg-connection-string
+COPY --from=builder /app/node_modules/split2 ./node_modules/split2
 COPY --from=builder /app/prisma.config.mjs ./prisma.config.mjs
 
 # Script de inicialização e banco de dados
