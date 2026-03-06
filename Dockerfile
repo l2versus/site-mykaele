@@ -30,6 +30,10 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+# Configurar timezone para Brasil (Fortaleza) - CRÍTICO para horários corretos!
+RUN apk add --no-cache tzdata
+ENV TZ=America/Fortaleza
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
