@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const startDate = new Date(dateStart)
+    const startDate = new Date(dateStart + 'T12:00:00')
     const slots = await getAvailableSlots(startDate, daysAhead, slotDuration)
 
     return NextResponse.json(

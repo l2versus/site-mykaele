@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Helper: YYYY-MM-DD no timezone local (evita bugs de UTC vs local)
+function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
@@ -19,12 +24,13 @@ export async function GET(req: NextRequest) {
       const schedules = await prisma.schedule.findMany({ where: { active: true } })
       const scheduleMap = new Map(schedules.map(s => [s.dayOfWeek, s]))
 
-      const start = new Date(startDate)
-      const end = new Date(endDate)
+      // T12:00:00 evita que midnight UTC caia no dia anterior no timezone local
+      const start = new Date(startDate + 'T12:00:00')
+      const end = new Date(endDate + 'T12:00:00')
       const blockedDates = await prisma.blockedDate.findMany({
         where: { date: { gte: new Date(startDate + 'T00:00:00'), lte: new Date(endDate + 'T23:59:59') } },
       })
-      const blockedSet = new Set(blockedDates.map(b => b.date.toISOString().split('T')[0]))
+      const blockedSet = new Set(blockedDates.map(b => toLocalDateStr(new Date(b.date))))
 
       // Get all appointments in range
       const appointments = await prisma.appointment.findMany({
@@ -35,17 +41,17 @@ export async function GET(req: NextRequest) {
       })
 
       const now = new Date()
+      const todayStr = toLocalDateStr(now)
       const days: { date: string; status: 'available' | 'full' | 'closed' | 'past'; availableSlots: number }[] = []
       const cursor = new Date(start)
 
       while (cursor <= end) {
-        const dateStr = cursor.toISOString().split('T')[0]
+        const dateStr = toLocalDateStr(cursor)
         const dayOfWeek = cursor.getDay()
         const schedule = scheduleMap.get(dayOfWeek)
 
         // Past dates
-        const isToday = dateStr === now.toISOString().split('T')[0]
-        const isPast = cursor < new Date(now.toISOString().split('T')[0] + 'T00:00:00')
+        const isPast = dateStr < todayStr
 
         if (isPast) {
           days.push({ date: dateStr, status: 'past', availableSlots: 0 })
@@ -67,7 +73,7 @@ export async function GET(req: NextRequest) {
         const slotDuration = schedule.slotDuration || 60
 
         const dayAppts = appointments.filter(a => {
-          const aDate = new Date(a.scheduledAt).toISOString().split('T')[0]
+          const aDate = toLocalDateStr(new Date(a.scheduledAt))
           return aDate === dateStr
         })
 
@@ -117,7 +123,8 @@ export async function GET(req: NextRequest) {
     const service = await prisma.service.findUnique({ where: { id: serviceId } })
     if (!service) return NextResponse.json({ error: 'Serviço não encontrado' }, { status: 404 })
 
-    const targetDate = new Date(date)
+    // T12:00:00 garante que getDay() retorna o dia correto no timezone local
+    const targetDate = new Date(date + 'T12:00:00')
     const dayOfWeek = targetDate.getDay()
 
     // Check schedule for this day

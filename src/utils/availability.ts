@@ -60,7 +60,10 @@ export async function getAvailableSlots(
     },
   })
   const blockedSet = new Set(
-    blockedDates.map((b: { date: Date }) => b.date.toISOString().split('T')[0])
+    blockedDates.map((b: { date: Date }) => {
+      const d = new Date(b.date)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    })
   )
 
   // Mapa de dia da semana → schedule
@@ -71,7 +74,7 @@ export async function getAvailableSlots(
 
   // Gerar slots para os próximos dias
   const currentDate = new Date(dateStart)
-  currentDate.setHours(0, 0, 0, 0)
+  currentDate.setHours(12, 0, 0, 0) // Meio-dia evita que midnight UTC caia no dia anterior
 
   for (let day = 0; day < daysAhead; day++) {
     const dayOfWeek = currentDate.getDay()
@@ -83,7 +86,7 @@ export async function getAvailableSlots(
     }
 
     // Verificar data bloqueada
-    const dateStr = currentDate.toISOString().split('T')[0]
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
     if (blockedSet.has(dateStr)) {
       currentDate.setDate(currentDate.getDate() + 1)
       continue
