@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useAdmin } from '../AdminContext'
+import { formatPaymentMethod } from '@/utils/format'
 
 const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
@@ -160,7 +161,7 @@ export default function RelatoriosPage() {
             {Object.entries(data.paymentMethods).sort((a, b) => b[1].total - a[1].total).map(([method, info]) => (
               <div key={method} className="flex items-center justify-between bg-stone-50 rounded-lg px-3 py-2.5">
                 <div>
-                  <div className="text-stone-700 text-xs font-semibold">{method}</div>
+                  <div className="text-stone-700 text-xs font-semibold">{formatPaymentMethod(method)}</div>
                   <div className="text-stone-400 text-[10px]">{info.count} transacoes</div>
                 </div>
                 <div className="text-emerald-600 text-sm font-bold">{fmtCur(info.total)}</div>

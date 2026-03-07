@@ -66,7 +66,7 @@ export async function PUT(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   try {
-    const { id, price, priceReturn, description, duration, active, name, isAddon, travelFee } = await req.json()
+    const { id, price, priceReturn, description, duration, active, name, isAddon, travelFee, packageOptions } = await req.json()
     if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
 
     const data: Record<string, unknown> = {}
@@ -80,7 +80,36 @@ export async function PUT(req: NextRequest) {
     if (travelFee !== undefined) data.travelFee = travelFee
 
     const service = await prisma.service.update({ where: { id }, data })
-    return NextResponse.json({ service })
+
+    // Sync packageOptions when provided
+    if (Array.isArray(packageOptions)) {
+      const existing = await prisma.packageOption.findMany({ where: { serviceId: id } })
+      const sentIds = packageOptions.filter((p: { id?: string }) => p.id).map((p: { id: string }) => p.id)
+      const toDelete = existing.filter(e => !sentIds.includes(e.id))
+
+      // Soft-delete removed packages (set active=false) to preserve purchase history
+      for (const pkg of toDelete) {
+        await prisma.packageOption.update({ where: { id: pkg.id }, data: { active: false } })
+      }
+
+      // Update existing packages
+      for (const pkg of packageOptions.filter((p: { id?: string }) => p.id)) {
+        await prisma.packageOption.update({
+          where: { id: pkg.id },
+          data: { name: pkg.name, sessions: pkg.sessions, price: pkg.price, active: true },
+        })
+      }
+
+      // Create new packages
+      for (const pkg of packageOptions.filter((p: { id?: string }) => !p.id)) {
+        await prisma.packageOption.create({
+          data: { serviceId: id, name: pkg.name, sessions: pkg.sessions, price: pkg.price },
+        })
+      }
+    }
+
+    const updated = await prisma.service.findUnique({ where: { id }, include: { packageOptions: true } })
+    return NextResponse.json({ service: updated })
   } catch (error) {
     return NextResponse.json({ error: 'Erro ao atualizar serviço' }, { status: 500 })
   }

@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useAdmin } from '../AdminContext'
+import { formatPaymentMethod, formatPaymentDisplay } from '@/utils/format'
 
-interface Payment { id: string; amount: number; method: string; description?: string; createdAt: string; user?: { name: string } }
+interface Payment { id: string; amount: number; method: string; gateway?: string; feeAmount?: number; description?: string; createdAt: string; user?: { name: string } }
 interface Expense { id: string; amount: number; description: string; category: string; date: string }
 interface FinanceData {
   revenue: number; expenses: number; profit: number
@@ -372,7 +373,7 @@ export default function FinanceiroPage() {
                       {entries.map(([method, amount]) => (
                         <div key={method}>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-stone-500">{METHOD_LABELS[method] || method}</span>
+                            <span className="text-stone-500">{formatPaymentMethod(method)}</span>
                             <span className="text-stone-600 font-medium">{fmtCur(amount)}</span>
                           </div>
                           <div className="h-1.5 bg-stone-50 rounded-full overflow-hidden">
@@ -413,7 +414,7 @@ export default function FinanceiroPage() {
                       <div key={p.id} className="flex items-center justify-between py-2.5 px-2 border-b border-stone-100 last:border-0 rounded-md hover:bg-white group transition-all">
                         <div className="flex-1 min-w-0">
                           <div className="text-stone-600 text-xs font-medium truncate">{p.user?.name || p.description || 'Pagamento'}</div>
-                          <div className="text-stone-400 text-[10px]">{fmtDate(p.createdAt)} · {METHOD_LABELS[p.method] || p.method}</div>
+                          <div className="text-stone-400 text-[10px]">{fmtDate(p.createdAt)} · {formatPaymentDisplay(p.method, p.gateway)}</div>
                           {p.description && p.user?.name && <div className="text-stone-300 text-[10px] truncate">{p.description}</div>}
                         </div>
                         <div className="flex items-center gap-2">

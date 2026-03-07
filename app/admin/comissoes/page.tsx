@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useAdmin } from '../AdminContext'
+import { formatPaymentMethod } from '@/utils/format'
 
 const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
@@ -141,7 +142,7 @@ export default function ComissoesPage() {
                       <td className="px-4 py-2.5 text-stone-700 font-medium">{a.userName}</td>
                       <td className="px-4 py-2.5 text-stone-500">{a.serviceName}</td>
                       <td className="px-4 py-2.5 text-right text-stone-700 font-medium">{fmtCur(a.price)}</td>
-                      <td className="px-4 py-2.5 text-stone-400">{a.paymentMethod || '-'}</td>
+                      <td className="px-4 py-2.5 text-stone-400">{formatPaymentMethod(a.paymentMethod)}</td>
                       <td className="px-4 py-2.5 text-right text-amber-600">{c.cardFee > 0 ? `-${fmtCur(c.cardFee)}` : '-'}</td>
                       <td className="px-4 py-2.5 text-right text-red-500">-{fmtCur(c.tax)}</td>
                       <td className="px-4 py-2.5 text-right text-violet-600 font-semibold">{fmtCur(c.professional)}</td>

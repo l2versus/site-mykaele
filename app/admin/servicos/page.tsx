@@ -10,7 +10,7 @@ interface Service {
   id: string; name: string; description?: string; duration: number; price: number; priceReturn?: number
   active: boolean; isAddon: boolean; travelFee?: string; packageOptions: PackageOption[]
 }
-interface PkgDraft { name: string; sessions: number; price: number }
+interface PkgDraft { id?: string; name: string; sessions: number; price: number }
 
 const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 const INPUT = "w-full px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-lg text-stone-800 text-sm focus:outline-none focus:border-[#b76e79]/40"
@@ -34,7 +34,9 @@ function ServiceForm({ initialData, onSave, onCancel, saving }: {
   const [travelFee, setTravelFee] = useState(initialData?.travelFee || '')
   const [isAddon, setIsAddon] = useState(initialData?.isAddon || false)
   const [active, setActive] = useState(initialData?.active ?? true)
-  const [pkgs, setPkgs] = useState<PkgDraft[]>([])
+  const [pkgs, setPkgs] = useState<PkgDraft[]>(
+    initialData?.packageOptions?.map(p => ({ id: p.id, name: p.name, sessions: p.sessions, price: p.price })) || []
+  )
 
   const addPkg = () => setPkgs([...pkgs, { name: '', sessions: 3, price: 0 }])
   const removePkg = (i: number) => { const p = [...pkgs]; p.splice(i, 1); setPkgs(p) }
@@ -43,7 +45,7 @@ function ServiceForm({ initialData, onSave, onCancel, saving }: {
   const handleSubmit = () => {
     const data: Record<string, unknown> = { name, description, duration, price, priceReturn: priceReturn || null, isAddon, travelFee: travelFee || null, active }
     if (isEdit) data.id = initialData!.id
-    if (!isEdit && pkgs.length > 0) data.packageOptions = pkgs.filter(p => p.name && p.price > 0)
+    data.packageOptions = pkgs.filter(p => p.name && p.price > 0)
     onSave(data)
   }
 
@@ -78,30 +80,23 @@ function ServiceForm({ initialData, onSave, onCancel, saving }: {
         </div>
       </div>
 
-      {/* Pacotes — visível na criação ou quando editando serviço com pacotes */}
-      {(!isEdit || (initialData && initialData.packageOptions.length > 0)) && (
-        <div className="border-t border-stone-100 pt-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-stone-500 text-[10px] uppercase tracking-wider font-semibold">
-              {isEdit ? `Pacotes existentes (${initialData!.packageOptions.length})` : 'Opcoes de Pacote'}
-            </span>
-            {!isEdit && <button type="button" onClick={addPkg} className="text-[#b76e79] text-[10px] font-semibold hover:underline cursor-pointer">+ Adicionar</button>}
-          </div>
-          {isEdit && initialData!.packageOptions.map(p => (
-            <div key={p.id} className="bg-stone-50 rounded-md px-2.5 py-1.5 mb-1.5 inline-block mr-2">
-              <span className="text-stone-500 text-[10px] font-medium">{p.name}</span>
-              <span className="text-stone-400 text-[9px] ml-1.5">{p.sessions} sessoes · {fmtCur(p.price)}</span>
-            </div>
-          ))}
-          {pkgs.map((pkg, i) => (
-            <div key={i} className="flex gap-2 items-end mb-2">
-              <input value={pkg.name} onChange={e => updatePkg(i, 'name', e.target.value)} placeholder="Nome" className="flex-1 px-2.5 py-2 bg-stone-50 border border-stone-200 rounded-md text-xs focus:outline-none" />
-              <input type="number" value={pkg.sessions} onChange={e => updatePkg(i, 'sessions', +e.target.value)} className="w-20 px-2.5 py-2 bg-stone-50 border border-stone-200 rounded-md text-xs" />
-              <input type="number" step="0.01" value={pkg.price || ''} onChange={e => updatePkg(i, 'price', +e.target.value)} placeholder="R$" className="w-24 px-2.5 py-2 bg-stone-50 border border-stone-200 rounded-md text-xs" />
-              <button type="button" onClick={() => removePkg(i)} className="p-2 text-red-400 hover:text-red-600 cursor-pointer"><svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-            </div>))}
+      {/* Pacotes — sempre editáveis */}
+      <div className="border-t border-stone-100 pt-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-stone-500 text-[10px] uppercase tracking-wider font-semibold">
+            Opcoes de Pacote {pkgs.length > 0 && `(${pkgs.length})`}
+          </span>
+          <button type="button" onClick={addPkg} className="text-[#b76e79] text-[10px] font-semibold hover:underline cursor-pointer">+ Adicionar</button>
         </div>
-      )}
+        {pkgs.map((pkg, i) => (
+          <div key={pkg.id || `new-${i}`} className="flex gap-2 items-end mb-2">
+            <input value={pkg.name} onChange={e => updatePkg(i, 'name', e.target.value)} placeholder="Nome" className="flex-1 px-2.5 py-2 bg-stone-50 border border-stone-200 rounded-md text-xs focus:outline-none" />
+            <input type="number" value={pkg.sessions} onChange={e => updatePkg(i, 'sessions', +e.target.value)} placeholder="Sessões" className="w-20 px-2.5 py-2 bg-stone-50 border border-stone-200 rounded-md text-xs" />
+            <input type="number" step="0.01" value={pkg.price || ''} onChange={e => updatePkg(i, 'price', +e.target.value)} placeholder="R$" className="w-24 px-2.5 py-2 bg-stone-50 border border-stone-200 rounded-md text-xs" />
+            <button type="button" onClick={() => removePkg(i)} className="p-2 text-red-400 hover:text-red-600 cursor-pointer"><svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>))}
+        {pkgs.length === 0 && <p className="text-stone-300 text-[10px] text-center py-2">Nenhum pacote configurado</p>}
+      </div>
 
       <div className="flex gap-2 justify-end sticky bottom-0 bg-white pt-3 pb-1">
         <button type="button" onClick={onCancel} className="px-4 py-3 rounded-lg text-xs text-stone-400 border border-stone-200 min-h-[44px] touch-manipulation cursor-pointer active:bg-stone-50">Cancelar</button>

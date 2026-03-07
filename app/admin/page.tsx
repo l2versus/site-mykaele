@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useAdmin } from './AdminContext'
 import Link from 'next/link'
 import { getUpcomingDatas, type DataComemorativa } from '@/data/datas-comemorativas'
+import { formatPaymentMethod } from '@/utils/format'
 
 /* ─── Types ─── */
 interface Stats {
@@ -17,7 +18,7 @@ interface StatusCounts { pending: number; confirmed: number; completed: number; 
 interface WeekDay { day: string; count: number }
 interface TopSvc { name: string; count: number; price: number }
 interface Apt { id: string; scheduledAt: string; status: string; type: string; user: { name: string; phone?: string }; service: { name: string; duration?: number }; price: number }
-interface Payment { id: string; amount: number; method: string; description?: string; createdAt: string; user?: { name: string } }
+interface Payment { id: string; amount: number; method: string; gateway?: string; description?: string; createdAt: string; user?: { name: string } }
 interface FollowUp { patientName: string; patientPhone?: string; lastService: string; lastDate: string }
 interface LowStockItem { id: string; name: string; quantity: number; minQuantity: number; unit: string; supplierPhone?: string | null }
 
@@ -808,7 +809,7 @@ export default function AdminDashboard() {
                   <div key={p.id} className="flex items-center justify-between py-1.5 border-b border-emerald-500/10 last:border-0">
                     <div className="min-w-0">
                       <div className="text-emerald-400 text-[11px] font-medium truncate">{p.user?.name || p.description || 'Pagamento'}</div>
-                      <div className="text-emerald-500/40 text-[10px]">{fmtDate(p.createdAt)} · {p.method}</div>
+                      <div className="text-emerald-500/40 text-[10px]">{fmtDate(p.createdAt)} · {formatPaymentMethod(p.method)}</div>
                     </div>
                     <span className="text-emerald-500 text-xs font-semibold flex-shrink-0">+{fmtCur(p.amount)}</span>
                   </div>

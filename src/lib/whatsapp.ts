@@ -20,6 +20,9 @@ const EVOLUTION_INSTANCE = process.env.WHATSAPP_INSTANCE_ID || ''
 const CALLMEBOT_API_KEY = process.env.CALLMEBOT_API_KEY || ''
 const CALLMEBOT_PHONE = process.env.CALLMEBOT_PHONE || '558599086924'
 
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || ''
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || ''
+
 const PROFESSIONAL_NUMBER = '5585999086924'
 
 // ───────── Helpers ─────────
@@ -35,6 +38,10 @@ function hasEvolutionApi(): boolean {
 
 function hasCallMeBot(): boolean {
   return !!CALLMEBOT_API_KEY && !CALLMEBOT_API_KEY.includes('sua-chave')
+}
+
+function hasTelegram(): boolean {
+  return !!(TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID)
 }
 
 // ───────── Evolution API ─────────
@@ -77,6 +84,71 @@ async function sendViaCallMeBot(message: string): Promise<boolean> {
   }
 }
 
+// ───────── Telegram Bot ─────────
+
+async function sendViaTelegram(message: string): Promise<boolean> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message }),
+    })
+    if (!res.ok) {
+      console.error('[Telegram] Error:', res.status, await res.text())
+      return false
+    }
+    console.log('[Telegram] Sent OK')
+    return true
+  } catch (err) {
+    console.error('[Telegram] Fetch error:', err)
+    return false
+  }
+}
+
+// ───────── Dispatch (WhatsApp + Telegram in parallel) ─────────
+
+async function sendWhatsApp(message: string): Promise<{ sent: boolean; method: string }> {
+  if (hasEvolutionApi()) {
+    const ok = await sendViaEvolution(PROFESSIONAL_NUMBER, message)
+    if (ok) return { sent: true, method: 'evolution-api' }
+  }
+  if (hasCallMeBot()) {
+    const ok = await sendViaCallMeBot(message)
+    if (ok) return { sent: true, method: 'callmebot' }
+  }
+  return { sent: false, method: 'none' }
+}
+
+async function dispatchNotification(message: string): Promise<{ sent: boolean; method: string }> {
+  const tasks: Promise<{ channel: string; ok: boolean; method: string }>[] = []
+
+  tasks.push(
+    sendWhatsApp(message).then(r => ({ channel: 'whatsapp', ok: r.sent, method: r.method }))
+  )
+
+  if (hasTelegram()) {
+    tasks.push(
+      sendViaTelegram(message).then(ok => ({ channel: 'telegram', ok, method: 'telegram' }))
+    )
+  }
+
+  const results = await Promise.allSettled(tasks)
+  const methods: string[] = []
+  let anySent = false
+
+  for (const r of results) {
+    if (r.status === 'fulfilled' && r.value.ok) {
+      anySent = true
+      methods.push(r.value.method)
+    }
+  }
+
+  if (anySent) return { sent: true, method: methods.join('+') }
+
+  console.log('[Notification] Nenhum canal conseguiu enviar. Mensagem logada:\n', message)
+  return { sent: false, method: 'logged' }
+}
+
 // ───────── Public API ─────────
 
 export async function sendBookingNotification(data: {
@@ -117,23 +189,7 @@ export async function sendBookingNotification(data: {
   }
   const message = lines.join('\n')
 
-  // 1. Try Evolution API
-  if (hasEvolutionApi()) {
-    const ok = await sendViaEvolution(PROFESSIONAL_NUMBER, message)
-    if (ok) return { sent: true, method: 'evolution-api' }
-  }
-
-  // 2. Try CallMeBot (free)
-  if (hasCallMeBot()) {
-    const ok = await sendViaCallMeBot(message)
-    if (ok) return { sent: true, method: 'callmebot' }
-  }
-
-  // 3. Fallback: log
-  console.log('[WhatsApp] Nenhuma API configurada. Configure CALLMEBOT_API_KEY ou Evolution API no .env.local')
-  console.log('[WhatsApp] Mensagem que seria enviada para', PROFESSIONAL_NUMBER, ':\n', message)
-
-  return { sent: false, method: 'logged' }
+  return dispatchNotification(message)
 }
 
 export async function sendPackageNotification(data: {
@@ -160,17 +216,7 @@ export async function sendPackageNotification(data: {
   })
   const message = lines.join('\n')
 
-  if (hasEvolutionApi()) {
-    const ok = await sendViaEvolution(PROFESSIONAL_NUMBER, message)
-    if (ok) return { sent: true, method: 'evolution-api' }
-  }
-  if (hasCallMeBot()) {
-    const ok = await sendViaCallMeBot(message)
-    if (ok) return { sent: true, method: 'callmebot' }
-  }
-
-  console.log('[WhatsApp] Nenhuma API configurada. Mensagem logada:\n', message)
-  return { sent: false, method: 'logged' }
+  return dispatchNotification(message)
 }
 
 export async function sendPurchaseNotification(data: {
@@ -206,17 +252,7 @@ export async function sendPurchaseNotification(data: {
   lines.push('\u2705 Pagamento confirmado com sucesso!')
   const message = lines.join('\n')
 
-  if (hasEvolutionApi()) {
-    const ok = await sendViaEvolution(PROFESSIONAL_NUMBER, message)
-    if (ok) return { sent: true, method: 'evolution-api' }
-  }
-  if (hasCallMeBot()) {
-    const ok = await sendViaCallMeBot(message)
-    if (ok) return { sent: true, method: 'callmebot' }
-  }
-
-  console.log('[WhatsApp] Compra de créditos logada:\n', message)
-  return { sent: false, method: 'logged' }
+  return dispatchNotification(message)
 }
 
 export async function sendNewRegistrationNotification(data: {
@@ -240,17 +276,7 @@ export async function sendNewRegistrationNotification(data: {
   lines.push('Uma nova cliente se cadastrou! \u2728')
   const message = lines.join('\n')
 
-  if (hasEvolutionApi()) {
-    const ok = await sendViaEvolution(PROFESSIONAL_NUMBER, message)
-    if (ok) return { sent: true, method: 'evolution-api' }
-  }
-  if (hasCallMeBot()) {
-    const ok = await sendViaCallMeBot(message)
-    if (ok) return { sent: true, method: 'callmebot' }
-  }
-
-  console.log('[WhatsApp] Novo cadastro logado:\n', message)
-  return { sent: false, method: 'logged' }
+  return dispatchNotification(message)
 }
 
 export async function sendCancellationNotification(data: {
@@ -273,15 +299,5 @@ export async function sendCancellationNotification(data: {
   lines.push('O horario foi liberado na agenda.')
   const message = lines.join('\n')
 
-  if (hasEvolutionApi()) {
-    const ok = await sendViaEvolution(PROFESSIONAL_NUMBER, message)
-    if (ok) return { sent: true, method: 'evolution-api' }
-  }
-  if (hasCallMeBot()) {
-    const ok = await sendViaCallMeBot(message)
-    if (ok) return { sent: true, method: 'callmebot' }
-  }
-
-  console.log('[WhatsApp] Cancelamento logado:\n', message)
-  return { sent: false, method: 'logged' }
+  return dispatchNotification(message)
 }
