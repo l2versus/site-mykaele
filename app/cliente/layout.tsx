@@ -3,11 +3,11 @@
 import { useState, useEffect, ReactNode, useCallback, createContext, useContext } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { ClientContextProvider, ClientContextType, ClientUser, useClient } from './ClientContext'
 import { CartProvider, useCart } from './CartContext'
 import PageTransition from '@/components/PageTransition'
+import { UserAvatar } from '@/components/UserAvatar'
 import NotificationPrompt from '@/components/NotificationPrompt'
 import { haptic } from '@/hooks/useHaptic'
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
@@ -1131,31 +1131,6 @@ function CartDrawer() {
 }
 
 /* ─── Client Shell — Layout com foto lateral persistente ─── */
-function UserAvatar({ src, name }: { src?: string | null; name?: string }) {
-  const [imgError, setImgError] = useState(false)
-  const initial = name?.charAt(0) || '?'
-
-  if (!src || imgError) {
-    return (
-      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c28a93] to-[#9e6670] flex items-center justify-center text-white text-sm font-light shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10">
-        {initial}
-      </div>
-    )
-  }
-
-  return (
-    <Image
-      src={src}
-      alt={name || ''}
-      width={40}
-      height={40}
-      className="w-10 h-10 rounded-full object-cover shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10"
-      onError={() => setImgError(true)}
-      unoptimized={src.startsWith('data:')}
-    />
-  )
-}
-
 function ClientShell({ user, pathname, children }: { user: ClientUser; pathname: string; children: ReactNode }) {
   const { open, toggle } = useContext(PhotoDrawerContext)
 

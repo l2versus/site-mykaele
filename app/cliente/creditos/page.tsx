@@ -5,6 +5,7 @@ import { useCart } from '../CartContext'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { InfoTooltip } from '@/components/InfoTooltip'
+import { SessionTicket } from '@/components/SessionTicket'
 
 // Serviços e pacotes disponíveis para compra de créditos
 const creditOptions = {
@@ -47,9 +48,6 @@ interface Package {
     service: { name: string }
   }
 }
-
-const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
-const fmtDate = (d: string | undefined) => d ? new Date(d).toLocaleDateString('pt-BR') : 'Sem expiração'
 
 export default function CreditosPage() {
   const { user, fetchWithAuth } = useClient()
@@ -103,7 +101,6 @@ export default function CreditosPage() {
   }, [fetchWithAuth])
 
   const activePackages = packages.filter(p => p.status === 'ACTIVE')
-  const totalSessions = activePackages.reduce((sum, p) => sum + (p.totalSessions - p.usedSessions), 0)
 
   const handleContact = () => {
     if (contactType === 'whatsapp') {
@@ -212,75 +209,32 @@ export default function CreditosPage() {
           </div>
         </div>
       )}
-      {/* Header com Saldo */}
-      <div className="relative overflow-hidden rounded-3xl">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#b76e79]/40 via-[#d4a0a7]/30 to-[#8b4a52]/20" />
-        <div className="relative border border-white/15 rounded-3xl p-6 lg:p-8">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-white/40 text-xs font-semibold tracking-widest uppercase mb-1">Saldo de Créditos</h2>
-              <h1 className="text-white/98 font-bold text-4xl lg:text-5xl">{totalSessions}</h1>
-              <p className="text-white/60 text-sm mt-2">Sessões disponíveis para agendar</p>
-            </div>
-            <div className="flex gap-3">
-              <a href="#comprar" className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#d4a0a7] to-[#b76e79] text-white text-sm font-bold shadow-lg shadow-[#b76e79]/25 hover:shadow-[#b76e79]/35 transition-all" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
-                Comprar mais créditos
-              </a>
-              <button onClick={() => setContactModal(true)} className="px-6 py-3 rounded-xl border border-white/20 text-white/80 hover:text-white text-sm font-medium transition-all">
-                💬 Dúvida?
-              </button>
-            </div>
-          </div>
+      {/* Meus Créditos Ativos */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-white/90 text-sm font-semibold">Meus Créditos Ativos <InfoTooltip text="Pacotes que você comprou e ainda tem sessões para usar. Agende diretamente pelo app!" /></h3>
+          <button onClick={() => setContactModal(true)} className="px-4 py-2 rounded-xl border border-white/15 text-white/60 hover:text-white text-xs font-medium transition-all">
+            💬 Dúvida?
+          </button>
         </div>
-      </div>
-
-      {/* Meus Créditos */}
-      <div className="space-y-3">
-        <h3 className="text-white/90 text-sm font-semibold">Meus Créditos Ativos <InfoTooltip text="Pacotes que você comprou e ainda tem sessões para usar. Agende diretamente pelo app!" /></h3>
         {activePackages.length === 0 ? (
-          <div className="text-center py-8 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
+          <div className="text-center py-12 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
             <p className="text-white/25 text-sm">Nenhum crédito disponível</p>
             <a href="#comprar" className="text-[#d4a0a7] text-xs mt-2 inline-block hover:underline" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
               Adquirir créditos →
             </a>
           </div>
         ) : (
-          <div className="space-y-3">
-            {activePackages.map(pkg => {
-              const used = pkg.usedSessions
-              const total = pkg.totalSessions
-              const remaining = total - used
-              const progress = Math.round((used / total) * 100)
-              
-              return (
-                <div key={pkg.id} className="relative overflow-hidden rounded-2xl group hover:scale-[1.01] transition-all duration-300">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-white/[0.01] group-hover:from-white/[0.06]" />
-                  <div className="relative border border-white/[0.06] rounded-2xl p-5">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h4 className="text-white/90 font-semibold text-sm">{pkg.packageOption.name}</h4>
-                        <p className="text-white/25 text-xs mt-1">{pkg.packageOption.service.name}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-emerald-400 font-bold text-lg">{remaining}</div>
-                        <div className="text-white/25 text-[10px]">de {total}</div>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="relative h-2 bg-white/[0.05] rounded-full overflow-hidden mb-3">
-                      <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
-                        style={{ width: `${progress}%` }} />
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] text-white/40">
-                      <span>{used} usado{used !== 1 ? 's' : ''}</span>
-                      <span>Válido até {fmtDate(pkg.expirationDate)}</span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {activePackages.map(pkg => (
+              <SessionTicket
+                key={pkg.id}
+                serviceName={pkg.packageOption.service.name}
+                remaining={pkg.totalSessions - pkg.usedSessions}
+                total={pkg.totalSessions}
+                expirationDate={pkg.expirationDate}
+              />
+            ))}
           </div>
         )}
       </div>

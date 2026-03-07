@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useClient } from '../ClientContext'
+import { UserAvatar } from '@/components/UserAvatar'
 
 type AnyUser = Record<string, unknown>
 
@@ -130,14 +131,12 @@ export default function PerfilPage() {
           {/* Avatar — posicionado subindo sobre a cover */}
           <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6 -mt-12 sm:-mt-14">
             <div className="relative shrink-0 self-center sm:self-auto">
-              {user?.avatar ? (
-                <img src={user.avatar} alt=""
-                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover shadow-2xl shadow-black/50 ring-[3px] ring-[#0e0b10] border border-[#b76e79]/15" />
-              ) : (
-                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-[#c28a93] to-[#9e6670] flex items-center justify-center text-white text-3xl sm:text-4xl font-light shadow-2xl shadow-black/50 ring-[3px] ring-[#0e0b10] border border-[#b76e79]/15">
-                  {user?.name?.charAt(0)}
-                </div>
-              )}
+              <UserAvatar
+                src={user?.avatar}
+                name={user?.name}
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl shadow-2xl shadow-black/50 ring-[3px] ring-[#0e0b10] border border-[#b76e79]/15"
+                initialsClassName="text-3xl sm:text-4xl"
+              />
               <button onClick={() => fileRef.current?.click()} disabled={uploadingPhoto}
                 className="absolute -bottom-2 -right-2 w-9 h-9 rounded-xl bg-gradient-to-br from-[#b76e79] to-[#c28a93] flex items-center justify-center text-white shadow-lg shadow-[#b76e79]/30 hover:scale-110 active:scale-95 transition-transform border-[3px] border-[#0e0b10]">
                 {uploadingPhoto ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : (
