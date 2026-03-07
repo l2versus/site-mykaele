@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useClient } from '../ClientContext'
 
 type AnyUser = Record<string, unknown>
@@ -45,6 +45,19 @@ export default function PerfilPage() {
   const [wppNotif, setWppNotif] = useState(true)
   const [wppReminder24h, setWppReminder24h] = useState(true)
   const [wppPromo, setWppPromo] = useState(false)
+
+  // Hidratar preferências do localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('myka:wpp_prefs')
+      if (saved) {
+        const prefs = JSON.parse(saved)
+        if (typeof prefs.notif === 'boolean') setWppNotif(prefs.notif)
+        if (typeof prefs.reminder24h === 'boolean') setWppReminder24h(prefs.reminder24h)
+        if (typeof prefs.promo === 'boolean') setWppPromo(prefs.promo)
+      }
+    } catch { /* ignore parse errors */ }
+  }, [])
 
   const save = async () => {
     if (!form.name.trim()) { setMessage('Nome obrigatorio'); setMsgType('error'); return }
@@ -353,7 +366,12 @@ export default function PerfilPage() {
                   <p className="text-emerald-400/50 text-[10px]">📱 As notificações são enviadas para o WhatsApp cadastrado no seu perfil: <span className="font-semibold text-emerald-400/70">{user?.phone || 'Não informado'}</span></p>
                 </div>
 
-                <button onClick={() => setSettingsModal(null)} className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#b76e79] to-[#c28a93] text-white text-xs font-medium">
+                <button onClick={() => {
+                  try {
+                    localStorage.setItem('myka:wpp_prefs', JSON.stringify({ notif: wppNotif, reminder24h: wppReminder24h, promo: wppPromo }))
+                  } catch { /* quota exceeded */ }
+                  setSettingsModal(null)
+                }} className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#b76e79] to-[#c28a93] text-white text-xs font-medium">
                   Salvar preferências
                 </button>
               </div>

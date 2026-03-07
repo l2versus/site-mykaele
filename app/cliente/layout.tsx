@@ -2,8 +2,9 @@
 
 import { useState, useEffect, ReactNode, useCallback, createContext, useContext } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { ClientContextProvider, ClientContextType, ClientUser } from './ClientContext'
+import { ClientContextProvider, ClientContextType, ClientUser, useClient } from './ClientContext'
 import { CartProvider, useCart } from './CartContext'
 import PageTransition from '@/components/PageTransition'
 import NotificationPrompt from '@/components/NotificationPrompt'
@@ -865,11 +866,72 @@ function PhotoDrawerProvider({ children }: { children: ReactNode }) {
 /* ─── Cart Drawer Global ─── */
 function CartDrawer() {
   const { items, removeItem, clearCart, total } = useCart()
+  const { fetchWithAuth } = useClient()
   const [isOpen, setIsOpen] = useState(false)
-  useBodyScrollLock(isOpen)
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [checkoutStep, setCheckoutStep] = useState<'choose' | 'loading' | 'success' | 'error'>('choose')
+  const [checkoutError, setCheckoutError] = useState('')
+  useBodyScrollLock(isOpen || checkoutOpen)
 
   const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
   const totalSessions = items.reduce((sum, i) => sum + i.sessions, 0)
+
+  const handleOnlineCheckout = async () => {
+    setCheckoutStep('loading')
+    try {
+      const cartItems = items.map(i => ({
+        packageOptionId: i.packageOptionId,
+        name: i.name,
+        sessions: i.sessions,
+        price: i.price,
+        serviceName: i.serviceName,
+      }))
+      const res = await fetchWithAuth('/api/payments/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ items: cartItems }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setCheckoutError(data.error || 'Erro ao processar pagamento')
+        setCheckoutStep('error')
+        return
+      }
+      if (data.checkoutUrl) window.location.href = data.checkoutUrl
+    } catch {
+      setCheckoutError('Erro de conexão. Tente novamente.')
+      setCheckoutStep('error')
+    }
+  }
+
+  const handleInPersonCheckout = async () => {
+    setCheckoutStep('loading')
+    try {
+      const cartItems = items.map(i => ({ name: i.name, sessions: i.sessions, price: i.price }))
+      const res = await fetchWithAuth('/api/payments/order', {
+        method: 'POST',
+        body: JSON.stringify({ items: cartItems }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setCheckoutError(data.error || 'Erro ao registrar pedido')
+        setCheckoutStep('error')
+        return
+      }
+      clearCart()
+      setCheckoutStep('success')
+    } catch {
+      setCheckoutError('Erro de conexão. Tente novamente.')
+      setCheckoutStep('error')
+    }
+  }
+
+  const closeCheckout = () => {
+    const wasSuccess = checkoutStep === 'success'
+    setCheckoutOpen(false)
+    setCheckoutStep('choose')
+    setCheckoutError('')
+    if (wasSuccess) setIsOpen(false)
+  }
 
   return (
     <>
@@ -967,14 +1029,99 @@ function CartDrawer() {
                     <span className="text-white text-2xl font-bold">{fmtCur(total)}</span>
                   </div>
                 </div>
-                <a href="/cliente/carrinho" onClick={() => setIsOpen(false)}
+                <button onClick={() => { setCheckoutOpen(true); setCheckoutStep('choose') }}
                   className="block w-full py-3.5 rounded-xl bg-gradient-to-r from-[#d4a0a7] to-[#b76e79] text-white text-center font-bold shadow-lg shadow-[#b76e79]/25 hover:shadow-[#b76e79]/40 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                  Ir para o Carrinho
-                </a>
+                  Finalizar Compra
+                </button>
                 <button onClick={() => { clearCart(); setIsOpen(false) }}
                   className="w-full py-2 text-white/30 hover:text-red-400 text-xs font-medium transition-colors">
                   Limpar carrinho
                 </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Modal de Checkout — Duas Vias ═══ */}
+      {checkoutOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center" onClick={closeCheckout}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md animate-[fadeIn_0.2s_ease-out]" />
+          <div className="relative w-full sm:max-w-md bg-[#13111a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-[slideUp_0.3s_ease-out]" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-center pt-1 pb-3 sm:hidden"><div className="w-10 h-1 rounded-full bg-white/10" /></div>
+
+            {checkoutStep === 'choose' && (
+              <div className="space-y-5">
+                <div className="text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#d4a0a7]/20 to-[#b76e79]/10 flex items-center justify-center mx-auto mb-3">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#d4a0a7]"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                  </div>
+                  <h3 className="text-white/90 font-bold text-lg">Como deseja pagar?</h3>
+                  <p className="text-white/30 text-xs mt-1">Total: {fmtCur(total)} · {totalSessions} sessão(ões)</p>
+                </div>
+                <div className="space-y-3">
+                  <button onClick={handleOnlineCheckout}
+                    className="w-full p-4 rounded-2xl border-2 border-[#b76e79]/30 bg-gradient-to-r from-[#b76e79]/10 to-[#d4a0a7]/5 hover:border-[#b76e79]/60 transition-all text-left group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#b76e79]/20 flex items-center justify-center shrink-0">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#d4a0a7]"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                      </div>
+                      <div>
+                        <div className="text-white/90 font-semibold text-sm group-hover:text-white transition-colors">Pagar Agora</div>
+                        <div className="text-white/30 text-[11px] mt-0.5">Online via Mercado Pago (Pix, Cartão, Boleto)</div>
+                      </div>
+                    </div>
+                  </button>
+                  <button onClick={handleInPersonCheckout}
+                    className="w-full p-4 rounded-2xl border-2 border-emerald-500/20 bg-emerald-500/[0.04] hover:border-emerald-500/40 transition-all text-left group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-emerald-400"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                      </div>
+                      <div>
+                        <div className="text-white/90 font-semibold text-sm group-hover:text-white transition-colors">Pagar no Atendimento</div>
+                        <div className="text-white/30 text-[11px] mt-0.5">Pix, Cartão ou Dinheiro na Clínica/Home Spa</div>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+                <button onClick={closeCheckout} className="w-full py-2 text-white/25 hover:text-white/50 text-xs transition-colors">Voltar</button>
+              </div>
+            )}
+
+            {checkoutStep === 'loading' && (
+              <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                <div className="w-10 h-10 border-[3px] border-[#b76e79]/30 border-t-[#b76e79] rounded-full animate-spin" />
+                <p className="text-white/50 text-sm">Processando seu pedido...</p>
+              </div>
+            )}
+
+            {checkoutStep === 'success' && (
+              <div className="text-center space-y-4 py-4">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-400"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div>
+                  <h3 className="text-white/90 font-bold text-lg">Pedido Confirmado!</h3>
+                  <p className="text-white/40 text-sm mt-2 leading-relaxed">Seu pedido foi registrado com sucesso.<br/>Realize o pagamento no dia do atendimento.</p>
+                </div>
+                <div className="p-3 bg-emerald-500/[0.06] rounded-xl border border-emerald-500/15">
+                  <p className="text-emerald-400/70 text-[11px]">💡 Aceitamos Pix, Cartão de Crédito/Débito e Dinheiro</p>
+                </div>
+                <button onClick={closeCheckout} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#d4a0a7] to-[#b76e79] text-white font-semibold text-sm shadow-lg shadow-[#b76e79]/20">Entendido</button>
+              </div>
+            )}
+
+            {checkoutStep === 'error' && (
+              <div className="text-center space-y-4 py-4">
+                <div className="w-16 h-16 rounded-2xl bg-red-500/15 flex items-center justify-center mx-auto">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-400"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                </div>
+                <div>
+                  <h3 className="text-white/90 font-bold">Ops, algo deu errado</h3>
+                  <p className="text-white/40 text-sm mt-1">{checkoutError}</p>
+                </div>
+                <button onClick={() => setCheckoutStep('choose')} className="w-full py-3 rounded-xl border border-white/10 text-white/60 hover:text-white text-sm font-medium transition-all">Tentar novamente</button>
               </div>
             )}
           </div>
@@ -985,6 +1132,31 @@ function CartDrawer() {
 }
 
 /* ─── Client Shell — Layout com foto lateral persistente ─── */
+function UserAvatar({ src, name }: { src?: string | null; name?: string }) {
+  const [imgError, setImgError] = useState(false)
+  const initial = name?.charAt(0) || '?'
+
+  if (!src || imgError) {
+    return (
+      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c28a93] to-[#9e6670] flex items-center justify-center text-white text-sm font-light shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10">
+        {initial}
+      </div>
+    )
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={name || ''}
+      width={40}
+      height={40}
+      className="w-10 h-10 rounded-full object-cover shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10"
+      onError={() => setImgError(true)}
+      unoptimized={src.startsWith('data:')}
+    />
+  )
+}
+
 function ClientShell({ user, pathname, children }: { user: ClientUser; pathname: string; children: ReactNode }) {
   const { open, toggle } = useContext(PhotoDrawerContext)
 
@@ -1071,13 +1243,7 @@ function ClientShell({ user, pathname, children }: { user: ClientUser; pathname:
 
               {/* DESKTOP: Avatar do paciente */}
               <div className="hidden lg:block relative">
-                {user.avatar ? (
-                  <img src={user.avatar} alt="" className="w-10 h-10 rounded-full object-cover shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c28a93] to-[#9e6670] flex items-center justify-center text-white text-sm font-light shadow-lg shadow-[#b76e79]/20 ring-2 ring-[#b76e79]/10">
-                    {user.name?.charAt(0)}
-                  </div>
-                )}
+                <UserAvatar src={user.avatar} name={user.name} />
                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0e0b10]" />
               </div>
 

@@ -20,7 +20,7 @@ const PUBLIC_PATHS = [
 ]
 
 // Prefixos de rotas estáticas
-const STATIC_PREFIXES = ['/_next', '/favicon', '/media', '/images', '/icon', '/apple-icon']
+const STATIC_PREFIXES = ['/_next', '/favicon', '/media', '/images', '/icon', '/apple-icon', '/uploads']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

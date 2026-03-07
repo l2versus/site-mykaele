@@ -5,7 +5,7 @@ import { useAdmin } from '../AdminContext'
 
 interface Appointment {
   id: string; scheduledAt: string; endAt: string; status: string; type: string
-  price: number; travelFee: number; location: string; notes?: string; addons?: string
+  price: number; travelFee: number; location: string; address?: string; notes?: string; addons?: string
   paymentStatus?: string; paymentMethod?: string
   user: { name: string; phone?: string; email: string }
   service: { name: string; duration: number }
@@ -525,6 +525,38 @@ export default function AgendaPage() {
                       <div className="text-stone-700 font-semibold mt-0.5">{selectedApp.location === 'HOME_SPA' ? 'Home Spa' : 'Clínica'}</div>
                     </div>
                   </div>
+
+                  {/* GPS Navigation — Home Spa */}
+                  {selectedApp.location === 'HOME_SPA' && selectedApp.address && (
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-blue-100 rounded-xl p-4 space-y-3">
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-blue-700 text-[10px] font-bold uppercase tracking-wider">Endereço do Atendimento</div>
+                          <div className="text-blue-900 text-xs font-medium mt-0.5 leading-relaxed">{selectedApp.address}</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <a href={`https://waze.com/ul?q=${encodeURIComponent(selectedApp.address)}&navigate=yes`} target="_blank" rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#33ccff]/10 border border-[#33ccff]/25 text-[#0088aa] text-[11px] font-bold hover:bg-[#33ccff]/20 transition-all">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                          Waze
+                        </a>
+                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedApp.address)}`} target="_blank" rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold hover:bg-emerald-100 transition-all">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          Google Maps
+                        </a>
+                        <a href={`https://m.uber.com/ul/?action=setPickup&dropoff[formatted_address]=${encodeURIComponent(selectedApp.address)}`} target="_blank" rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-stone-100 border border-stone-200 text-stone-700 text-[11px] font-bold hover:bg-stone-200 transition-all">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9L18 10l-2-4H7L5 10l-2.5 1.1C1.7 11.3 1 12.1 1 13v3c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg>
+                          Uber
+                        </a>
+                      </div>
+                    </div>
+                  )}
 
                   {selectedApp.notes && (
                     <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">

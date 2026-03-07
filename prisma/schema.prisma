@@ -482,3 +482,13 @@ model DigitalReceipt {
   @@index([userId])
   @@index([createdAt])
 }
+
+model GalleryImage {
+  id        String   @id @default(cuid())
+  url       String
+  alt       String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([order])
+}

@@ -9,6 +9,7 @@ import type { Metadata } from 'next'
 
 // Dynamic imports para componentes abaixo do fold — reduz bundle JS inicial em ~40%
 const ResultadosReais = dynamic(() => import('@/components/ResultadosReais'))
+const GaleriaDinamica = dynamic(() => import('@/components/GaleriaDinamica'))
 const Testimoniais = dynamic(() => import('@/components/Testimoniais'))
 const EquipeAmbiente = dynamic(() => import('@/components/EquipeAmbiente'))
 const GaleriaVideos = dynamic(() => import('@/components/GaleriaVideos'))
@@ -65,6 +66,7 @@ export default function Home() {
 
       <ServicesSection />
       <ResultadosReais />
+      <GaleriaDinamica />
       <AboutMykaele />
       <AppShowcase />
       <Testimoniais />

@@ -1,6 +1,7 @@
 'use client'
 
 import { useClient } from '../ClientContext'
+import { useCart } from '../CartContext'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { InfoTooltip } from '@/components/InfoTooltip'
@@ -57,74 +58,44 @@ export default function CreditosPage() {
   const [contactModal, setContactModal] = useState(false)
   const [contactType, setContactType] = useState<'whatsapp' | 'email'>('whatsapp')
   const [message, setMessage] = useState('')
-  // Carrinho de créditos
-  const [cart, setCart] = useState<any[]>([])
+  const { addItem } = useCart()
   const [selectedService, setSelectedService] = useState<'metodo' | 'massagem' | 'adicional'>('metodo')
-  const [cartOpen, setCartOpen] = useState(false)
   const [toast, setToast] = useState('')
-  const [cartBounce, setCartBounce] = useState(false)
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
-  const [checkoutError, setCheckoutError] = useState('')
-  
-  // Adiciona item ao carrinho com feedback visual
-  const addToCart = (item: any) => {
-    setCart(prev => [...prev, item]);
-    setToast(item.name);
-    setCartBounce(true);
-    setTimeout(() => setToast(''), 2500);
-    setTimeout(() => setCartBounce(false), 600);
-  };
-  
-  // Remove item do carrinho
-  const removeFromCart = (idx: number) => {
-    setCart(cart.filter((_, i) => i !== idx));
-  };
-  
-  // Total do carrinho
-  const cartTotal = cart.reduce((sum, item) => sum + item.price, 0);
-  const cartSessions = cart.reduce((sum, item) => sum + item.sessions, 0);
+  const [clinicWhatsapp, setClinicWhatsapp] = useState('')
 
-  // Finalizar compra via Mercado Pago
-  const handleCheckout = async () => {
-    if (cart.length === 0) return;
-    setCheckoutLoading(true);
-    setCheckoutError('');
-    try {
-      const items = cart.map((item, idx) => ({
-        packageOptionId: `credit_${idx}_${Date.now()}`,
-        name: item.name,
-        sessions: item.sessions,
-        price: item.price,
-        serviceName: item.name,
-      }));
-      const res = await fetchWithAuth('/api/payments/checkout', {
-        method: 'POST',
-        body: JSON.stringify({ items }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setCheckoutError(data.error || 'Erro ao processar pagamento');
-        return;
-      }
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      } else {
-        setCheckoutError('URL de pagamento n\u00e3o recebida');
-      }
-    } catch {
-      setCheckoutError('Erro de conex\u00e3o. Tente novamente.');
-    } finally {
-      setCheckoutLoading(false);
-    }
-  };
+  // Adiciona item ao carrinho global com feedback visual
+  const addToCart = (item: { name: string; price: number; sessions: number }) => {
+    const uid = `credit_${selectedService}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+    addItem({
+      id: uid,
+      packageOptionId: uid,
+      name: item.name,
+      sessions: item.sessions,
+      price: item.price,
+      serviceId: selectedService,
+      serviceName: creditOptions[selectedService].name,
+    })
+    setToast(item.name)
+    setTimeout(() => setToast(''), 2500)
+  }
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetchWithAuth('/api/patient/packages')
-        if (res.ok) {
-          const data = await res.json()
+        const [pkgRes, settingsRes] = await Promise.all([
+          fetchWithAuth('/api/patient/packages'),
+          fetch('/api/admin/settings'),
+        ])
+        if (pkgRes.ok) {
+          const data = await pkgRes.json()
           setPackages(data.packages || data || [])
+        }
+        if (settingsRes.ok) {
+          const { settings } = await settingsRes.json()
+          if (settings?.whatsapp) {
+            const clean = settings.whatsapp.replace(/\D/g, '')
+            setClinicWhatsapp(clean.startsWith('55') ? clean : `55${clean}`)
+          }
         }
       } catch { /* */ }
       setLoading(false)
@@ -138,7 +109,8 @@ export default function CreditosPage() {
     if (contactType === 'whatsapp') {
       const text = `Olá Myka! Tenho dúvida sobre meus créditos. ${message}`
       const encodedText = encodeURIComponent(text)
-      window.open(`https://wa.me/5585999086924?text=${encodedText}`, '_blank')
+      const waNumber = clinicWhatsapp || '5585999086924'
+      window.open(`https://wa.me/${waNumber}?text=${encodedText}`, '_blank')
     } else if (contactType === 'email') {
       window.location.href = `mailto:mykaele@spa.com?subject=Dúvida sobre Créditos&body=${encodeURIComponent(message)}`
     }
