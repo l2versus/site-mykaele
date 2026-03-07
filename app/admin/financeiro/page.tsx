@@ -417,14 +417,14 @@ export default function FinanceiroPage() {
                           <div className="text-stone-400 text-[10px]">{fmtDate(p.createdAt)} · {formatPaymentDisplay(p.method, p.gateway)}</div>
                           {p.description && p.user?.name && <div className="text-stone-300 text-[10px] truncate">{p.description}</div>}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           <span className="text-emerald-400 text-xs font-semibold">+{fmtCur(p.amount)}</span>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => openEditPayment(p)} className="p-1 rounded text-stone-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="Editar">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => openEditPayment(p)} className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg bg-slate-50 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all" title="Editar" aria-label="Editar receita">
                               {Ico.edit}
                             </button>
                             <button onClick={() => setConfirmDelete({ id: p.id, type: 'payment', label: p.description || p.user?.name || 'Pagamento' })}
-                              className="p-1 rounded text-stone-400 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Excluir">
+                              className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg bg-slate-50 text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all" title="Excluir" aria-label="Excluir receita">
                               {Ico.trash}
                             </button>
                           </div>
@@ -453,14 +453,14 @@ export default function FinanceiroPage() {
                           </div>
                           <div className="text-stone-400 text-[10px] ml-4">{fmtDateFull(e.date)} · {CATS.find(c => c.value === e.category)?.label || e.category}</div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           <span className="text-red-400 text-xs font-semibold">-{fmtCur(e.amount)}</span>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => openEditExpense(e)} className="p-1 rounded text-stone-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="Editar">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => openEditExpense(e)} className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg bg-slate-50 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all" title="Editar" aria-label="Editar despesa">
                               {Ico.edit}
                             </button>
                             <button onClick={() => setConfirmDelete({ id: e.id, type: 'expense', label: e.description })}
-                              className="p-1 rounded text-stone-400 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Excluir">
+                              className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg bg-slate-50 text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all" title="Excluir" aria-label="Excluir despesa">
                               {Ico.trash}
                             </button>
                           </div>
