@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, ReactNode, useCallback, createContext, useContext } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -870,6 +871,8 @@ function CartDrawer() {
   const [isOpen, setIsOpen] = useState(false)
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'payment_method' | 'loading' | 'success' | 'error'>('cart')
   const [checkoutError, setCheckoutError] = useState('')
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
   useBodyScrollLock(isOpen)
 
   const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
@@ -950,8 +953,8 @@ function CartDrawer() {
         )}
       </button>
 
-      {/* Drawer overlay + panel */}
-      {isOpen && (
+      {/* Drawer overlay + panel — portaled to body to escape header stacking context */}
+      {mounted && isOpen && createPortal(
         <div className="fixed inset-0 z-[60]" onClick={() => { setIsOpen(false); setCheckoutStep('cart') }}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]" />
           <div
@@ -982,7 +985,7 @@ function CartDrawer() {
             {/* ═══ Cart items ═══ */}
             {checkoutStep === 'cart' && (
               <>
-                <div className="flex-1 overflow-y-auto px-6 py-4 pb-48 space-y-3">
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
                   {items.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
                       <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
@@ -1016,7 +1019,7 @@ function CartDrawer() {
                   )}
                 </div>
                 {items.length > 0 && (
-                  <div className="absolute bottom-0 left-0 w-full bg-[#0e0b10] p-4 border-t border-white/10 space-y-3">
+                  <div className="shrink-0 w-full bg-[#0e0b10] p-4 border-t border-white/10 space-y-3">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs text-white/40">
                         <span>Subtotal ({items.length} item{items.length > 1 ? 's' : ''})</span>
@@ -1119,7 +1122,8 @@ function CartDrawer() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </>
