@@ -1338,15 +1338,38 @@ export default function ClienteLayout({ children }: { children: ReactNode }) {
     const savedToken = localStorage.getItem('client_token')
     const savedUser = localStorage.getItem('client_user')
     if (savedToken && savedUser) {
-      try { setToken(savedToken); setUser(JSON.parse(savedUser)) } catch { /* ignore */ }
+      try {
+        // Verificar se o token ainda é válido (decode sem verificar assinatura)
+        const payload = JSON.parse(atob(savedToken.split('.')[1]))
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          // Token expirado — limpar e forçar re-login
+          localStorage.removeItem('client_token')
+          localStorage.removeItem('client_user')
+          return
+        }
+        setToken(savedToken); setUser(JSON.parse(savedUser))
+      } catch {
+        // Token corrompido — limpar
+        localStorage.removeItem('client_token')
+        localStorage.removeItem('client_user')
+      }
     }
   }, [])
 
   const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}) => {
-    return fetch(url, {
+    const currentToken = token || localStorage.getItem('client_token')
+    const res = await fetch(url, {
       ...options,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(options.headers || {}) },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}`, ...(options.headers || {}) },
     })
+    // Interceptor: se token expirou, forçar re-login
+    if (res.status === 401 && currentToken) {
+      localStorage.removeItem('client_token')
+      localStorage.removeItem('client_user')
+      window.location.href = '/cliente'
+      return res
+    }
+    return res
   }, [token])
 
   const handleLogin = (newToken: string, newUser: ClientUser) => {

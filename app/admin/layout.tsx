@@ -224,10 +224,37 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const handleCloseSidebar = () => setMobileOpen(false);
   useEffect(() => { setMobileOpen(false) }, [pathname])
-  useEffect(() => { setMounted(true); try { const t = localStorage.getItem('admin_token'); const u = localStorage.getItem('admin_user'); if (t && u) { setToken(t); setUser(JSON.parse(u)) } } catch {} }, [])
+  useEffect(() => {
+    setMounted(true)
+    try {
+      const t = localStorage.getItem('admin_token')
+      const u = localStorage.getItem('admin_user')
+      if (t && u) {
+        // Verificar expiração do token
+        const payload = JSON.parse(atob(t.split('.')[1]))
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          localStorage.removeItem('admin_token')
+          localStorage.removeItem('admin_user')
+          return
+        }
+        setToken(t); setUser(JSON.parse(u))
+      }
+    } catch {
+      localStorage.removeItem('admin_token')
+      localStorage.removeItem('admin_user')
+    }
+  }, [])
 
   const fetchWithAuth = useCallback(async (url: string, opts: RequestInit = {}) => {
-    return fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(opts.headers || {}) } })
+    const currentToken = token || localStorage.getItem('admin_token')
+    const res = await fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}`, ...(opts.headers || {}) } })
+    if (res.status === 401 && currentToken) {
+      localStorage.removeItem('admin_token')
+      localStorage.removeItem('admin_user')
+      window.location.href = '/admin'
+      return res
+    }
+    return res
   }, [token])
 
   const handleLogin = (t: string, u: AdminUser) => { setToken(t); setUser(u); localStorage.setItem('admin_token', t); localStorage.setItem('admin_user', JSON.stringify(u)) }
