@@ -140,6 +140,7 @@ export default function CheckInClient({
       Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19,
+        crossOrigin: 'anonymous',
       }).addTo(map)
       Leaflet.control.zoom({ position: 'bottomright' }).addTo(map)
 
@@ -163,9 +164,18 @@ export default function CheckInClient({
 
       mapRef.current = map
       setTimeout(() => map.invalidateSize(), 200)
+      setTimeout(() => map.invalidateSize(), 800)
     })
     return () => { mounted = false }
   }, [])
+
+  // ─── Redimensionar mapa quando overlay fecha ───
+  useEffect(() => {
+    if (!showOverlay && mapRef.current) {
+      mapRef.current.invalidateSize()
+      setTimeout(() => mapRef.current?.invalidateSize(), 300)
+    }
+  }, [showOverlay])
 
   // ─── SSE Connection ───
   useEffect(() => {
@@ -215,6 +225,31 @@ export default function CheckInClient({
   return (
     <>
       <style>{`
+        /* Leaflet tile fix — override Tailwind v4 preflight */
+        .leaflet-container img,
+        .leaflet-tile-pane img,
+        .leaflet-tile {
+          max-width: none !important;
+          max-height: none !important;
+          width: 256px !important;
+          height: 256px !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          border: none !important;
+        }
+        .leaflet-container img {
+          width: auto !important;
+          height: auto !important;
+        }
+        .leaflet-control-container img,
+        .leaflet-marker-pane img {
+          width: auto !important;
+          height: auto !important;
+        }
+        .leaflet-container {
+          z-index: 0;
+          background: #e8e4df !important;
+        }
         @keyframes overlay-fadeOut { to { opacity: 0; pointer-events: none; } }
         @keyframes overlay-btn-glow { 0%,100%{box-shadow:0 0 20px rgba(201,169,110,0.3)} 50%{box-shadow:0 0 40px rgba(201,169,110,0.6)} }
         @keyframes sparkle { 0%,100%{opacity:0;transform:rotate(var(--r,0deg)) translateY(-48px) scale(0)} 50%{opacity:1;transform:rotate(var(--r,0deg)) translateY(-48px) scale(1)} }

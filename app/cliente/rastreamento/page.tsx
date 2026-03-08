@@ -117,6 +117,7 @@ export default function RastreamentoPage() {
       Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19,
+        crossOrigin: 'anonymous',
       }).addTo(map)
 
       // Controle de zoom no canto inferior direito
@@ -370,6 +371,31 @@ export default function RastreamentoPage() {
   return (
     <>
       <style>{`
+        /* Leaflet tile fix — override Tailwind v4 preflight */
+        .leaflet-container img,
+        .leaflet-tile-pane img,
+        .leaflet-tile {
+          max-width: none !important;
+          max-height: none !important;
+          width: 256px !important;
+          height: 256px !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          border: none !important;
+        }
+        .leaflet-container img {
+          width: auto !important;
+          height: auto !important;
+        }
+        .leaflet-control-container img,
+        .leaflet-marker-pane img {
+          width: auto !important;
+          height: auto !important;
+        }
+        .leaflet-container {
+          z-index: 0;
+          background: #e8e4df !important;
+        }
         @keyframes pulse-marker {
           0%, 100% { box-shadow: 0 4px 20px rgba(212,132,154,0.5); }
           50% { box-shadow: 0 4px 30px rgba(212,132,154,0.8); }

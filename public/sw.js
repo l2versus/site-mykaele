@@ -1,7 +1,7 @@
 // Myka Home Spa — Service Worker v3
 // Offline-first caching strategy for premium app experience
 
-const CACHE_NAME = 'myka-spa-v3'
+const CACHE_NAME = 'myka-spa-v4'
 const STATIC_ASSETS = [
     '/',
     '/manifest.json',
@@ -36,6 +36,9 @@ self.addEventListener('fetch', (event) => {
 
     // Skip non-GET
     if (request.method !== 'GET') return
+
+    // Skip cross-origin requests (tiles do mapa, CDNs, fontes externas)
+    if (url.origin !== self.location.origin) return
 
     // Skip video/audio files — let browser handle range requests natively
     if (url.pathname.match(/\.(mp4|mov|webm|ogg|m4v|avi|mkv|mp3|m4a)$/i)) return
