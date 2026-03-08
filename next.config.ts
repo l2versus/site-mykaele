@@ -4,6 +4,7 @@ const isProd = process.env.NODE_ENV === 'production'
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mykaprocopio.com.br'
 
 const nextConfig: NextConfig = {
+  transpilePackages: ['leaflet'],
   images: {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200],

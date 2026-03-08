@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 @theme inline {
   --color-background: #faf9f7;
@@ -596,4 +597,18 @@ body {
 
 .animation-delay-2000 {
   animation-delay: 2s;
+}
+
+/* ═══ Leaflet — Override Tailwind preflight que quebra tiles do mapa ═══ */
+.leaflet-container img {
+  max-width: none !important;
+  max-height: none !important;
+  height: auto;
+}
+.leaflet-container .leaflet-tile-pane img {
+  width: 256px;
+  height: 256px;
+}
+.leaflet-container {
+  z-index: 0;
 }

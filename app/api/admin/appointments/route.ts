@@ -52,7 +52,8 @@ export async function PUT(req: NextRequest) {
     // Validar transições de status permitidas
     const VALID_TRANSITIONS: Record<string, string[]> = {
       PENDING: ['CONFIRMED', 'CANCELLED'],
-      CONFIRMED: ['COMPLETED', 'CANCELLED', 'NO_SHOW'],
+      CONFIRMED: ['COMPLETED', 'CANCELLED', 'NO_SHOW', 'EN_ROUTE'],
+      EN_ROUTE: ['COMPLETED', 'CANCELLED', 'NO_SHOW'],
       COMPLETED: [],
       CANCELLED: [],
       NO_SHOW: [],

@@ -22,6 +22,7 @@ const fmtTime = (d: string) => new Date(d).toLocaleTimeString('pt-BR', { hour: '
 const ST: Record<string, { label: string; dot: string; bg: string; text: string; border: string }> = {
   PENDING:   { label: 'Pendente',       dot: 'bg-amber-400',   bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200' },
   CONFIRMED: { label: 'Confirmado',     dot: 'bg-blue-400',    bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200' },
+  EN_ROUTE:  { label: 'A caminho',      dot: 'bg-violet-400',  bg: 'bg-violet-50',  text: 'text-violet-700',  border: 'border-violet-200' },
   COMPLETED: { label: 'Realizado',      dot: 'bg-emerald-400', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
   CANCELLED: { label: 'Cancelado',      dot: 'bg-red-400',     bg: 'bg-red-50',     text: 'text-red-600',     border: 'border-red-200' },
   NO_SHOW:   { label: 'Não Compareceu', dot: 'bg-gray-400',    bg: 'bg-gray-50',    text: 'text-gray-600',    border: 'border-gray-200' },
@@ -106,6 +107,7 @@ export default function AgendaPage() {
   const [paymentModal, setPaymentModal] = useState<{ app: Appointment; mode: 'complete' | 'baixa' } | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<string>('PIX')
   const [view, setView] = useState<'day' | 'week' | 'month'>('day')
+  const [startingDisplacement, setStartingDisplacement] = useState<string | null>(null)
 
   const rangeFrom = useMemo(() => {
     if (view === 'day') return date
@@ -162,6 +164,47 @@ export default function AgendaPage() {
     } catch {}
     setUpdating(null)
     setPaymentModal(null)
+  }
+
+  // ─── Iniciar Deslocamento (fluxo iFood) ───
+  const startDisplacement = async (app: Appointment) => {
+    if (startingDisplacement) return
+    setStartingDisplacement(app.id)
+    try {
+      const res = await fetchWithAuth('/api/admin/appointments/displacement', {
+        method: 'POST',
+        body: JSON.stringify({ appointmentId: app.id }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Erro desconhecido' }))
+        alert(err.error || 'Erro ao iniciar deslocamento')
+        setStartingDisplacement(null)
+        return
+      }
+      const data = await res.json()
+      const checkInUrl = data.checkInUrl as string
+
+      // 1) Enviar WhatsApp com link de rastreio
+      if (app.user.phone) {
+        const firstName = app.user.name.split(' ')[0]
+        const msg = `Olá ${firstName}! 💛\n\nMykaele já está a caminho para o seu atendimento de ${app.service.name} ✨\n\nAcompanhe em tempo real pelo link:\n${checkInUrl}\n\nTe vejo em breve! 🚗💨\n\nMykaele Procópio - Home Spa`
+        openWhatsApp(app.user.phone, msg)
+      }
+
+      // 2) Redirecionar para tela de GPS da profissional
+      const dest = data.appointment.destination
+      const gpsParams = new URLSearchParams({
+        id: app.id,
+        client: app.user.name,
+        service: `${app.service.name} · ${app.service.duration} min`,
+        auto: '1',
+        ...(dest ? { dlat: String(dest.lat), dlng: String(dest.lng) } : {}),
+      })
+      window.location.href = `/admin/rastreamento?${gpsParams.toString()}`
+    } catch {
+      alert('Erro de conexão ao iniciar deslocamento')
+    }
+    setStartingDisplacement(null)
   }
 
   const filtered = filter === 'ALL' ? appointments : appointments.filter(a => a.status === filter)
@@ -580,16 +623,51 @@ export default function AgendaPage() {
                       </div>
                     )}
                     {selectedApp.status === 'CONFIRMED' && (
-                      <div className="flex gap-2">
-                        <button onClick={() => { updateStatus(selectedApp.id, 'COMPLETED'); setSelectedApp(null) }} disabled={updating === selectedApp.id}
-                          className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm transition-all disabled:opacity-30">
-                          ✓ Marcar Realizado
-                        </button>
-                        <button onClick={() => { updateStatus(selectedApp.id, 'NO_SHOW'); setSelectedApp(null) }} disabled={updating === selectedApp.id}
-                          className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200 transition-all disabled:opacity-30">
-                          Não Compareceu
-                        </button>
-                      </div>
+                      <>
+                        {/* Botão destaque: Iniciar Deslocamento (Home Spa) */}
+                        {selectedApp.location === 'HOME_SPA' && (
+                          <button
+                            onClick={() => startDisplacement(selectedApp)}
+                            disabled={startingDisplacement === selectedApp.id}
+                            className="w-full py-3 rounded-xl text-xs font-bold text-white shadow-lg transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                            style={{ background: 'linear-gradient(135deg, #b76e79, #c9a96e)', boxShadow: '0 4px 16px rgba(183,110,121,0.3)' }}>
+                            {startingDisplacement === selectedApp.id ? (
+                              <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Iniciando...</>
+                            ) : (
+                              <><span className="text-sm">📍</span> Iniciar Deslocamento</>
+                            )}
+                          </button>
+                        )}
+                        <div className="flex gap-2">
+                          <button onClick={() => { updateStatus(selectedApp.id, 'COMPLETED'); setSelectedApp(null) }} disabled={updating === selectedApp.id}
+                            className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm transition-all disabled:opacity-30">
+                            ✓ Marcar Realizado
+                          </button>
+                          <button onClick={() => { updateStatus(selectedApp.id, 'NO_SHOW'); setSelectedApp(null) }} disabled={updating === selectedApp.id}
+                            className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200 transition-all disabled:opacity-30">
+                            Não Compareceu
+                          </button>
+                        </div>
+                      </>
+                    )}
+                    {selectedApp.status === 'EN_ROUTE' && (
+                      <>
+                        <a href={`/admin/rastreamento?id=${selectedApp.id}&client=${encodeURIComponent(selectedApp.user.name)}&service=${encodeURIComponent(selectedApp.service.name + ' · ' + selectedApp.service.duration + ' min')}`}
+                          className="w-full py-3 rounded-xl text-xs font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2"
+                          style={{ background: 'linear-gradient(135deg, #7c3aed, #a78bfa)', boxShadow: '0 4px 16px rgba(124,58,237,0.3)' }}>
+                          <span className="text-sm">🗺️</span> Abrir GPS (A caminho)
+                        </a>
+                        <div className="flex gap-2">
+                          <button onClick={() => { updateStatus(selectedApp.id, 'COMPLETED'); setSelectedApp(null) }} disabled={updating === selectedApp.id}
+                            className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm transition-all disabled:opacity-30">
+                            ✓ Marcar Realizado
+                          </button>
+                          <button onClick={() => { updateStatus(selectedApp.id, 'NO_SHOW'); setSelectedApp(null) }} disabled={updating === selectedApp.id}
+                            className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200 transition-all disabled:opacity-30">
+                            Não Compareceu
+                          </button>
+                        </div>
+                      </>
                     )}
                     {selectedApp.user.phone && (
                       <button onClick={() => openWhatsApp(selectedApp.user.phone!, `Olá ${selectedApp.user.name.split(' ')[0]}! 🌟\n\nSobre seu agendamento de ${selectedApp.service.name} às ${fmtTime(selectedApp.scheduledAt)}.\n\nMykaele Procópio - Home Spa`)}

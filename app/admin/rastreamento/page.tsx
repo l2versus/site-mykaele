@@ -10,6 +10,9 @@ export default function RastreamentoProfissionalPage() {
   const appointmentId = searchParams.get('id') ?? 'demo'
   const clientName = searchParams.get('client') ?? 'Fernanda Oliveira'
   const serviceName = searchParams.get('service') ?? 'Drenagem Linfática · 90 min'
+  const destLat = searchParams.get('dlat')
+  const destLng = searchParams.get('dlng')
+  const autoStart = searchParams.get('auto') // auto-start vindos da agenda
 
   const [gpsState, setGpsState] = useState<GpsState>('idle')
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
@@ -46,10 +49,14 @@ export default function RastreamentoProfissionalPage() {
   const startTracking = useCallback(async () => {
     // 1) Iniciar sessão no servidor
     try {
+      const startBody: Record<string, unknown> = { appointmentId, action: 'start' }
+      if (destLat && destLng) {
+        startBody.destination = { lat: Number(destLat), lng: Number(destLng) }
+      }
       await fetch('/api/gps/position', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appointmentId, action: 'start' }),
+        body: JSON.stringify(startBody),
       })
     } catch { /* continua mesmo offline */ }
 
@@ -133,7 +140,7 @@ export default function RastreamentoProfissionalPage() {
     }
   }, [appointmentId])
 
-  // ─── Reset (para novo uso) ───
+  // ─── Reset (volta para agenda) ───
   const resetTracking = useCallback(async () => {
     try {
       await fetch('/api/gps/position', {
@@ -143,10 +150,8 @@ export default function RastreamentoProfissionalPage() {
       })
     } catch { /* ignora */ }
 
-    setGpsState('idle')
-    setCoords(null)
-    setAccuracy(0)
-    setRingOffset(439.6)
+    // Se veio da agenda, volta para lá
+    window.location.href = '/admin/agenda'
   }, [appointmentId])
 
   // ─── Cleanup ao sair ───
@@ -164,6 +169,14 @@ export default function RastreamentoProfissionalPage() {
     }
   }, [])
 
+  // ─── Auto-start se veio da agenda ───
+  useEffect(() => {
+    if (autoStart === '1' && gpsState === 'idle') {
+      startTracking()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart])
+
   // ─── Botão principal ───
   function handleMainButton() {
     if (gpsState === 'idle') startTracking()
@@ -180,16 +193,16 @@ export default function RastreamentoProfissionalPage() {
       shadow: '0 4px 24px rgba(201,169,110,0.35)',
     },
     active: {
-      label: 'Parar Transmissão',
-      bg: 'linear-gradient(135deg, #b5637a, #d4849a)',
-      color: '#fffdf9',
-      shadow: '0 4px 24px rgba(181,99,122,0.35)',
-    },
-    arrived: {
-      label: 'Cheguei ao destino ✓',
+      label: '✦ Cheguei no Destino',
       bg: 'linear-gradient(135deg, #4a7c5c, #5cb85c)',
       color: '#fffdf9',
       shadow: '0 4px 24px rgba(92,184,92,0.3)',
+    },
+    arrived: {
+      label: 'Voltar para Agenda',
+      bg: 'linear-gradient(135deg, #6b7280, #9ca3af)',
+      color: '#fffdf9',
+      shadow: '0 4px 24px rgba(107,114,128,0.25)',
     },
   }[gpsState]
 
