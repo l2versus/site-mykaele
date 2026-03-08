@@ -313,7 +313,39 @@ export async function DELETE(req: NextRequest) {
     const appointment = await prisma.appointment.findUnique({ where: { id } })
     if (!appointment) return NextResponse.json({ error: 'Agendamento não encontrado' }, { status: 404 })
 
-    // Remover registros dependentes antes de deletar
+    // ─── Reverter pontos de fidelidade que foram concedidos por este appointment ───
+    const loyaltyTxs = await prisma.loyaltyTransaction.findMany({
+      where: { referenceId: id, points: { gt: 0 } },
+    })
+    if (loyaltyTxs.length > 0) {
+      const totalPoints = loyaltyTxs.reduce((sum, tx) => sum + tx.points, 0)
+      const loyalty = await prisma.loyaltyPoints.findUnique({ where: { userId: appointment.userId } })
+      if (loyalty) {
+        const calcTier = (t: number) => t >= 5000 ? 'DIAMOND' : t >= 1500 ? 'GOLD' : t >= 500 ? 'SILVER' : 'BRONZE'
+        const newEarned = Math.max(0, loyalty.totalEarned - totalPoints)
+        const newPoints = Math.max(0, loyalty.points - totalPoints)
+        await prisma.loyaltyPoints.update({
+          where: { userId: appointment.userId },
+          data: { points: newPoints, totalEarned: newEarned, tier: calcTier(newEarned) },
+        })
+      }
+    }
+
+    // ─── Reverter sessão usada de pacote (se aplicável) ───
+    if (appointment.status === 'COMPLETED') {
+      const userPkg = await prisma.package.findFirst({
+        where: { userId: appointment.userId, status: 'ACTIVE', packageOption: { serviceId: appointment.serviceId } },
+        include: { packageOption: true },
+      })
+      if (userPkg && userPkg.usedSessions > 0) {
+        await prisma.package.update({
+          where: { id: userPkg.id },
+          data: { usedSessions: { decrement: 1 } },
+        })
+      }
+    }
+
+    // ─── Remover registros dependentes ───
     await prisma.payment.deleteMany({ where: { appointmentId: id } })
     await prisma.loyaltyTransaction.deleteMany({ where: { referenceId: id } })
     await prisma.sessionFeedback.deleteMany({ where: { appointmentId: id } })

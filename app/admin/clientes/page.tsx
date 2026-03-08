@@ -740,6 +740,17 @@ export default function ClientesPage() {
             </div>
 
             <div className="space-y-4">
+              {/* Nota de impacto financeiro */}
+              {(creditType === 'package' || creditType === 'sessions') && (
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200/50 flex items-start gap-2">
+                  <span className="text-blue-500 text-sm mt-0.5">ℹ️</span>
+                  <div>
+                    <div className="text-blue-700 text-xs font-medium">Sem impacto financeiro</div>
+                    <div className="text-blue-600/70 text-[10px] mt-0.5">Pacotes e sessões inseridos aqui não geram registros de pagamento. Ideal para migrar clientes com tratamento em andamento.</div>
+                  </div>
+                </div>
+              )}
+
               {/* Tipo: Pacote */}
               {creditType === 'package' && (
                 <>
