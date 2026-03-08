@@ -108,6 +108,7 @@ export default function AgendaPage() {
   const [paymentMethod, setPaymentMethod] = useState<string>('PIX')
   const [view, setView] = useState<'day' | 'week' | 'month'>('day')
   const [startingDisplacement, setStartingDisplacement] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   const rangeFrom = useMemo(() => {
     if (view === 'day') return date
@@ -164,6 +165,17 @@ export default function AgendaPage() {
     } catch {}
     setUpdating(null)
     setPaymentModal(null)
+  }
+
+  // ─── Excluir Agendamento ───
+  const deleteAppointment = async (id: string) => {
+    if (!confirm('Tem certeza que deseja EXCLUIR este agendamento permanentemente? Esta ação não pode ser desfeita.')) return
+    setDeleting(id)
+    try {
+      const res = await fetchWithAuth('/api/admin/appointments', { method: 'DELETE', body: JSON.stringify({ id }) })
+      if (res.ok) { setSelectedApp(null); load() }
+    } catch {}
+    setDeleting(null)
   }
 
   // ─── Iniciar Deslocamento (fluxo iFood) ───
@@ -669,6 +681,19 @@ export default function AgendaPage() {
                         </div>
                       </>
                     )}
+                    {/* Botão Excluir — disponível para qualquer status */}
+                    <button
+                      onClick={() => deleteAppointment(selectedApp.id)}
+                      disabled={deleting === selectedApp.id}
+                      className="w-full py-2 rounded-xl text-[11px] font-semibold bg-red-50 text-red-400 border border-red-100 hover:bg-red-100 hover:text-red-600 transition-all disabled:opacity-30 flex items-center justify-center gap-1.5"
+                    >
+                      {deleting === selectedApp.id ? (
+                        <><span className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" /> Excluindo...</>
+                      ) : (
+                        <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Excluir Agendamento</>
+                      )}
+                    </button>
+
                     {selectedApp.user.phone && (
                       <button onClick={() => openWhatsApp(selectedApp.user.phone!, `Olá ${selectedApp.user.name.split(' ')[0]}! 🌟\n\nSobre seu agendamento de ${selectedApp.service.name} às ${fmtTime(selectedApp.scheduledAt)}.\n\nMykaele Procópio - Home Spa`)}
                         className="w-full py-2.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 transition-all flex items-center justify-center gap-2">

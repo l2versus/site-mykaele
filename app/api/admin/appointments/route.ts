@@ -300,3 +300,29 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Erro ao dar baixa no pagamento' }, { status: 500 })
   }
 }
+
+// ═══ DELETE: Excluir agendamento permanentemente ═══
+export async function DELETE(req: NextRequest) {
+  const admin = getAdmin(req)
+  if (!admin) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  try {
+    const { id } = await req.json()
+    if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
+
+    const appointment = await prisma.appointment.findUnique({ where: { id } })
+    if (!appointment) return NextResponse.json({ error: 'Agendamento não encontrado' }, { status: 404 })
+
+    // Remover registros dependentes antes de deletar
+    await prisma.payment.deleteMany({ where: { appointmentId: id } })
+    await prisma.loyaltyTransaction.deleteMany({ where: { referenceId: id } })
+    await prisma.sessionFeedback.deleteMany({ where: { appointmentId: id } })
+    await prisma.digitalReceipt.deleteMany({ where: { appointmentId: id } })
+    await prisma.appointment.delete({ where: { id } })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Admin appointments DELETE error:', error)
+    return NextResponse.json({ error: 'Erro ao excluir agendamento' }, { status: 500 })
+  }
+}
