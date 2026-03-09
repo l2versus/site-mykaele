@@ -47,29 +47,29 @@ export default function AboutMykaele() {
 
                 <div className="space-y-6 text-[15px] text-[#5a5550] font-light leading-[1.9] mb-14">
                   <p>
-                    Com sete anos de atuação dedicada à estética de resultados
-                    e formação integral em Fisioterapia, Mykaele Procópio
-                    representa o mais alto rigor técnico na remodelação corporal.
+                    Muito prazer, eu sou Mykaele Procópio. 
+                    Acredito que a beleza é o resultado de um corpo em equilíbrio e uma alma em paz. 
+                    Como Fisioterapeuta, minha base é a ciência e a precisão do movimento. 
+                    Mas, ao longo da minha trajetória cuidando de mulheres admiráveis, entendi que a técnica, por mais avançada que seja, é apenas o começo da jornada.
+
                   </p>
                   <p>
-                    Inconformada com as limitações dos protocolos convencionais
-                    do mercado, dedicou sua expertise clínica para desenvolver
-                    uma intervenção 100% proprietária e exclusiva: o{' '}
+                    Minha Filosofia: O Cuidado Além da Estética.
+                  Eu não vejo apenas tecidos e contornos; eu vejo histórias, 
+                  tensões e a necessidade profunda de uma pausa real. Criadora do {' '}
                     <span className="text-[#2d2d2d] font-normal">Método Mykaele Procópio</span>.
                   </p>
                   <p>
-                    A conduta clínica é pautada pela personalização extrema e
-                    pelo respeito à fisiologia de cada paciente. Para garantir
-                    um atendimento que transcende o convencional, oferece suas
-                    intervenções tanto no ambiente refinado de sua clínica
-                    quanto através do primoroso serviço de Home Spa.
+                    Minha mão é guiada pelo conhecimento clínico, mas meu coração é movido pela escuta atenta
+                     e pelo cuidado genuíno. O verdadeiro luxo do meu atendimento 
+                     não está na renovação que acontece de dentro para fora.
                   </p>
                 </div>
 
                 {/* Credentials */}
                 <div className="stagger-left space-y-4 pt-10 border-t border-[#e8dfd6]/80">
                   {[
-                    'Fisioterapeuta — CREFITO',
+                    'Fisioterapeuta',
                     'Criadora de Protocolo Autoral Exclusivo',
                     'Criadora do Método Mykaele Procópio',
                     '7 anos de atuação clínica',

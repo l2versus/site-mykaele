@@ -141,3 +141,79 @@ export async function POST(
     return NextResponse.json({ error: 'Erro interno ao inserir créditos' }, { status: 500 })
   }
 }
+
+// ═══ DELETE — Reset total de dados de teste de um cliente ═══
+// Remove: appointments, payments, loyalty, packages, feedbacks, receipts, measures
+// NÃO deleta o usuário em si — apenas zera seus dados
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const admin = getAdmin(request)
+  if (!admin) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const { id } = await params
+
+  try {
+    const client = await prisma.user.findUnique({ where: { id, role: 'PATIENT' } })
+    if (!client) return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 })
+
+    // Buscar IDs de appointments para limpar referências
+    const appointments = await prisma.appointment.findMany({
+      where: { userId: id },
+      select: { id: true },
+    })
+    const aptIds = appointments.map(a => a.id)
+
+    // Limpar tudo em ordem (evitar FK violations)
+    const cleaned: string[] = []
+
+    // Digital receipts referenciando appointments
+    if (aptIds.length > 0) {
+      const r1 = await prisma.digitalReceipt.deleteMany({ where: { appointmentId: { in: aptIds } } })
+      if (r1.count) cleaned.push(`${r1.count} recibos digitais`)
+
+      const r2 = await prisma.sessionFeedback.deleteMany({ where: { appointmentId: { in: aptIds } } })
+      if (r2.count) cleaned.push(`${r2.count} feedbacks`)
+    }
+
+    // Payments (vinculados a appointments E avulsos)
+    const r3 = await prisma.payment.deleteMany({ where: { userId: id } })
+    if (r3.count) cleaned.push(`${r3.count} pagamentos`)
+
+    // Loyalty
+    const r4 = await prisma.loyaltyTransaction.deleteMany({ where: { userId: id } })
+    if (r4.count) cleaned.push(`${r4.count} transações de fidelidade`)
+
+    await prisma.loyaltyPoints.deleteMany({ where: { userId: id } })
+    cleaned.push('pontos de fidelidade zerados')
+
+    // Packages
+    const r6 = await prisma.package.deleteMany({ where: { userId: id } })
+    if (r6.count) cleaned.push(`${r6.count} pacotes`)
+
+    // Body measurements
+    const r7 = await prisma.bodyMeasurement.deleteMany({ where: { userId: id } })
+    if (r7.count) cleaned.push(`${r7.count} medições`)
+
+    // Appointments
+    const r8 = await prisma.appointment.deleteMany({ where: { userId: id } })
+    if (r8.count) cleaned.push(`${r8.count} agendamentos`)
+
+    // Zerar saldo
+    await prisma.user.update({
+      where: { id },
+      data: { balance: 0, cashbackBalance: 0 },
+    })
+    cleaned.push('saldo zerado')
+
+    return NextResponse.json({
+      success: true,
+      message: `Reset completo de ${client.name}: ${cleaned.join(', ')}`,
+      cleaned,
+    })
+  } catch (error) {
+    console.error('DELETE reset error:', error)
+    return NextResponse.json({ error: 'Erro no reset' }, { status: 500 })
+  }
+}
