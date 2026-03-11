@@ -328,6 +328,8 @@ export default function AutomationsPage() {
   const [editingAutomation, setEditingAutomation] = useState<AutomationItem | null>(null)
   const [toggling, setToggling] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [triggering, setTriggering] = useState<string | null>(null)
+  const [triggerStatus, setTriggerStatus] = useState<Record<string, 'success' | 'error'>>({})
   const [showLog, setShowLog] = useState(false)
   const addToast = useToastStore(s => s.addToast)
 
@@ -428,6 +430,33 @@ export default function AutomationsPage() {
       addToast('Erro ao excluir', 'error')
     } finally {
       setDeleting(null)
+    }
+  }
+
+  const handleTrigger = async (automationId: string) => {
+    setTriggering(automationId)
+    setTriggerStatus(prev => { const n = { ...prev }; delete n[automationId]; return n })
+    try {
+      const res = await fetch(`/api/admin/crm/automations/${automationId}/trigger?tenantId=${TENANT_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Erro desconhecido' }))
+        throw new Error(data.error ?? `HTTP ${res.status}`)
+      }
+      setTriggerStatus(prev => ({ ...prev, [automationId]: 'success' }))
+      addToast('Automação disparada! Verifica os logs em Sistema > DLQ')
+    } catch (err) {
+      setTriggerStatus(prev => ({ ...prev, [automationId]: 'error' }))
+      addToast(err instanceof Error ? err.message : 'Erro ao disparar automação', 'error')
+    } finally {
+      setTriggering(null)
+      // Limpar status após 2s
+      setTimeout(() => {
+        setTriggerStatus(prev => { const n = { ...prev }; delete n[automationId]; return n })
+      }, 2000)
     }
   }
 
@@ -556,6 +585,32 @@ export default function AutomationsPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 shrink-0">
+                    {/* Testar Agora */}
+                    <button
+                      onClick={() => handleTrigger(automation.id)}
+                      disabled={triggering === automation.id || !!triggerStatus[automation.id]}
+                      className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all disabled:opacity-70 hover:brightness-110"
+                      style={{
+                        background: triggerStatus[automation.id] === 'success'
+                          ? '#2ECC8A18' : triggerStatus[automation.id] === 'error'
+                          ? '#FF6B4A18' : 'rgba(212,175,55,0.08)',
+                        color: triggerStatus[automation.id] === 'success'
+                          ? '#2ECC8A' : triggerStatus[automation.id] === 'error'
+                          ? '#FF6B4A' : '#D4AF37',
+                        border: `1px solid ${triggerStatus[automation.id] === 'success'
+                          ? '#2ECC8A30' : triggerStatus[automation.id] === 'error'
+                          ? '#FF6B4A30' : 'rgba(212,175,55,0.15)'}`,
+                      }}
+                      title="Disparar manualmente (modo teste)"
+                    >
+                      {triggering === automation.id
+                        ? '⏳ Disparando...'
+                        : triggerStatus[automation.id] === 'success'
+                        ? '✓ Disparado'
+                        : triggerStatus[automation.id] === 'error'
+                        ? '✗ Erro'
+                        : '▶ Testar'}
+                    </button>
                     <button
                       onClick={() => setEditingAutomation(automation)}
                       className="p-1.5 rounded-lg transition-colors hover:bg-white/5"
