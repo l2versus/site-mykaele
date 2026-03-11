@@ -492,3 +492,289 @@ model GalleryImage {
 
   @@index([order])
 }
+
+// ============================================================
+// MÓDULO CRM v8.0 — ZERO LACUNAS
+// Adicionar ao FINAL do schema.prisma.
+// NÃO alterar NADA acima desta linha.
+// ============================================================
+
+enum LeadStatus {
+  COLD
+  WARM
+  HOT
+  WON
+  LOST
+}
+
+enum StageType {
+  OPEN
+  WON
+  LOST
+}
+
+enum CrmMessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+  TEMPLATE
+  SYSTEM_LOG
+}
+
+enum AutomationTrigger {
+  NEW_MESSAGE_RECEIVED
+  LEAD_STAGE_CHANGED
+  LEAD_CREATED
+  CONTACT_IDLE
+  APPOINTMENT_BOOKED
+  APPOINTMENT_COMPLETED
+}
+
+model CrmTenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  pipelines     Pipeline[]
+  leads         Lead[]
+  channels      CrmChannel[]
+  conversations Conversation[]
+  automations   CrmAutomation[]
+  integrations  CrmIntegration[]
+  auditLogs     CrmAuditLog[]
+  knowledgeBase CrmKnowledgeBase[]
+}
+
+model CrmIntegration {
+  id          String   @id @default(cuid())
+  tenantId    String
+  provider    String
+  credentials Json
+  isActive    Boolean  @default(true)
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider])
+  @@index([tenantId, isActive])
+}
+
+model CrmAuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  action    String
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, userId])
+  @@index([tenantId, action])
+}
+
+model CrmKnowledgeBase {
+  id         String   @id @default(cuid())
+  tenantId   String
+  title      String
+  content    String   @db.Text
+  chunkIndex Int      @default(0)
+  sourceFile String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, sourceFile])
+}
+
+model Pipeline {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id])
+  stages Stage[]
+  leads  Lead[]
+
+  @@index([tenantId])
+}
+
+model Stage {
+  id         String    @id @default(cuid())
+  pipelineId String
+  tenantId   String
+  name       String
+  type       StageType @default(OPEN)
+  order      Int
+  cachedLeadCount  Int      @default(0)
+  cachedTotalValue Float    @default(0)
+  cacheUpdatedAt   DateTime?
+  color      String?
+  createdAt  DateTime  @default(now())
+
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  leads    Lead[]
+
+  @@index([pipelineId])
+  @@index([tenantId])
+}
+
+model Lead {
+  id         String     @id @default(cuid())
+  tenantId   String
+  pipelineId String
+  stageId    String
+  status     LeadStatus @default(WARM)
+
+  name   String
+  phone  String
+  email  String?
+  source String?
+  tags   String[]
+
+  position      Float  @default(0)
+  expectedValue Float?
+
+  aiScore      Float?
+  aiScoreLabel String?
+  churnRisk    Float?
+
+  bestContactDays  String?
+  bestContactHours String?
+  bestContactBasis Int?
+
+  lastInteractionAt DateTime?
+  lostReason        String?
+  deletedAt         DateTime?
+
+  patientId           String?
+  linkedAppointmentId String?
+
+  pipeline      Pipeline       @relation(fields: [pipelineId], references: [id])
+  stage         Stage          @relation(fields: [stageId], references: [id])
+  tenant        CrmTenant      @relation(fields: [tenantId], references: [id])
+  conversations Conversation[]
+  activities    LeadActivity[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  closedAt  DateTime?
+
+  @@index([tenantId, stageId, position])
+  @@index([tenantId, status])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, lastInteractionAt])
+  @@index([tenantId, phone])
+}
+
+model LeadActivity {
+  id        String   @id @default(cuid())
+  leadId    String
+  type      String
+  payload   Json
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+}
+
+model CrmChannel {
+  id          String   @id @default(cuid())
+  tenantId    String
+  type        String
+  name        String
+  instanceId  String?
+  credentials Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  tenant        CrmTenant      @relation(fields: [tenantId], references: [id])
+  conversations Conversation[]
+
+  @@index([tenantId])
+}
+
+model Conversation {
+  id               String   @id @default(cuid())
+  tenantId         String
+  leadId           String
+  channelId        String
+  remoteJid        String
+  unreadCount      Int      @default(0)
+  isClosed         Boolean  @default(false)
+  lastMessageAt    DateTime @default(now())
+  assignedToUserId String?
+
+  tenant   CrmTenant  @relation(fields: [tenantId], references: [id])
+  lead     Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  channel  CrmChannel @relation(fields: [channelId], references: [id])
+  messages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, remoteJid])
+  @@index([tenantId, isClosed, lastMessageAt(sort: Desc)])
+  @@index([leadId])
+}
+
+model Message {
+  id             String         @id @default(cuid())
+  conversationId String
+  tenantId       String
+  waMessageId    String         @unique
+
+  fromMe        Boolean
+  type          CrmMessageType @default(TEXT)
+  content       String         @db.Text
+  mediaMimeType String?
+  mediaUrl      String?
+
+  isClinicalMedia Boolean @default(false)
+
+  status String    @default("SENT")
+  readAt DateTime?
+
+  sentByUserId String?
+  sentiment    String?
+  aiSummary    String?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([tenantId, isClinicalMedia])
+  @@index([tenantId])
+}
+
+model CrmAutomation {
+  id       String            @id @default(cuid())
+  tenantId String
+  name     String
+  trigger  AutomationTrigger
+  flowJson Json
+  isActive Boolean           @default(false)
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, trigger, isActive])
+}

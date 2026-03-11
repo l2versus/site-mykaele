@@ -599,6 +599,28 @@ body {
   animation-delay: 2s;
 }
 
+/* ═══ CRM Module — Variáveis de tema escuro premium ═══ */
+:root {
+  --crm-bg: #0A0A0B;
+  --crm-surface: #111114;
+  --crm-surface-2: #1A1A1F;
+  --crm-border: #2A2A32;
+  --crm-gold: #D4AF37;
+  --crm-gold-subtle: rgba(212,175,55,0.12);
+  --crm-text: #F0EDE8;
+  --crm-text-muted: #8B8A94;
+  --crm-hot: #FF6B4A;
+  --crm-warm: #F0A500;
+  --crm-cold: #4A7BFF;
+  --crm-won: #2ECC8A;
+}
+
+/* Scrollbar CRM — mais escura para o tema dark */
+.crm-scroll::-webkit-scrollbar { width: 4px; }
+.crm-scroll::-webkit-scrollbar-track { background: transparent; }
+.crm-scroll::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.15); border-radius: 2px; }
+.crm-scroll::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.3); }
+
 /* ═══ Leaflet — Override Tailwind preflight que quebra tiles do mapa ═══ */
 .leaflet-container img {
   max-width: none !important;
