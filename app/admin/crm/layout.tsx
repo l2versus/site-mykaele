@@ -3,29 +3,102 @@
 import { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import { CrmToasts } from '@/components/crm/CrmToast'
 
 const CRM_NAV = [
-  { href: '/admin/crm/pipeline', label: 'Pipeline' },
-  { href: '/admin/crm/inbox', label: 'Inbox' },
-  { href: '/admin/crm/contacts', label: 'Contatos' },
-  { href: '/admin/crm/intelligence', label: 'Inteligência' },
-  { href: '/admin/crm/automations', label: 'Automações' },
-  { href: '/admin/crm/integrations', label: 'Integrações' },
-  { href: '/admin/crm/system/dlq', label: 'Sistema' },
+  {
+    href: '/admin/crm/pipeline',
+    label: 'Pipeline',
+    icon: (
+      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </svg>
+    ),
+  },
+  {
+    href: '/admin/crm/inbox',
+    label: 'Inbox',
+    icon: (
+      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    ),
+  },
+  {
+    href: '/admin/crm/contacts',
+    label: 'Contatos',
+    icon: (
+      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
+  {
+    href: '/admin/crm/intelligence',
+    label: 'Inteligência',
+    icon: (
+      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+        <path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z" />
+        <line x1="9" y1="21" x2="15" y2="21" />
+      </svg>
+    ),
+  },
+  {
+    href: '/admin/crm/automations',
+    label: 'Automações',
+    icon: (
+      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+        <polyline points="16 3 21 3 21 8" />
+        <line x1="4" y1="20" x2="21" y2="3" />
+        <polyline points="21 16 21 21 16 21" />
+        <line x1="15" y1="15" x2="21" y2="21" />
+        <line x1="4" y1="4" x2="9" y2="9" />
+      </svg>
+    ),
+  },
+  {
+    href: '/admin/crm/integrations',
+    label: 'Integrações',
+    icon: (
+      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    ),
+  },
+  {
+    href: '/admin/crm/system/dlq',
+    label: 'Sistema',
+    icon: (
+      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <line x1="8" y1="21" x2="16" y2="21" />
+        <line x1="12" y1="17" x2="12" y2="21" />
+      </svg>
+    ),
+  },
 ]
 
 export default function CrmLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
 
   return (
-    <div className="-m-4 lg:-m-6 min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)]" style={{ background: '#0A0A0B' }}>
-      {/* Sub-navegação horizontal */}
-      <nav className="sticky top-14 lg:top-16 z-20 border-b px-4 lg:px-6 flex items-center gap-1 overflow-x-auto scrollbar-none"
+    <div className="-m-4 lg:-m-6 min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)]" style={{ background: 'var(--crm-bg)' }}>
+      {/* Sub-navegação horizontal premium */}
+      <nav
+        className="sticky top-14 lg:top-16 z-20 border-b px-3 lg:px-5 flex items-center gap-0.5 overflow-x-auto scrollbar-none"
         style={{
-          borderColor: 'var(--crm-border, #2A2A32)',
-          background: 'rgba(10,10,11,0.95)',
-          backdropFilter: 'blur(20px)',
+          borderColor: 'var(--crm-border)',
+          background: 'rgba(10,10,11,0.92)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
         }}
       >
         {CRM_NAV.map((item) => {
@@ -34,16 +107,24 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
-              className="relative px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors"
+              className="relative flex items-center gap-2 px-3.5 py-3 text-[13px] font-medium whitespace-nowrap transition-all duration-200 rounded-lg my-1"
               style={{
-                color: active ? '#D4AF37' : '#8B8A94',
+                color: active ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
+                background: active ? 'var(--crm-gold-subtle)' : 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                if (!active) e.currentTarget.style.color = 'var(--crm-text)'
+              }}
+              onMouseLeave={(e) => {
+                if (!active) e.currentTarget.style.color = 'var(--crm-text-muted)'
               }}
             >
+              <span className="opacity-80" style={active ? { opacity: 1 } : undefined}>{item.icon}</span>
               {item.label}
               {active && (
                 <span
-                  className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full"
-                  style={{ background: '#D4AF37' }}
+                  className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full"
+                  style={{ background: 'var(--crm-gold)' }}
                 />
               )}
             </Link>
@@ -53,12 +134,22 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
 
       {/* Conteúdo da página CRM */}
       <div className="p-4 lg:p-6">
-        {children}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       <CrmToasts />
 
-      {/* CSS Variables para CRM — :root para disponibilidade global */}
+      {/* CSS Variables para CRM */}
       <style jsx global>{`
         :root {
           --crm-bg: #0A0A0B;
@@ -66,7 +157,7 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
           --crm-surface-2: #1A1A1F;
           --crm-border: #2A2A32;
           --crm-gold: #D4AF37;
-          --crm-gold-subtle: rgba(212,175,55,0.12);
+          --crm-gold-subtle: rgba(212,175,55,0.08);
           --crm-text: #F0EDE8;
           --crm-text-muted: #8B8A94;
           --crm-hot: #FF6B4A;
