@@ -18,7 +18,7 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)]" style={{ background: '#0A0A0B' }}>
+    <div className="-m-4 lg:-m-6 min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)]" style={{ background: '#0A0A0B' }}>
       {/* Sub-navegação horizontal */}
       <nav className="sticky top-14 lg:top-16 z-20 border-b px-4 lg:px-6 flex items-center gap-1 overflow-x-auto scrollbar-none"
         style={{

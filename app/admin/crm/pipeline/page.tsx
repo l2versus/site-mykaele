@@ -325,7 +325,7 @@ function StageColumn({ stage, leads, index, isDraggingAny }: {
 
   return (
     <motion.div
-      className="flex-shrink-0 w-[300px] rounded-xl flex flex-col max-h-[calc(100vh-12rem)]"
+      className="flex-shrink-0 w-[300px] rounded-xl flex flex-col max-h-[calc(100vh-14rem)]"
       style={{ background: '#111114', border: '1px solid #2A2A32' }}
       variants={columnVariants}
       initial="hidden"
@@ -363,11 +363,8 @@ function StageColumn({ stage, leads, index, isDraggingAny }: {
             }}
           >
             {leads.length === 0 && !snapshot.isDraggingOver && (
-              <div className="flex flex-col items-center justify-center py-8 opacity-40">
-                <svg width="32" height="32" fill="none" stroke="#8B8A94" strokeWidth="1.2" viewBox="0 0 24 24">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
-                </svg>
-                <span className="text-xs mt-2" style={{ color: '#8B8A94' }}>Arraste leads aqui</span>
+              <div className="flex items-center justify-center py-8">
+                <span className="text-[11px]" style={{ color: '#8B8A94', opacity: 0.4 }}>Sem leads neste estágio</span>
               </div>
             )}
             {leads.map((lead, i) => (
@@ -613,7 +610,7 @@ export default function PipelinePage() {
         onDragStart={() => setIsDragging(true)}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 lg:-mx-6 lg:px-6">
+        <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 lg:-mx-6 lg:px-6 scroll-smooth">
           {optimisticStages
             .sort((a, b) => a.order - b.order)
             .map((stage, index) => (
