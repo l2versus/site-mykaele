@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useToastStore } from '@/stores/toast-store'
 
 const TENANT_ID = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID ?? 'clinica-mykaele-procopio'
+const PAGE_SIZE = 25
 
 interface ContactLead {
   id: string
@@ -13,6 +15,7 @@ interface ContactLead {
   status: 'COLD' | 'WARM' | 'HOT' | 'WON' | 'LOST'
   stageId: string
   stageName: string
+  stageColor: string | null
   expectedValue: number | null
   aiScore: number | null
   churnRisk: number | null
@@ -22,25 +25,24 @@ interface ContactLead {
   createdAt: string
 }
 
+interface StageInfo {
+  id: string
+  name: string
+  color: string | null
+}
+
 const STATUS_COLORS: Record<string, string> = {
-  HOT: '#FF6B4A',
-  WARM: '#F0A500',
-  COLD: '#4A7BFF',
-  WON: '#2ECC8A',
-  LOST: '#8B8A94',
+  HOT: '#FF6B4A', WARM: '#F0A500', COLD: '#4A7BFF', WON: '#2ECC8A', LOST: '#8B8A94',
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  HOT: 'Quente',
-  WARM: 'Morno',
-  COLD: 'Frio',
-  WON: 'Ganho',
-  LOST: 'Perdido',
+  HOT: 'Quente', WARM: 'Morno', COLD: 'Frio', WON: 'Ganho', LOST: 'Perdido',
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value)
-}
+type SortField = 'name' | 'lastInteraction' | 'aiScore' | 'value' | 'status' | 'stage' | 'churn' | 'created'
+type SortDir = 'asc' | 'desc'
+
+const currencyFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—'
@@ -50,7 +52,7 @@ function formatDate(dateStr: string | null): string {
 function timeAgo(dateStr: string | null): string {
   if (!dateStr) return 'Sem interação'
   const diff = Date.now() - new Date(dateStr).getTime()
-  const days = Math.floor(diff / (24 * 60 * 60 * 1000))
+  const days = Math.floor(diff / 86400000)
   if (days === 0) return 'Hoje'
   if (days === 1) return 'Ontem'
   if (days < 30) return `Há ${days}d`
@@ -58,19 +60,31 @@ function timeAgo(dateStr: string | null): string {
   return `Há ${Math.floor(days / 365)}a`
 }
 
+function maskPhone(phone: string): string {
+  const d = phone.replace(/\D/g, '')
+  if (d.length >= 11) return `(${d.slice(2, 4)}) ${d.slice(4, 5)}****-${d.slice(-4)}`
+  return phone
+}
+
 // ━━━ Skeleton ━━━
 function ContactsSkeleton() {
   return (
     <div className="space-y-3">
+      <div className="flex gap-3 mb-6">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-20 flex-1 rounded-xl animate-pulse" style={{ background: '#111114' }} />
+        ))}
+      </div>
+      <div className="h-10 rounded-lg animate-pulse mb-4" style={{ background: '#111114' }} />
       {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="h-16 rounded-xl animate-pulse" style={{ background: '#111114' }} />
+        <div key={i} className="h-14 rounded-xl animate-pulse" style={{ background: '#111114' }} />
       ))}
     </div>
   )
 }
 
 // ━━━ Empty State ━━━
-function EmptyState() {
+function EmptyState({ hasFilters }: { hasFilters: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center py-20">
       <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
@@ -83,38 +97,437 @@ function EmptyState() {
           <line x1="22" y1="11" x2="16" y2="11" />
         </svg>
       </div>
-      <p className="text-sm font-medium" style={{ color: '#F0EDE8' }}>Nenhum contato ainda</p>
-      <p className="text-xs mt-1" style={{ color: '#8B8A94' }}>Crie leads no Pipeline para vê-los aqui</p>
+      <p className="text-sm font-medium" style={{ color: '#F0EDE8' }}>
+        {hasFilters ? 'Nenhum resultado encontrado' : 'Nenhum contato ainda'}
+      </p>
+      <p className="text-xs mt-1" style={{ color: '#8B8A94' }}>
+        {hasFilters ? 'Ajuste os filtros para encontrar contatos' : 'Crie leads no Pipeline para vê-los aqui'}
+      </p>
     </div>
   )
 }
 
+// ━━━ Sort Header ━━━
+function SortHeader({
+  label, field, currentSort, currentDir, onSort,
+}: {
+  label: string; field: SortField; currentSort: SortField; currentDir: SortDir
+  onSort: (field: SortField) => void
+}) {
+  const active = currentSort === field
+  return (
+    <button
+      onClick={() => onSort(field)}
+      className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium hover:text-white/80 transition-colors"
+      style={{ color: active ? '#D4AF37' : '#8B8A94' }}
+    >
+      {label}
+      {active && (
+        <svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24"
+          style={{ transform: currentDir === 'desc' ? 'rotate(180deg)' : 'none' }}
+        >
+          <path d="M7 14l5-5 5 5z" />
+        </svg>
+      )}
+    </button>
+  )
+}
+
+// ━━━ Lead Detail Drawer ━━━
+function LeadDrawer({ lead, stages, onClose, onUpdate }: {
+  lead: ContactLead; stages: StageInfo[]; onClose: () => void
+  onUpdate: (id: string, updates: Partial<ContactLead>) => void
+}) {
+  const [editTags, setEditTags] = useState(lead.tags.join(', '))
+  const [notes, setNotes] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const addToast = useToastStore(s => s.addToast)
+  const statusColor = STATUS_COLORS[lead.status] ?? '#8B8A94'
+
+  const handleSaveTags = async () => {
+    setIsSaving(true)
+    try {
+      const token = localStorage.getItem('admin_token')
+      const newTags = editTags.split(',').map(t => t.trim()).filter(Boolean)
+      const res = await fetch(`/api/admin/crm/leads/${lead.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tags: newTags, tenantId: TENANT_ID }),
+      })
+      if (!res.ok) throw new Error()
+      onUpdate(lead.id, { tags: newTags })
+      addToast('Tags atualizadas')
+    } catch {
+      addToast('Erro ao salvar tags', 'error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-40"
+        style={{ background: 'rgba(0,0,0,0.6)' }}
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        className="fixed right-0 top-0 h-full w-full sm:w-96 z-50 overflow-y-auto"
+        style={{ background: '#111114', borderLeft: '1px solid #2A2A32' }}
+      >
+        {/* Header */}
+        <div className="sticky top-0 z-10 px-5 py-4 flex items-center justify-between"
+          style={{ background: '#111114', borderBottom: '1px solid #2A2A32' }}
+        >
+          <h3 className="text-sm font-semibold" style={{ color: '#F0EDE8' }}>Detalhes do Contato</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5" style={{ color: '#8B8A94' }}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Avatar & Name */}
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold"
+              style={{ background: `${statusColor}18`, color: statusColor }}
+            >
+              {lead.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-base font-semibold" style={{ color: '#F0EDE8' }}>{lead.name}</p>
+              <p className="text-xs" style={{ color: '#8B8A94' }}>{maskPhone(lead.phone)}</p>
+              {lead.email && <p className="text-xs" style={{ color: '#8B8A94' }}>{lead.email}</p>}
+            </div>
+          </div>
+
+          {/* Status & Stage */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl p-3" style={{ background: '#1A1A1F' }}>
+              <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: '#8B8A94' }}>Status</span>
+              <span className="text-sm font-bold" style={{ color: statusColor }}>
+                {STATUS_LABELS[lead.status]}
+              </span>
+            </div>
+            <div className="rounded-xl p-3" style={{ background: '#1A1A1F' }}>
+              <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: '#8B8A94' }}>Etapa</span>
+              <span className="text-sm font-medium" style={{ color: lead.stageColor ?? '#F0EDE8' }}>
+                {lead.stageName}
+              </span>
+            </div>
+          </div>
+
+          {/* Metrics */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-xl p-3" style={{ background: '#1A1A1F' }}>
+              <span className="text-[10px] block mb-1" style={{ color: '#8B8A94' }}>Score IA</span>
+              <span className="text-lg font-bold" style={{
+                color: lead.aiScore != null ? (lead.aiScore >= 70 ? '#2ECC8A' : lead.aiScore >= 40 ? '#F0A500' : '#FF6B4A') : '#5A5A64'
+              }}>
+                {lead.aiScore ?? '—'}
+              </span>
+            </div>
+            <div className="rounded-xl p-3" style={{ background: '#1A1A1F' }}>
+              <span className="text-[10px] block mb-1" style={{ color: '#8B8A94' }}>Valor</span>
+              <span className="text-sm font-bold" style={{ color: '#D4AF37' }}>
+                {lead.expectedValue ? currencyFmt.format(lead.expectedValue) : '—'}
+              </span>
+            </div>
+            <div className="rounded-xl p-3" style={{ background: '#1A1A1F' }}>
+              <span className="text-[10px] block mb-1" style={{ color: '#8B8A94' }}>Churn</span>
+              <span className="text-lg font-bold" style={{
+                color: lead.churnRisk != null ? (lead.churnRisk >= 70 ? '#FF6B4A' : lead.churnRisk >= 40 ? '#F0A500' : '#2ECC8A') : '#5A5A64'
+              }}>
+                {lead.churnRisk != null ? `${lead.churnRisk}%` : '—'}
+              </span>
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className="space-y-2 rounded-xl p-3" style={{ background: '#1A1A1F' }}>
+            <div className="flex justify-between">
+              <span className="text-xs" style={{ color: '#8B8A94' }}>Fonte</span>
+              <span className="text-xs" style={{ color: '#F0EDE8' }}>{lead.source ?? '—'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs" style={{ color: '#8B8A94' }}>Criado em</span>
+              <span className="text-xs" style={{ color: '#F0EDE8' }}>{formatDate(lead.createdAt)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs" style={{ color: '#8B8A94' }}>Última interação</span>
+              <span className="text-xs" style={{ color: '#F0EDE8' }}>{timeAgo(lead.lastInteractionAt)}</span>
+            </div>
+          </div>
+
+          {/* Tags (editable) */}
+          <div>
+            <label className="text-[10px] uppercase tracking-wider font-medium block mb-2" style={{ color: '#8B8A94' }}>
+              Tags
+            </label>
+            <div className="flex gap-2">
+              <input
+                value={editTags}
+                onChange={e => setEditTags(e.target.value)}
+                placeholder="botox, vip, retorno..."
+                className="flex-1 px-3 py-2 rounded-lg text-xs focus:outline-none"
+                style={{ background: '#0A0A0B', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+              />
+              <button
+                onClick={handleSaveTags}
+                disabled={isSaving}
+                className="px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                style={{ background: '#D4AF37', color: '#0A0A0B' }}
+              >
+                {isSaving ? '...' : 'Salvar'}
+              </button>
+            </div>
+            {lead.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {lead.tags.map(tag => (
+                  <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37' }}
+                  >{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="text-[10px] uppercase tracking-wider font-medium block mb-2" style={{ color: '#8B8A94' }}>
+              Anotações
+            </label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Adicionar anotação sobre este contato..."
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg text-xs resize-none focus:outline-none"
+              style={{ background: '#0A0A0B', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+            />
+          </div>
+
+          {/* Move Stage */}
+          <div>
+            <label className="text-[10px] uppercase tracking-wider font-medium block mb-2" style={{ color: '#8B8A94' }}>
+              Mover para etapa
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {stages.filter(s => s.id !== lead.stageId).map(stage => (
+                <MoveStageButton key={stage.id} lead={lead} stage={stage} onUpdate={onUpdate} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </>
+  )
+}
+
+function MoveStageButton({ lead, stage, onUpdate }: {
+  lead: ContactLead; stage: StageInfo; onUpdate: (id: string, updates: Partial<ContactLead>) => void
+}) {
+  const [isMoving, setIsMoving] = useState(false)
+  const addToast = useToastStore(s => s.addToast)
+
+  const handleMove = async () => {
+    setIsMoving(true)
+    try {
+      const token = localStorage.getItem('admin_token')
+      const res = await fetch('/api/admin/crm/leads/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ leadId: lead.id, toStageId: stage.id, position: 999, tenantId: TENANT_ID }),
+      })
+      if (!res.ok) throw new Error()
+      onUpdate(lead.id, { stageId: stage.id, stageName: stage.name, stageColor: stage.color })
+      addToast(`Movido para ${stage.name}`)
+    } catch {
+      addToast('Erro ao mover lead', 'error')
+    } finally {
+      setIsMoving(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleMove}
+      disabled={isMoving}
+      className="text-[10px] px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+      style={{ background: '#1A1A1F', color: stage.color ?? '#F0EDE8', border: '1px solid #2A2A32' }}
+    >
+      {isMoving ? '...' : stage.name}
+    </button>
+  )
+}
+
+// ━━━ Bulk Actions Bar ━━━
+function BulkActionsBar({ count, onClear, onExport, onTag, stages, onMoveAll }: {
+  count: number; onClear: () => void; onExport: () => void
+  onTag: (tag: string) => void; stages: StageInfo[]; onMoveAll: (stageId: string) => void
+}) {
+  const [showTagInput, setShowTagInput] = useState(false)
+  const [tagValue, setTagValue] = useState('')
+  const [showMoveMenu, setShowMoveMenu] = useState(false)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl"
+      style={{ background: '#1A1A1F', border: '1px solid #2A2A32', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }}
+    >
+      <span className="text-sm font-medium" style={{ color: '#D4AF37' }}>{count} selecionado{count > 1 ? 's' : ''}</span>
+      <div className="w-px h-5" style={{ background: '#2A2A32' }} />
+
+      {/* Move */}
+      <div className="relative">
+        <button
+          onClick={() => setShowMoveMenu(p => !p)}
+          className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+          style={{ background: '#2A2A32', color: '#F0EDE8' }}
+        >
+          Mover
+        </button>
+        {showMoveMenu && (
+          <div className="absolute bottom-full mb-2 left-0 rounded-xl overflow-hidden shadow-xl"
+            style={{ background: '#111114', border: '1px solid #2A2A32', minWidth: '140px' }}
+          >
+            {stages.map(s => (
+              <button key={s.id}
+                onClick={() => { onMoveAll(s.id); setShowMoveMenu(false) }}
+                className="w-full text-left px-3 py-2 text-xs hover:bg-white/5 transition-colors"
+                style={{ color: s.color ?? '#F0EDE8' }}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tag */}
+      <div className="relative">
+        {showTagInput ? (
+          <div className="flex items-center gap-1">
+            <input
+              value={tagValue}
+              onChange={e => setTagValue(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && tagValue.trim()) { onTag(tagValue.trim()); setTagValue(''); setShowTagInput(false) } }}
+              placeholder="Tag..."
+              autoFocus
+              className="w-24 px-2 py-1 rounded text-xs focus:outline-none"
+              style={{ background: '#0A0A0B', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+            />
+            <button onClick={() => setShowTagInput(false)} className="text-xs" style={{ color: '#8B8A94' }}>
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowTagInput(true)}
+            className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+            style={{ background: '#2A2A32', color: '#F0EDE8' }}
+          >
+            Tag
+          </button>
+        )}
+      </div>
+
+      {/* Export */}
+      <button
+        onClick={onExport}
+        className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+        style={{ background: '#2A2A32', color: '#F0EDE8' }}
+      >
+        Exportar
+      </button>
+
+      {/* Clear */}
+      <button onClick={onClear} className="p-1.5 rounded-lg hover:bg-white/5" style={{ color: '#8B8A94' }}>
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </motion.div>
+  )
+}
+
+// ━━━ CSV Export ━━━
+function exportCSV(contacts: ContactLead[]) {
+  const headers = ['Nome', 'Telefone', 'Email', 'Status', 'Etapa', 'Valor', 'Score IA', 'Tags', 'Fonte', 'Criado em']
+  const rows = contacts.map(c => [
+    c.name,
+    c.phone,
+    c.email ?? '',
+    STATUS_LABELS[c.status] ?? c.status,
+    c.stageName,
+    c.expectedValue?.toString() ?? '',
+    c.aiScore?.toString() ?? '',
+    c.tags.join('; '),
+    c.source ?? '',
+    formatDate(c.createdAt),
+  ])
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `contatos-crm-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+// ━━━ Main Page ━━━
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<ContactLead[]>([])
+  const [stages, setStages] = useState<StageInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
-  const [sortBy, setSortBy] = useState<'name' | 'lastInteraction' | 'aiScore' | 'value'>('lastInteraction')
+  const [tagFilter, setTagFilter] = useState('')
+  const [sortField, setSortField] = useState<SortField>('lastInteraction')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [page, setPage] = useState(1)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [drawerLead, setDrawerLead] = useState<ContactLead | null>(null)
+  const addToast = useToastStore(s => s.addToast)
 
   const fetchContacts = useCallback(async () => {
     try {
       setIsLoading(true)
       const token = localStorage.getItem('admin_token')
 
-      // Reutilizar API de pipeline para pegar stages
       const pipelineRes = await fetch(`/api/admin/crm/pipeline?tenantId=${TENANT_ID}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!pipelineRes.ok) throw new Error('Falha ao carregar pipeline')
       const pipelineData = await pipelineRes.json()
 
-      const stageMap: Record<string, string> = {}
+      const stageMap: Record<string, { name: string; color: string | null }> = {}
+      const stageList: StageInfo[] = []
       for (const stage of pipelineData.stages) {
-        stageMap[stage.id] = stage.name
+        stageMap[stage.id] = { name: stage.name, color: stage.color }
+        stageList.push({ id: stage.id, name: stage.name, color: stage.color })
       }
+      setStages(stageList)
 
-      // Buscar leads
       const leadsRes = await fetch(`/api/admin/crm/leads?tenantId=${TENANT_ID}&pipelineId=${pipelineData.pipeline.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -123,7 +536,8 @@ export default function ContactsPage() {
 
       const mapped: ContactLead[] = leadsData.leads.map((lead: ContactLead & { stageId: string }) => ({
         ...lead,
-        stageName: stageMap[lead.stageId] ?? 'Desconhecido',
+        stageName: stageMap[lead.stageId]?.name ?? 'Desconhecido',
+        stageColor: stageMap[lead.stageId]?.color ?? null,
       }))
 
       setContacts(mapped)
@@ -137,37 +551,164 @@ export default function ContactsPage() {
 
   useEffect(() => { fetchContacts() }, [fetchContacts])
 
-  // Filtrar e ordenar
-  const filteredContacts = contacts
-    .filter(c => {
-      if (statusFilter !== 'ALL' && c.status !== statusFilter) return false
-      if (!searchQuery.trim()) return true
+  // All unique tags for filter dropdown
+  const allTags = useMemo(() => {
+    const set = new Set<string>()
+    contacts.forEach(c => c.tags.forEach(t => set.add(t)))
+    return Array.from(set).sort()
+  }, [contacts])
+
+  // Sort handler
+  const handleSort = useCallback((field: SortField) => {
+    setSortField(prev => {
+      if (prev === field) {
+        setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+        return field
+      }
+      setSortDir('desc')
+      return field
+    })
+    setPage(1)
+  }, [])
+
+  // Filter & Sort
+  const hasFilters = searchQuery.trim() !== '' || statusFilter !== 'ALL' || tagFilter !== ''
+
+  const filteredContacts = useMemo(() => {
+    let result = contacts
+
+    if (statusFilter !== 'ALL') result = result.filter(c => c.status === statusFilter)
+    if (tagFilter) result = result.filter(c => c.tags.some(t => t.toLowerCase() === tagFilter.toLowerCase()))
+    if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
-      return c.name.toLowerCase().includes(q) ||
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(q) ||
         c.phone.includes(q) ||
         (c.email && c.email.toLowerCase().includes(q)) ||
         c.tags.some(t => t.toLowerCase().includes(q))
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'name': return a.name.localeCompare(b.name)
-        case 'aiScore': return (b.aiScore ?? 0) - (a.aiScore ?? 0)
-        case 'value': return (b.expectedValue ?? 0) - (a.expectedValue ?? 0)
+      )
+    }
+
+    const dir = sortDir === 'asc' ? 1 : -1
+    result = [...result].sort((a, b) => {
+      switch (sortField) {
+        case 'name': return dir * a.name.localeCompare(b.name)
+        case 'aiScore': return dir * ((a.aiScore ?? -1) - (b.aiScore ?? -1))
+        case 'value': return dir * ((a.expectedValue ?? 0) - (b.expectedValue ?? 0))
+        case 'status': return dir * a.status.localeCompare(b.status)
+        case 'stage': return dir * a.stageName.localeCompare(b.stageName)
+        case 'churn': return dir * ((a.churnRisk ?? -1) - (b.churnRisk ?? -1))
+        case 'created': return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
         case 'lastInteraction':
         default:
-          return new Date(b.lastInteractionAt ?? b.createdAt).getTime() -
-                 new Date(a.lastInteractionAt ?? a.createdAt).getTime()
+          return dir * (
+            new Date(a.lastInteractionAt ?? a.createdAt).getTime() -
+            new Date(b.lastInteractionAt ?? b.createdAt).getTime()
+          )
       }
     })
 
-  const stats = {
+    return result
+  }, [contacts, statusFilter, tagFilter, searchQuery, sortField, sortDir])
+
+  // Pagination
+  const totalPages = Math.ceil(filteredContacts.length / PAGE_SIZE)
+  const paginatedContacts = useMemo(() =>
+    filteredContacts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  , [filteredContacts, page])
+
+  // Selection
+  const allOnPageSelected = paginatedContacts.length > 0 && paginatedContacts.every(c => selectedIds.has(c.id))
+  const toggleAll = () => {
+    if (allOnPageSelected) {
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        paginatedContacts.forEach(c => next.delete(c.id))
+        return next
+      })
+    } else {
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        paginatedContacts.forEach(c => next.add(c.id))
+        return next
+      })
+    }
+  }
+  const toggleOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  // Bulk actions
+  const handleBulkTag = async (tag: string) => {
+    const token = localStorage.getItem('admin_token')
+    let success = 0
+    for (const id of selectedIds) {
+      const contact = contacts.find(c => c.id === id)
+      if (!contact) continue
+      const newTags = contact.tags.includes(tag) ? contact.tags : [...contact.tags, tag]
+      try {
+        const res = await fetch(`/api/admin/crm/leads/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ tags: newTags, tenantId: TENANT_ID }),
+        })
+        if (res.ok) {
+          setContacts(prev => prev.map(c => c.id === id ? { ...c, tags: newTags } : c))
+          success++
+        }
+      } catch { /* skip */ }
+    }
+    addToast(`Tag "${tag}" adicionada a ${success} contato${success > 1 ? 's' : ''}`)
+    setSelectedIds(new Set())
+  }
+
+  const handleBulkMove = async (stageId: string) => {
+    const token = localStorage.getItem('admin_token')
+    const stage = stages.find(s => s.id === stageId)
+    if (!stage) return
+    let success = 0
+    for (const id of selectedIds) {
+      try {
+        const res = await fetch('/api/admin/crm/leads/move', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ leadId: id, toStageId: stageId, position: 999, tenantId: TENANT_ID }),
+        })
+        if (res.ok) {
+          setContacts(prev => prev.map(c => c.id === id ? { ...c, stageId, stageName: stage.name, stageColor: stage.color } : c))
+          success++
+        }
+      } catch { /* skip */ }
+    }
+    addToast(`${success} contato${success > 1 ? 's' : ''} movido${success > 1 ? 's' : ''} para ${stage.name}`)
+    setSelectedIds(new Set())
+  }
+
+  const handleBulkExport = () => {
+    const selected = contacts.filter(c => selectedIds.has(c.id))
+    exportCSV(selected)
+    addToast(`${selected.length} contato${selected.length > 1 ? 's' : ''} exportado${selected.length > 1 ? 's' : ''}`)
+  }
+
+  const handleUpdateContact = (id: string, updates: Partial<ContactLead>) => {
+    setContacts(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c))
+    if (drawerLead?.id === id) setDrawerLead(prev => prev ? { ...prev, ...updates } : null)
+  }
+
+  // Stats
+  const stats = useMemo(() => ({
     total: contacts.length,
     hot: contacts.filter(c => c.status === 'HOT').length,
     warm: contacts.filter(c => c.status === 'WARM').length,
     cold: contacts.filter(c => c.status === 'COLD').length,
     won: contacts.filter(c => c.status === 'WON').length,
     totalValue: contacts.reduce((acc, c) => acc + (c.expectedValue ?? 0), 0),
-  }
+  }), [contacts])
 
   if (isLoading) return <ContactsSkeleton />
 
@@ -189,9 +730,19 @@ export default function ContactsPage() {
         <div>
           <h1 className="text-xl font-bold" style={{ color: '#F0EDE8' }}>Contatos</h1>
           <p className="text-xs mt-0.5" style={{ color: '#8B8A94' }}>
-            {stats.total} contatos · {formatCurrency(stats.totalValue)} em pipeline
+            {stats.total} contatos · {currencyFmt.format(stats.totalValue)} em pipeline
           </p>
         </div>
+        <button
+          onClick={() => exportCSV(filteredContacts)}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+          style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+        >
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Exportar CSV
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -224,15 +775,25 @@ export default function ContactsPage() {
           </svg>
           <input
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={e => { setSearchQuery(e.target.value); setPage(1) }}
             placeholder="Buscar por nome, telefone, email ou tag..."
             className="w-full pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none"
             style={{ background: '#111114', color: '#F0EDE8', border: '1px solid #2A2A32' }}
           />
+          {searchQuery && (
+            <button onClick={() => { setSearchQuery(''); setPage(1) }}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+              style={{ color: '#8B8A94' }}
+            >
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
         </div>
         <select
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
+          onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
           className="px-3 py-2 rounded-lg text-sm focus:outline-none"
           style={{ background: '#111114', color: '#F0EDE8', border: '1px solid #2A2A32' }}
         >
@@ -243,61 +804,98 @@ export default function ContactsPage() {
           <option value="WON">Ganhos</option>
           <option value="LOST">Perdidos</option>
         </select>
-        <select
-          value={sortBy}
-          onChange={e => setSortBy(e.target.value as typeof sortBy)}
-          className="px-3 py-2 rounded-lg text-sm focus:outline-none"
-          style={{ background: '#111114', color: '#F0EDE8', border: '1px solid #2A2A32' }}
-        >
-          <option value="lastInteraction">Última interação</option>
-          <option value="name">Nome A-Z</option>
-          <option value="aiScore">Score IA</option>
-          <option value="value">Valor</option>
-        </select>
+        {allTags.length > 0 && (
+          <select
+            value={tagFilter}
+            onChange={e => { setTagFilter(e.target.value); setPage(1) }}
+            className="px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{ background: '#111114', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+          >
+            <option value="">Todas as tags</option>
+            {allTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
+          </select>
+        )}
+        {hasFilters && (
+          <button
+            onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); setTagFilter(''); setPage(1) }}
+            className="text-xs px-3 py-2 rounded-lg"
+            style={{ color: '#D4AF37', background: 'rgba(212,175,55,0.08)' }}
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
 
-      {/* Results count */}
-      <p className="text-xs mb-3" style={{ color: '#8B8A94' }}>
-        {filteredContacts.length} {filteredContacts.length === 1 ? 'resultado' : 'resultados'}
-      </p>
+      {/* Results info */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs" style={{ color: '#8B8A94' }}>
+          {filteredContacts.length} {filteredContacts.length === 1 ? 'resultado' : 'resultados'}
+          {totalPages > 1 && ` · Página ${page} de ${totalPages}`}
+        </p>
+      </div>
 
       {/* Table */}
       {filteredContacts.length === 0 ? (
-        <EmptyState />
+        <EmptyState hasFilters={hasFilters} />
       ) : (
         <div className="rounded-xl border overflow-hidden" style={{ borderColor: '#2A2A32' }}>
           {/* Desktop header */}
-          <div className="hidden lg:grid grid-cols-[1fr_140px_100px_100px_100px_80px_100px] gap-2 px-4 py-2.5 text-[10px] uppercase tracking-wider font-medium"
-            style={{ background: '#111114', color: '#8B8A94', borderBottom: '1px solid #2A2A32' }}
+          <div className="hidden lg:grid grid-cols-[40px_1fr_120px_90px_90px_80px_70px_90px] gap-2 px-4 py-2.5 items-center"
+            style={{ background: '#111114', borderBottom: '1px solid #2A2A32' }}
           >
-            <span>Contato</span>
-            <span>Estágio</span>
-            <span>Status</span>
-            <span>Valor</span>
-            <span>Score IA</span>
-            <span>Risco</span>
-            <span>Última vez</span>
+            <label className="flex items-center justify-center">
+              <input
+                type="checkbox"
+                checked={allOnPageSelected}
+                onChange={toggleAll}
+                className="w-3.5 h-3.5 rounded accent-amber-600"
+              />
+            </label>
+            <SortHeader label="Contato" field="name" currentSort={sortField} currentDir={sortDir} onSort={handleSort} />
+            <SortHeader label="Etapa" field="stage" currentSort={sortField} currentDir={sortDir} onSort={handleSort} />
+            <SortHeader label="Status" field="status" currentSort={sortField} currentDir={sortDir} onSort={handleSort} />
+            <SortHeader label="Valor" field="value" currentSort={sortField} currentDir={sortDir} onSort={handleSort} />
+            <SortHeader label="Score" field="aiScore" currentSort={sortField} currentDir={sortDir} onSort={handleSort} />
+            <SortHeader label="Churn" field="churn" currentSort={sortField} currentDir={sortDir} onSort={handleSort} />
+            <SortHeader label="Interação" field="lastInteraction" currentSort={sortField} currentDir={sortDir} onSort={handleSort} />
           </div>
 
           <AnimatePresence>
-            {filteredContacts.map((contact, i) => {
+            {paginatedContacts.map((contact, i) => {
               const statusColor = STATUS_COLORS[contact.status] ?? '#8B8A94'
               const churnColor = contact.churnRisk != null
                 ? contact.churnRisk >= 70 ? '#FF6B4A' : contact.churnRisk >= 40 ? '#F0A500' : '#2ECC8A'
-                : '#8B8A94'
+                : '#5A5A64'
+              const isSelected = selectedIds.has(contact.id)
 
               return (
                 <motion.div
                   key={contact.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.02 }}
-                  className="grid grid-cols-1 lg:grid-cols-[1fr_140px_100px_100px_100px_80px_100px] gap-2 px-4 py-3 items-center transition-colors hover:bg-white/[0.02]"
-                  style={{ borderBottom: '1px solid #1A1A1F' }}
+                  transition={{ delay: i * 0.015 }}
+                  onClick={() => setDrawerLead(contact)}
+                  className="grid grid-cols-1 lg:grid-cols-[40px_1fr_120px_90px_90px_80px_70px_90px] gap-2 px-4 py-3 items-center transition-colors cursor-pointer"
+                  style={{
+                    borderBottom: '1px solid #1A1A1F',
+                    background: isSelected ? 'rgba(212,175,55,0.04)' : 'transparent',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isSelected ? 'rgba(212,175,55,0.06)' : 'rgba(255,255,255,0.02)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isSelected ? 'rgba(212,175,55,0.04)' : 'transparent' }}
                 >
-                  {/* Contato */}
+                  {/* Checkbox */}
+                  <label className="hidden lg:flex items-center justify-center" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleOne(contact.id)}
+                      className="w-3.5 h-3.5 rounded accent-amber-600"
+                    />
+                  </label>
+
+                  {/* Contact info */}
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold"
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
                       style={{ background: statusColor + '18', color: statusColor }}
                     >
                       {contact.name.charAt(0).toUpperCase()}
@@ -305,65 +903,65 @@ export default function ContactsPage() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate" style={{ color: '#F0EDE8' }}>{contact.name}</p>
                       <p className="text-[11px] truncate" style={{ color: '#8B8A94' }}>
-                        {contact.phone}
+                        {maskPhone(contact.phone)}
                         {contact.email && ` · ${contact.email}`}
                       </p>
                       {contact.tags.length > 0 && (
-                        <div className="flex gap-1 mt-0.5 lg:hidden">
-                          {contact.tags.slice(0, 2).map(tag => (
-                            <span key={tag} className="text-[9px] px-1 py-0.5 rounded"
-                              style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37' }}
+                        <div className="flex gap-1 mt-0.5">
+                          {contact.tags.slice(0, 3).map(tag => (
+                            <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded"
+                              style={{ background: 'rgba(212,175,55,0.08)', color: '#D4AF37' }}
                             >{tag}</span>
                           ))}
+                          {contact.tags.length > 3 && (
+                            <span className="text-[9px] py-0.5" style={{ color: '#5A5A64' }}>+{contact.tags.length - 3}</span>
+                          )}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Estágio */}
+                  {/* Stage */}
                   <div className="hidden lg:block">
-                    <span className="text-xs" style={{ color: '#F0EDE8' }}>{contact.stageName}</span>
+                    <span className="text-xs" style={{ color: contact.stageColor ?? '#F0EDE8' }}>{contact.stageName}</span>
                   </div>
 
                   {/* Status */}
-                  <div>
+                  <div className="hidden lg:block">
                     <span className="text-[10px] font-bold px-2 py-1 rounded inline-block"
                       style={{ background: statusColor + '18', color: statusColor }}
                     >
-                      {STATUS_LABELS[contact.status] ?? contact.status}
+                      {STATUS_LABELS[contact.status]}
                     </span>
                   </div>
 
-                  {/* Valor */}
+                  {/* Value */}
                   <div className="hidden lg:block">
-                    <span className="text-xs font-medium" style={{ color: contact.expectedValue ? '#D4AF37' : '#8B8A94' }}>
-                      {contact.expectedValue ? formatCurrency(contact.expectedValue) : '—'}
+                    <span className="text-xs font-medium" style={{ color: contact.expectedValue ? '#D4AF37' : '#5A5A64' }}>
+                      {contact.expectedValue ? currencyFmt.format(contact.expectedValue) : '—'}
                     </span>
                   </div>
 
-                  {/* Score IA */}
+                  {/* AI Score */}
                   <div className="hidden lg:block">
                     {contact.aiScore != null ? (
                       <div className="flex items-center gap-1.5">
                         <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: '#1A1A1F' }}>
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${contact.aiScore}%`,
-                              background: contact.aiScore >= 70 ? '#2ECC8A' : contact.aiScore >= 40 ? '#F0A500' : '#4A7BFF',
-                            }}
-                          />
+                          <div className="h-full rounded-full" style={{
+                            width: `${contact.aiScore}%`,
+                            background: contact.aiScore >= 70 ? '#2ECC8A' : contact.aiScore >= 40 ? '#F0A500' : '#4A7BFF',
+                          }} />
                         </div>
                         <span className="text-[10px] font-bold w-7 text-right" style={{ color: '#F0EDE8' }}>
                           {contact.aiScore}
                         </span>
                       </div>
                     ) : (
-                      <span className="text-[10px]" style={{ color: '#8B8A94' }}>—</span>
+                      <span className="text-[10px]" style={{ color: '#5A5A64' }}>—</span>
                     )}
                   </div>
 
-                  {/* Risco Churn */}
+                  {/* Churn */}
                   <div className="hidden lg:block">
                     {contact.churnRisk != null ? (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
@@ -372,11 +970,11 @@ export default function ContactsPage() {
                         {contact.churnRisk}%
                       </span>
                     ) : (
-                      <span className="text-[10px]" style={{ color: '#8B8A94' }}>—</span>
+                      <span className="text-[10px]" style={{ color: '#5A5A64' }}>—</span>
                     )}
                   </div>
 
-                  {/* Última interação */}
+                  {/* Last interaction */}
                   <div className="hidden lg:block">
                     <span className="text-[11px]" style={{ color: '#8B8A94' }}>
                       {timeAgo(contact.lastInteractionAt)}
@@ -388,6 +986,80 @@ export default function ContactsPage() {
           </AnimatePresence>
         </div>
       )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-30"
+            style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+          >
+            Anterior
+          </button>
+          {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+            let pageNum: number
+            if (totalPages <= 7) {
+              pageNum = i + 1
+            } else if (page <= 4) {
+              pageNum = i + 1
+            } else if (page >= totalPages - 3) {
+              pageNum = totalPages - 6 + i
+            } else {
+              pageNum = page - 3 + i
+            }
+            return (
+              <button
+                key={pageNum}
+                onClick={() => setPage(pageNum)}
+                className="w-8 h-8 rounded-lg text-xs font-medium transition-colors"
+                style={{
+                  background: pageNum === page ? '#D4AF37' : '#1A1A1F',
+                  color: pageNum === page ? '#0A0A0B' : '#F0EDE8',
+                  border: pageNum === page ? 'none' : '1px solid #2A2A32',
+                }}
+              >
+                {pageNum}
+              </button>
+            )
+          })}
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-30"
+            style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+          >
+            Próxima
+          </button>
+        </div>
+      )}
+
+      {/* Bulk Actions Bar */}
+      <AnimatePresence>
+        {selectedIds.size > 0 && (
+          <BulkActionsBar
+            count={selectedIds.size}
+            onClear={() => setSelectedIds(new Set())}
+            onExport={handleBulkExport}
+            onTag={handleBulkTag}
+            stages={stages}
+            onMoveAll={handleBulkMove}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Lead Drawer */}
+      <AnimatePresence>
+        {drawerLead && (
+          <LeadDrawer
+            lead={drawerLead}
+            stages={stages}
+            onClose={() => setDrawerLead(null)}
+            onUpdate={handleUpdateContact}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
