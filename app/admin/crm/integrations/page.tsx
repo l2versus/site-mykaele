@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { playFeedback } from '@/lib/crm-feedback'
+import { useToastStore } from '@/stores/toast-store'
 
 const TENANT_ID = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID ?? 'clinica-mykaele-procopio'
 
@@ -20,6 +21,7 @@ export default function IntegrationsPage() {
   const [instanceId, setInstanceId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const addToast = useToastStore(s => s.addToast)
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null
   const webhookUrl = typeof window !== 'undefined'
@@ -38,6 +40,7 @@ export default function IntegrationsPage() {
       setInstanceId(data.instanceId)
       if (data.status === 'connected') {
         playFeedback('won')
+        addToast('WhatsApp conectado com sucesso!')
         stopPolling()
       }
     } catch {
@@ -72,6 +75,7 @@ export default function IntegrationsPage() {
       pollingRef.current = setInterval(fetchStatus, 3000)
     } catch {
       setWaStatus('error')
+      addToast('Erro ao conectar WhatsApp', 'error')
     }
   }
 

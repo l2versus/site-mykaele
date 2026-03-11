@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { useToastStore } from '@/stores/toast-store'
 
 interface DlqJob {
   id: string
@@ -47,6 +48,7 @@ export default function DlqPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
   const [requeueing, setRequeueing] = useState<string | null>(null)
+  const addToast = useToastStore(s => s.addToast)
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null
 
@@ -83,8 +85,9 @@ export default function DlqPage() {
         body: JSON.stringify({ jobId, originalQueue, payload }),
       })
       setJobs(prev => prev.filter(j => j.id !== jobId))
+      addToast('Job reenfileirado')
     } catch {
-      // silently fail
+      addToast('Erro ao reenfileirar', 'error')
     } finally {
       setRequeueing(null)
     }
