@@ -8,9 +8,11 @@ function resolveTenantSlug(req: NextRequest): string {
   return req.nextUrl.searchParams.get('tenantId') || process.env.DEFAULT_TENANT_ID || 'clinica-mykaele-procopio'
 }
 
-async function resolveTenantId(slug: string): Promise<string> {
-  const tenant = await prisma.crmTenant.findUnique({ where: { slug } })
-  return tenant?.id ?? slug
+async function resolveTenantId(value: string): Promise<string> {
+  const tenant = await prisma.crmTenant.findUnique({ where: { slug: value } })
+  if (tenant) return tenant.id
+  const tenantById = await prisma.crmTenant.findUnique({ where: { id: value } })
+  return tenantById?.id ?? value
 }
 
 // GET — Lista fontes de conhecimento (agrupadas por sourceFile, chunkIndex=0 como "principal")

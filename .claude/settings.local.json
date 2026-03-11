@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \":*)",
+      "Bash(find 'c:\\\\Users\\\\admin\\\\Desktop\\\\site myka\\\\site-mykaele\\\\app\\\\api\\\\admin' -name *.ts -type f)"
+    ]
+  }
+}

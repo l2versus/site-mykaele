@@ -307,12 +307,13 @@ function GeneralTab() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           tenantId: TENANT_ID,
+          provider: PROVIDER_KEY,
           workspaceName,
           timezone,
           language,
           businessHours,
         }),
-      }).catch(() => { /* silently fail */ })
+      }).catch(err => { console.error('[GeneralTab] save error:', err) })
     }
     window.addEventListener('crm-settings-save', handleSaveEvent)
     return () => window.removeEventListener('crm-settings-save', handleSaveEvent)
@@ -1470,6 +1471,9 @@ function WhatsAppTab() {
 // ━━━ Tab: Notificações ━━━
 
 function NotificationsTab() {
+  const TENANT_ID = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID ?? 'clinica-mykaele-procopio'
+  const PROVIDER_KEY = 'notifications'
+
   const [masterEnabled, setMasterEnabled] = useState(true)
   const [events, setEvents] = useState<NotificationEvent[]>([
     { id: 'new_lead', label: 'Novo lead criado', email: true, whatsapp: false, browser: true, frequency: 'immediate' },
@@ -1481,6 +1485,52 @@ function NotificationsTab() {
     { id: 'system_error', label: 'Erro do sistema', email: true, whatsapp: false, browser: true, frequency: 'immediate' },
     { id: 'task_reminder', label: 'Lembrete de tarefa', email: false, whatsapp: true, browser: true, frequency: 'immediate' },
   ])
+  const hasFetched = useRef(false)
+
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || localStorage.getItem('token')) : null
+
+  // Carregar configurações de notificação do banco
+  useEffect(() => {
+    if (hasFetched.current || !token) return
+    hasFetched.current = true
+
+    fetch(`/api/admin/crm/settings?tenantId=${TENANT_ID}&provider=${PROVIDER_KEY}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.settings) {
+          const s = data.settings
+          if (s.masterEnabled !== undefined) setMasterEnabled(s.masterEnabled as boolean)
+          if (s.events && Array.isArray(s.events)) {
+            setEvents(prev => prev.map(defaultEvt => {
+              const saved = (s.events as NotificationEvent[]).find(e => e.id === defaultEvt.id)
+              return saved ? { ...defaultEvt, ...saved } : defaultEvt
+            }))
+          }
+        }
+      })
+      .catch(() => { /* primeira vez sem settings */ })
+  }, [TENANT_ID, token])
+
+  // Salvar quando o botão global "Salvar" é clicado
+  useEffect(() => {
+    const handleSaveEvent = () => {
+      if (!token) return
+      fetch('/api/admin/crm/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          tenantId: TENANT_ID,
+          provider: PROVIDER_KEY,
+          masterEnabled,
+          events,
+        }),
+      }).catch(err => { console.error('[NotificationsTab] save error:', err) })
+    }
+    window.addEventListener('crm-settings-save', handleSaveEvent)
+    return () => window.removeEventListener('crm-settings-save', handleSaveEvent)
+  }, [token, TENANT_ID, masterEnabled, events])
 
   const toggleChannel = (eventId: string, channel: 'email' | 'whatsapp' | 'browser') => {
     setEvents(prev => prev.map(e => e.id === eventId ? { ...e, [channel]: !e[channel] } : e))
@@ -1754,6 +1804,7 @@ function TeamTab() {
 
 function AiTab() {
   const TENANT_ID = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID ?? 'clinica-mykaele-procopio'
+  const PROVIDER_KEY = 'ai-settings'
   const addToast = useToastStore(s => s.addToast)
 
   const [features, setFeatures] = useState<AiFeature[]>([
@@ -1841,14 +1892,14 @@ function AiTab() {
     const token = typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || localStorage.getItem('token')) : null
     if (!token) { setLoading(false); return }
 
-    fetch(`/api/admin/crm/settings?tenantId=${TENANT_ID}`, {
+    fetch(`/api/admin/crm/settings?tenantId=${TENANT_ID}&provider=${PROVIDER_KEY}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => res.json())
       .then(data => {
         if (data.settings) {
           const s = data.settings
-          if (s.provider) setProvider(s.provider as string)
+          if (s.aiProvider) setProvider(s.aiProvider as string)
           if (s.model) setModel(s.model as string)
           if (s.apiKey_set) setApiKeySet(true)
           if (s.apiKey) setApiKey(s.apiKey as string)
@@ -1884,18 +1935,19 @@ function AiTab() {
   }
 
   // Salvar no banco
-  const handleSave = async () => {
+  const handleSave = async (silent = false) => {
     const token = typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || localStorage.getItem('token')) : null
     if (!token) return
 
-    setSaving(true)
+    if (!silent) setSaving(true)
     try {
       const res = await fetch('/api/admin/crm/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           tenantId: TENANT_ID,
-          provider,
+          provider: PROVIDER_KEY,
+          aiProvider: provider,
           model,
           apiKey: apiKey,
           baseUrl: baseUrl || BASE_URLS[provider] || '',
@@ -1907,13 +1959,39 @@ function AiTab() {
       })
       if (!res.ok) throw new Error('Falha ao salvar')
       setApiKeySet(apiKey.length > 0 && !apiKey.includes('*'))
-      addToast('Configurações de IA salvas')
+      if (!silent) addToast('Configurações de IA salvas')
     } catch {
       addToast('Erro ao salvar configurações', 'error')
     } finally {
-      setSaving(false)
+      if (!silent) setSaving(false)
     }
   }
+
+  // Salvar quando o botão global "Salvar" é clicado
+  useEffect(() => {
+    const handleGlobalSave = () => {
+      const tk = typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || localStorage.getItem('token')) : null
+      if (!tk) return
+      fetch('/api/admin/crm/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
+        body: JSON.stringify({
+          tenantId: TENANT_ID,
+          provider: PROVIDER_KEY,
+          aiProvider: provider,
+          model,
+          apiKey,
+          baseUrl: baseUrl || BASE_URLS[provider] || '',
+          confidence,
+          maxTokens: Number(maxTokens),
+          temperature,
+          features: Object.fromEntries(features.map(f => [f.id, f.enabled])),
+        }),
+      }).catch(err => { console.error('[AiTab] save error:', err) })
+    }
+    window.addEventListener('crm-settings-save', handleGlobalSave)
+    return () => window.removeEventListener('crm-settings-save', handleGlobalSave)
+  }, [TENANT_ID, PROVIDER_KEY, provider, model, apiKey, baseUrl, confidence, maxTokens, temperature, features])
 
   // Testar conexão
   const handleTestConnection = async () => {
@@ -2050,7 +2128,7 @@ function AiTab() {
 
             {/* Save button inline */}
             <button
-              onClick={handleSave}
+              onClick={() => handleSave()}
               disabled={saving}
               className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #D4AF37, #B8962E)', color: 'var(--crm-bg)', boxShadow: '0 4px 16px rgba(212,175,55,0.2)' }}
@@ -2467,8 +2545,8 @@ export default function SettingsPage() {
     setSaving(true)
     // Dispara evento customizado para que cada tab salve seus dados
     window.dispatchEvent(new CustomEvent('crm-settings-save'))
-    // Pequeno delay para os handlers executarem
-    await new Promise(r => setTimeout(r, 600))
+    // Aguarda os handlers de cada tab completarem as requisições
+    await new Promise(r => setTimeout(r, 1200))
     setSaving(false)
     addToast('Configurações salvas')
   }, [addToast])

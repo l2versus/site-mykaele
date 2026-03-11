@@ -42,11 +42,15 @@ async function getAdminPayload() {
 }
 
 async function resolveTenantId(): Promise<string | null> {
-  const slug = process.env.DEFAULT_TENANT_ID
-  if (!slug) return null
+  const value = process.env.DEFAULT_TENANT_ID
+  if (!value) return null
 
-  const tenant = await prisma.crmTenant.findUnique({ where: { slug } })
-  return tenant?.id ?? null
+  // Tentar por slug primeiro, depois por ID
+  const tenant = await prisma.crmTenant.findUnique({ where: { slug: value } })
+  if (tenant) return tenant.id
+
+  const tenantById = await prisma.crmTenant.findUnique({ where: { id: value } })
+  return tenantById?.id ?? null
 }
 
 async function getChannelForTenant(tenantId: string) {

@@ -546,7 +546,11 @@ model CrmTenant {
   integrations    CrmIntegration[]
   auditLogs       CrmAuditLog[]
   knowledgeBase   CrmKnowledgeBase[]
-  automationLogs  CrmAutomationLog[]
+  automationLogs          CrmAutomationLog[]
+  notifications           CrmNotification[]
+  notificationSettings    CrmNotificationSetting[]
+  aiConfig                CrmAiConfig?
+  tasks                   CrmTask[]
 }
 
 model CrmIntegration {
@@ -670,6 +674,7 @@ model Lead {
   tenant        CrmTenant      @relation(fields: [tenantId], references: [id])
   conversations Conversation[]
   activities    LeadActivity[]
+  tasks         CrmTask[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -796,4 +801,87 @@ model CrmAutomationLog {
 
   @@index([tenantId, executedAt(sort: Desc)])
   @@index([automationId])
+}
+
+// ============================================================
+// MÓDULO CRM v8.1 — TABELAS COMPLEMENTARES
+// Notificações persistentes, configurações de IA, tarefas/lembretes
+// ============================================================
+
+model CrmNotification {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String
+  type       String   // LEAD_ASSIGNED, MESSAGE_RECEIVED, TASK_DUE, AUTOMATION_FAILED, LEAD_WON, CHURN_ALERT
+  title      String
+  message    String
+  entityId   String?
+  entityType String?  // LEAD, CONVERSATION, TASK, AUTOMATION
+  isRead     Boolean  @default(false)
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, isRead])
+  @@index([tenantId, userId, createdAt(sort: Desc)])
+}
+
+model CrmNotificationSetting {
+  id        String  @id @default(cuid())
+  tenantId  String
+  userId    String
+  event     String  // LEAD_ASSIGNED, MESSAGE_RECEIVED, TASK_DUE, AUTOMATION_FAILED, LEAD_WON, CHURN_ALERT, GOLDEN_WINDOW
+  channel   String  // IN_APP, EMAIL, WHATSAPP
+  isEnabled Boolean @default(true)
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, event, channel])
+  @@index([tenantId, userId])
+}
+
+model CrmAiConfig {
+  id           String  @id @default(cuid())
+  tenantId     String  @unique
+  provider     String  @default("openai")
+  model        String  @default("gpt-4o-mini")
+  temperature  Float   @default(0.7)
+  maxTokens    Int     @default(1024)
+  systemPrompt String? @db.Text
+  isActive     Boolean @default(false)
+
+  conciergeGreeting   String? // Saudação automática do Concierge
+  conciergePersona    String? // Tom/personalidade (ex: "profissional e acolhedora")
+  autoScoreEnabled    Boolean @default(true)
+  autoSentimentEnabled Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model CrmTask {
+  id               String    @id @default(cuid())
+  tenantId         String
+  leadId           String?
+  assignedToUserId String
+  title            String
+  description      String?
+  dueAt            DateTime?
+  completedAt      DateTime?
+  priority         Int       @default(0)  // 0=normal, 1=alta, 2=urgente
+  status           String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead   Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, assignedToUserId, status])
+  @@index([tenantId, dueAt])
+  @@index([tenantId, leadId])
 }
