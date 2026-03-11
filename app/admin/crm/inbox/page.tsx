@@ -130,24 +130,24 @@ const currencyFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency
 
 function InboxSkeleton() {
   return (
-    <div className="flex h-[calc(100vh-10rem)] rounded-xl overflow-hidden" style={{ border: '1px solid #2A2A32' }}>
-      <div className="w-80 border-r shrink-0" style={{ borderColor: '#2A2A32', background: '#111114' }}>
-        <div className="p-3 border-b" style={{ borderColor: '#2A2A32' }}>
-          <div className="h-8 rounded-lg animate-pulse" style={{ background: '#1A1A1F' }} />
+    <div className="flex h-[calc(100vh-10rem)] rounded-2xl overflow-hidden" style={{ border: '1px solid var(--crm-border)', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
+      <div className="w-80 border-r shrink-0" style={{ borderColor: 'var(--crm-border)', background: 'var(--crm-surface)' }}>
+        <div className="p-3.5 border-b" style={{ borderColor: 'var(--crm-border)' }}>
+          <div className="h-9 rounded-lg animate-pulse" style={{ background: 'var(--crm-surface-2)' }} />
         </div>
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="p-3 border-b animate-pulse" style={{ borderColor: '#1A1A1F' }}>
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-full shrink-0" style={{ background: '#1A1A1F' }} />
+          <div key={i} className="p-3.5 border-b animate-pulse" style={{ borderColor: 'var(--crm-surface-2)' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full shrink-0" style={{ background: 'var(--crm-surface-2)' }} />
               <div className="flex-1 min-w-0">
-                <div className="h-3.5 w-28 rounded mb-2" style={{ background: '#1A1A1F' }} />
-                <div className="h-3 w-40 rounded" style={{ background: '#1A1A1F' }} />
+                <div className="h-3.5 w-28 rounded mb-2" style={{ background: 'var(--crm-surface-2)' }} />
+                <div className="h-3 w-40 rounded" style={{ background: 'var(--crm-surface-2)' }} />
               </div>
             </div>
           </div>
         ))}
       </div>
-      <div className="flex-1 flex items-center justify-center" style={{ background: '#0A0A0B' }}>
+      <div className="flex-1 flex items-center justify-center" style={{ background: 'var(--crm-bg)' }}>
         <EmptyChat />
       </div>
     </div>
@@ -159,11 +159,13 @@ function InboxSkeleton() {
 function EmptyChat() {
   return (
     <div className="text-center opacity-40">
-      <svg width="56" height="56" fill="none" stroke="#8B8A94" strokeWidth="1" viewBox="0 0 24 24" className="mx-auto">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
-      <p className="text-sm mt-3" style={{ color: '#8B8A94' }}>Selecione uma conversa</p>
-      <p className="text-xs mt-1" style={{ color: '#5A5A64' }}>As mensagens aparecerão aqui</p>
+      <div className="w-20 h-20 rounded-2xl mx-auto flex items-center justify-center mb-4" style={{ background: 'rgba(212,175,55,0.06)' }}>
+        <svg width="36" height="36" fill="none" stroke="var(--crm-text-muted)" strokeWidth="1" viewBox="0 0 24 24">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      </div>
+      <p className="text-sm font-medium" style={{ color: 'var(--crm-text-muted)' }}>Selecione uma conversa</p>
+      <p className="text-xs mt-1.5" style={{ color: '#5A5A64' }}>As mensagens aparecerão aqui</p>
     </div>
   )
 }
@@ -171,12 +173,14 @@ function EmptyChat() {
 function EmptyConversations() {
   return (
     <div className="flex flex-col items-center justify-center py-20 px-4">
-      <svg width="40" height="40" fill="none" stroke="#5A5A64" strokeWidth="1" viewBox="0 0 24 24" className="mb-3">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
-      <p className="text-sm font-medium" style={{ color: '#8B8A94' }}>Nenhuma conversa</p>
-      <p className="text-xs mt-1 text-center" style={{ color: '#5A5A64' }}>
-        Conecte o WhatsApp em<br />Integrações para começar
+      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(212,175,55,0.06)' }}>
+        <svg width="28" height="28" fill="none" stroke="#5A5A64" strokeWidth="1.2" viewBox="0 0 24 24">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      </div>
+      <p className="text-sm font-semibold" style={{ color: 'var(--crm-text-muted)' }}>Nenhuma conversa</p>
+      <p className="text-xs mt-1 text-center max-w-[200px]" style={{ color: '#5A5A64' }}>
+        Conecte o WhatsApp em Integrações para começar
       </p>
     </div>
   )
@@ -201,13 +205,21 @@ function MessageBubble({ message }: { message: MessageItem }) {
 
   return (
     <div className={`flex ${message.fromMe ? 'justify-end' : 'justify-start'} mb-1.5`}>
-      <div
-        className="max-w-[75%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed"
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 4 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.15 }}
+        className="max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed"
         style={{
-          background: message.fromMe ? '#D4AF37' : '#1A1A1F',
-          color: message.fromMe ? '#0A0A0B' : '#F0EDE8',
+          background: message.fromMe
+            ? 'linear-gradient(135deg, #D4AF37, #B8962E)'
+            : 'var(--crm-surface-2)',
+          color: message.fromMe ? '#0A0A0B' : 'var(--crm-text)',
           borderBottomRightRadius: message.fromMe ? '4px' : '16px',
           borderBottomLeftRadius: message.fromMe ? '16px' : '4px',
+          boxShadow: message.fromMe
+            ? '0 2px 12px rgba(212,175,55,0.2)'
+            : '0 1px 4px rgba(0,0,0,0.2)',
         }}
       >
         {message.type === 'IMAGE' && message.mediaUrl && (
@@ -216,7 +228,9 @@ function MessageBubble({ message }: { message: MessageItem }) {
         {message.type === 'AUDIO' && (
           <div className="flex items-center gap-2 py-1">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-            <div className="flex-1 h-1 rounded-full" style={{ background: message.fromMe ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.15)' }} />
+            <div className="flex-1 h-1.5 rounded-full" style={{ background: message.fromMe ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.1)' }}>
+              <div className="h-full w-1/3 rounded-full" style={{ background: message.fromMe ? 'rgba(0,0,0,0.3)' : 'rgba(212,175,55,0.5)' }} />
+            </div>
             <span className="text-[10px] opacity-60">Áudio</span>
           </div>
         )}
@@ -237,7 +251,7 @@ function MessageBubble({ message }: { message: MessageItem }) {
           {time}
           {statusIcon}
         </span>
-      </div>
+      </motion.div>
     </div>
   )
 }
@@ -246,12 +260,12 @@ function MessageBubble({ message }: { message: MessageItem }) {
 
 function DaySeparator({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 my-4">
-      <div className="flex-1 h-px" style={{ background: '#2A2A32' }} />
-      <span className="text-[10px] font-medium px-2.5 py-1 rounded-full" style={{ background: '#1A1A1F', color: '#8B8A94' }}>
+    <div className="flex items-center gap-3 my-5">
+      <div className="flex-1 h-px" style={{ background: 'var(--crm-border)' }} />
+      <span className="text-[10px] font-semibold uppercase tracking-wider px-3 py-1 rounded-full" style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text-muted)' }}>
         {label}
       </span>
-      <div className="flex-1 h-px" style={{ background: '#2A2A32' }} />
+      <div className="flex-1 h-px" style={{ background: 'var(--crm-border)' }} />
     </div>
   )
 }
@@ -263,78 +277,78 @@ function LeadPanel({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
 
   return (
     <div className="w-72 shrink-0 border-l flex flex-col overflow-y-auto"
-      style={{ borderColor: '#2A2A32', background: '#111114' }}
+      style={{ borderColor: 'var(--crm-border)', background: 'var(--crm-surface)' }}
     >
       {/* Header */}
-      <div className="p-4 border-b" style={{ borderColor: '#2A2A32' }}>
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-medium" style={{ color: '#8B8A94' }}>Perfil do Lead</span>
-          <button onClick={onClose} className="p-1 rounded hover:bg-white/5" style={{ color: '#8B8A94' }}>
+      <div className="p-4 border-b relative overflow-hidden" style={{ borderColor: 'var(--crm-border)' }}>
+        <div className="absolute inset-0 opacity-[0.03]" style={{ background: `radial-gradient(circle at 50% 0%, ${statusColor}, transparent 70%)` }} />
+        <div className="flex items-center justify-between mb-3 relative z-10">
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--crm-text-muted)' }}>Perfil do Lead</span>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/5 transition-colors" style={{ color: 'var(--crm-text-muted)' }}>
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold"
-            style={{ background: `${statusColor}18`, color: statusColor }}
-          >
-            {lead.name.charAt(0).toUpperCase()}
+        <div className="flex items-center gap-3 relative z-10">
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold"
+              style={{ background: `${statusColor}18`, color: statusColor }}
+            >
+              {lead.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2" style={{ borderColor: 'var(--crm-surface)', background: statusColor }} />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold truncate" style={{ color: '#F0EDE8' }}>{lead.name}</p>
-            <p className="text-xs" style={{ color: '#8B8A94' }}>{maskPhone(lead.phone)}</p>
+            <p className="text-sm font-semibold truncate" style={{ color: 'var(--crm-text)' }}>{lead.name}</p>
+            <p className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>{maskPhone(lead.phone)}</p>
           </div>
         </div>
       </div>
 
       {/* Status & Stage */}
-      <div className="p-4 border-b" style={{ borderColor: '#2A2A32' }}>
+      <div className="p-4 border-b" style={{ borderColor: 'var(--crm-border)' }}>
         <div className="flex items-center justify-between mb-2.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#8B8A94' }}>Status</span>
-          <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: `${statusColor}18`, color: statusColor }}>
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--crm-text-muted)' }}>Status</span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${statusColor}18`, color: statusColor }}>
             {getStatusLabel(lead.status)}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#8B8A94' }}>Etapa</span>
-          <span className="text-xs font-medium" style={{ color: lead.stage.color ?? '#F0EDE8' }}>
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--crm-text-muted)' }}>Etapa</span>
+          <span className="text-xs font-medium" style={{ color: lead.stage.color ?? 'var(--crm-text)' }}>
             {lead.stage.name}
           </span>
         </div>
       </div>
 
       {/* Metrics */}
-      <div className="p-4 border-b grid grid-cols-2 gap-3" style={{ borderColor: '#2A2A32' }}>
-        {/* AI Score */}
-        <div className="rounded-lg p-2.5" style={{ background: '#1A1A1F' }}>
-          <span className="text-[10px] block mb-1" style={{ color: '#8B8A94' }}>AI Score</span>
+      <div className="p-4 border-b grid grid-cols-2 gap-2.5" style={{ borderColor: 'var(--crm-border)' }}>
+        <div className="rounded-xl p-2.5" style={{ background: 'var(--crm-surface-2)' }}>
+          <span className="text-[9px] uppercase tracking-wider block mb-1" style={{ color: 'var(--crm-text-muted)' }}>AI Score</span>
           <span className="text-base font-bold" style={{
-            color: lead.aiScore != null ? (lead.aiScore >= 70 ? '#2ECC8A' : lead.aiScore >= 40 ? '#F0A500' : '#FF6B4A') : '#5A5A64'
+            color: lead.aiScore != null ? (lead.aiScore >= 70 ? 'var(--crm-won)' : lead.aiScore >= 40 ? 'var(--crm-warm)' : 'var(--crm-hot)') : '#5A5A64'
           }}>
             {lead.aiScore != null ? lead.aiScore : '—'}
           </span>
         </div>
-        {/* Value */}
-        <div className="rounded-lg p-2.5" style={{ background: '#1A1A1F' }}>
-          <span className="text-[10px] block mb-1" style={{ color: '#8B8A94' }}>Valor</span>
-          <span className="text-sm font-bold" style={{ color: '#D4AF37' }}>
+        <div className="rounded-xl p-2.5" style={{ background: 'var(--crm-surface-2)' }}>
+          <span className="text-[9px] uppercase tracking-wider block mb-1" style={{ color: 'var(--crm-text-muted)' }}>Valor</span>
+          <span className="text-sm font-bold" style={{ color: 'var(--crm-gold)' }}>
             {lead.expectedValue ? currencyFmt.format(lead.expectedValue) : '—'}
           </span>
         </div>
-        {/* Churn Risk */}
-        <div className="rounded-lg p-2.5" style={{ background: '#1A1A1F' }}>
-          <span className="text-[10px] block mb-1" style={{ color: '#8B8A94' }}>Risco Churn</span>
+        <div className="rounded-xl p-2.5" style={{ background: 'var(--crm-surface-2)' }}>
+          <span className="text-[9px] uppercase tracking-wider block mb-1" style={{ color: 'var(--crm-text-muted)' }}>Risco Churn</span>
           <span className="text-sm font-bold" style={{
-            color: lead.churnRisk != null ? (lead.churnRisk >= 70 ? '#FF6B4A' : lead.churnRisk >= 40 ? '#F0A500' : '#2ECC8A') : '#5A5A64'
+            color: lead.churnRisk != null ? (lead.churnRisk >= 70 ? 'var(--crm-hot)' : lead.churnRisk >= 40 ? 'var(--crm-warm)' : 'var(--crm-won)') : '#5A5A64'
           }}>
             {lead.churnRisk != null ? `${lead.churnRisk}%` : '—'}
           </span>
         </div>
-        {/* Source */}
-        <div className="rounded-lg p-2.5" style={{ background: '#1A1A1F' }}>
-          <span className="text-[10px] block mb-1" style={{ color: '#8B8A94' }}>Fonte</span>
-          <span className="text-xs font-medium truncate block" style={{ color: '#F0EDE8' }}>
+        <div className="rounded-xl p-2.5" style={{ background: 'var(--crm-surface-2)' }}>
+          <span className="text-[9px] uppercase tracking-wider block mb-1" style={{ color: 'var(--crm-text-muted)' }}>Fonte</span>
+          <span className="text-xs font-medium truncate block" style={{ color: 'var(--crm-text)' }}>
             {lead.source ?? '—'}
           </span>
         </div>
@@ -342,31 +356,36 @@ function LeadPanel({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
 
       {/* Golden Window */}
       {(lead.bestContactDays || lead.bestContactHours) && (
-        <div className="p-4 border-b" style={{ borderColor: '#2A2A32' }}>
-          <span className="text-[10px] font-bold uppercase tracking-wider block mb-2" style={{ color: '#D4AF37' }}>
-            Janela de Ouro
-          </span>
-          {lead.bestContactDays && (
-            <p className="text-xs mb-1" style={{ color: '#F0EDE8' }}>
-              <span style={{ color: '#8B8A94' }}>Dias: </span>{lead.bestContactDays}
-            </p>
-          )}
-          {lead.bestContactHours && (
-            <p className="text-xs" style={{ color: '#F0EDE8' }}>
-              <span style={{ color: '#8B8A94' }}>Horário: </span>{lead.bestContactHours}
-            </p>
-          )}
+        <div className="p-4 border-b" style={{ borderColor: 'var(--crm-border)' }}>
+          <div className="rounded-xl p-3" style={{ background: 'rgba(212,175,55,0.04)', border: '1px solid rgba(212,175,55,0.12)' }}>
+            <span className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 mb-2" style={{ color: 'var(--crm-gold)' }}>
+              <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+              </svg>
+              Janela de Ouro
+            </span>
+            {lead.bestContactDays && (
+              <p className="text-xs mb-0.5" style={{ color: 'var(--crm-text)' }}>
+                <span style={{ color: 'var(--crm-text-muted)' }}>Dias: </span>{lead.bestContactDays}
+              </p>
+            )}
+            {lead.bestContactHours && (
+              <p className="text-xs" style={{ color: 'var(--crm-text)' }}>
+                <span style={{ color: 'var(--crm-text-muted)' }}>Horário: </span>{lead.bestContactHours}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
       {/* Tags */}
       {lead.tags.length > 0 && (
-        <div className="p-4 border-b" style={{ borderColor: '#2A2A32' }}>
-          <span className="text-[10px] font-bold uppercase tracking-wider block mb-2" style={{ color: '#8B8A94' }}>Tags</span>
+        <div className="p-4 border-b" style={{ borderColor: 'var(--crm-border)' }}>
+          <span className="text-[9px] font-bold uppercase tracking-wider block mb-2" style={{ color: 'var(--crm-text-muted)' }}>Tags</span>
           <div className="flex flex-wrap gap-1.5">
             {lead.tags.map(tag => (
-              <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37' }}
+              <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                style={{ background: 'rgba(212,175,55,0.08)', color: 'var(--crm-gold)' }}
               >{tag}</span>
             ))}
           </div>
@@ -374,23 +393,23 @@ function LeadPanel({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
       )}
 
       {/* Info */}
-      <div className="p-4">
+      <div className="p-4 space-y-3">
         {lead.email && (
-          <div className="mb-2">
-            <span className="text-[10px] block" style={{ color: '#8B8A94' }}>E-mail</span>
-            <span className="text-xs" style={{ color: '#F0EDE8' }}>{lead.email}</span>
+          <div>
+            <span className="text-[9px] uppercase tracking-wider block mb-0.5" style={{ color: 'var(--crm-text-muted)' }}>E-mail</span>
+            <span className="text-xs" style={{ color: 'var(--crm-text)' }}>{lead.email}</span>
           </div>
         )}
-        <div className="mb-2">
-          <span className="text-[10px] block" style={{ color: '#8B8A94' }}>Criado em</span>
-          <span className="text-xs" style={{ color: '#F0EDE8' }}>
+        <div>
+          <span className="text-[9px] uppercase tracking-wider block mb-0.5" style={{ color: 'var(--crm-text-muted)' }}>Criado em</span>
+          <span className="text-xs" style={{ color: 'var(--crm-text)' }}>
             {new Date(lead.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
           </span>
         </div>
         {lead.lastInteractionAt && (
           <div>
-            <span className="text-[10px] block" style={{ color: '#8B8A94' }}>Última interação</span>
-            <span className="text-xs" style={{ color: '#F0EDE8' }}>
+            <span className="text-[9px] uppercase tracking-wider block mb-0.5" style={{ color: 'var(--crm-text-muted)' }}>Última interação</span>
+            <span className="text-xs" style={{ color: 'var(--crm-text)' }}>
               {new Date(lead.lastInteractionAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
@@ -405,22 +424,23 @@ function LeadPanel({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
 function QuickRepliesPopover({ onSelect, onClose }: { onSelect: (text: string) => void; onClose: () => void }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+      transition={{ duration: 0.15 }}
       className="absolute bottom-full left-0 mb-2 w-72 rounded-xl overflow-hidden shadow-2xl z-20"
-      style={{ background: '#1A1A1F', border: '1px solid #2A2A32' }}
+      style={{ background: 'var(--crm-surface-2)', border: '1px solid var(--crm-border)', backdropFilter: 'blur(20px)' }}
     >
       <div className="p-2">
-        <p className="text-[10px] font-bold uppercase tracking-wider px-2 py-1.5" style={{ color: '#8B8A94' }}>
+        <p className="text-[9px] font-bold uppercase tracking-wider px-2.5 py-1.5" style={{ color: 'var(--crm-text-muted)' }}>
           Respostas rápidas
         </p>
         {QUICK_REPLIES.map((text, i) => (
           <button
             key={i}
             onClick={() => { onSelect(text); onClose() }}
-            className="w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors hover:bg-white/5"
-            style={{ color: '#F0EDE8' }}
+            className="w-full text-left px-2.5 py-2 rounded-lg text-xs transition-all hover:bg-white/5 hover:translate-x-0.5"
+            style={{ color: 'var(--crm-text)' }}
           >
             {text}
           </button>
@@ -488,11 +508,9 @@ export default function InboxPage() {
       const data = await res.json()
 
       if (cursor) {
-        // Prepend older messages
         setMessages(prev => [...data.messages, ...prev])
       } else {
         setMessages(data.messages)
-        // Scroll to bottom on initial load
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'instant' }), 50)
       }
       setHasMore(data.hasMore)
@@ -535,10 +553,8 @@ export default function InboxPage() {
     const content = newMessage
     setNewMessage('')
 
-    // Reset textarea height
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
-    // Optimistic add
     const optimisticMsg: MessageItem = {
       id: `temp-${Date.now()}`,
       fromMe: true,
@@ -591,7 +607,7 @@ export default function InboxPage() {
     }
   }
 
-  // Infinite scroll (load older messages)
+  // Infinite scroll
   const handleScroll = useCallback(() => {
     if (!chatContainerRef.current || !hasMore || isLoadingMore || !selectedId) return
     if (chatContainerRef.current.scrollTop < 60) {
@@ -634,25 +650,28 @@ export default function InboxPage() {
   if (isLoading) return <InboxSkeleton />
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] rounded-xl overflow-hidden" style={{ border: '1px solid #2A2A32' }}>
+    <div className="flex h-[calc(100vh-10rem)] rounded-2xl overflow-hidden" style={{ border: '1px solid var(--crm-border)', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
 
       {/* ━━━ Column 1: Conversation List ━━━ */}
       <div
         className="w-full sm:w-80 shrink-0 border-r flex flex-col"
         style={{
-          borderColor: '#2A2A32',
-          background: '#111114',
+          borderColor: 'var(--crm-border)',
+          background: 'var(--crm-surface)',
           display: selectedId && typeof window !== 'undefined' && window.innerWidth < 640 ? 'none' : 'flex',
         }}
       >
         {/* Search Header */}
-        <div className="p-3 border-b" style={{ borderColor: '#2A2A32' }}>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold" style={{ color: '#F0EDE8' }}>
+        <div className="p-3.5 border-b" style={{ borderColor: 'var(--crm-border)' }}>
+          <div className="flex items-center justify-between mb-2.5">
+            <h2 className="text-sm font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--crm-text)' }}>
+              <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" style={{ color: 'var(--crm-gold)' }}>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
               Conversas
               {totalUnread > 0 && (
-                <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                  style={{ background: '#D4AF37', color: '#0A0A0B' }}
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse"
+                  style={{ background: 'var(--crm-gold)', color: 'var(--crm-bg)' }}
                 >
                   {totalUnread > 99 ? '99+' : totalUnread}
                 </span>
@@ -660,7 +679,7 @@ export default function InboxPage() {
             </h2>
           </div>
           <div className="relative">
-            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2" width="14" height="14" fill="none" stroke="#8B8A94" strokeWidth="2" viewBox="0 0 24 24">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="14" height="14" fill="none" stroke="var(--crm-text-muted)" strokeWidth="2" viewBox="0 0 24 24">
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
             <input
@@ -668,12 +687,12 @@ export default function InboxPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar conversa..."
-              className="w-full pl-8 pr-3 py-2 text-xs rounded-lg focus:outline-none"
-              style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+              className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl transition-all focus:outline-none focus:ring-1"
+              style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)' }}
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2"
-                style={{ color: '#8B8A94' }}
+              <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-white/5 transition-colors"
+                style={{ color: 'var(--crm-text-muted)' }}
               >
                 <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -688,7 +707,7 @@ export default function InboxPage() {
           {conversations.length === 0 ? (
             search ? (
               <div className="flex flex-col items-center py-16 opacity-50">
-                <p className="text-xs" style={{ color: '#8B8A94' }}>Nenhum resultado para &ldquo;{search}&rdquo;</p>
+                <p className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>Nenhum resultado para &ldquo;{search}&rdquo;</p>
               </div>
             ) : (
               <EmptyConversations />
@@ -699,41 +718,45 @@ export default function InboxPage() {
               const statusColor = getStatusColor(conv.lead.status)
 
               return (
-                <button
+                <motion.button
                   key={conv.id}
                   onClick={() => setSelectedId(conv.id)}
-                  className="w-full text-left px-3 py-3 border-b transition-colors"
+                  className="w-full text-left px-3.5 py-3 border-b transition-all"
+                  whileHover={{ x: 2 }}
+                  transition={{ duration: 0.1 }}
                   style={{
-                    borderColor: '#1A1A1F',
+                    borderColor: 'var(--crm-surface-2)',
                     background: isActive ? 'rgba(212,175,55,0.06)' : 'transparent',
-                    borderLeft: isActive ? '2px solid #D4AF37' : '2px solid transparent',
+                    borderLeft: isActive ? '2px solid var(--crm-gold)' : '2px solid transparent',
                   }}
                 >
-                  <div className="flex items-start gap-2.5">
+                  <div className="flex items-start gap-3">
                     {/* Avatar */}
-                    <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-sm font-bold relative"
-                      style={{ background: `${statusColor}18`, color: statusColor }}
-                    >
-                      {conv.lead.name.charAt(0).toUpperCase()}
+                    <div className="relative shrink-0">
+                      <div className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold"
+                        style={{ background: `${statusColor}18`, color: statusColor }}
+                      >
+                        {conv.lead.name.charAt(0).toUpperCase()}
+                      </div>
                       {conv.unreadCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold"
-                          style={{ background: '#D4AF37', color: '#0A0A0B' }}
+                        <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[8px] font-bold shadow-lg"
+                          style={{ background: 'var(--crm-gold)', color: 'var(--crm-bg)', minWidth: '18px', height: '18px' }}
                         >
                           {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
                         </span>
                       )}
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2" style={{ borderColor: 'var(--crm-surface)', background: statusColor }} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-sm font-medium truncate" style={{ color: '#F0EDE8' }}>
+                        <span className="text-[13px] font-semibold truncate" style={{ color: 'var(--crm-text)' }}>
                           {conv.lead.name}
                         </span>
-                        <span className="text-[10px] shrink-0 ml-2" style={{ color: conv.unreadCount > 0 ? '#D4AF37' : '#8B8A94' }}>
+                        <span className="text-[10px] shrink-0 ml-2 font-medium" style={{ color: conv.unreadCount > 0 ? 'var(--crm-gold)' : 'var(--crm-text-muted)' }}>
                           {formatTime(conv.lastMessageAt)}
                         </span>
                       </div>
-                      {/* Last message preview */}
-                      <p className="text-xs truncate" style={{ color: '#8B8A94', fontWeight: conv.unreadCount > 0 ? 600 : 400 }}>
+                      <p className="text-xs truncate" style={{ color: 'var(--crm-text-muted)', fontWeight: conv.unreadCount > 0 ? 600 : 400 }}>
                         {conv.lastMessage ? (
                           <>
                             {conv.lastMessage.fromMe && <span style={{ color: '#5A5A64' }}>Você: </span>}
@@ -750,12 +773,11 @@ export default function InboxPage() {
                           <span style={{ color: '#5A5A64' }}>Sem mensagens</span>
                         )}
                       </p>
-                      {/* Tags */}
                       {conv.lead.tags.length > 0 && (
-                        <div className="flex gap-1 mt-1">
+                        <div className="flex gap-1 mt-1.5">
                           {conv.lead.tags.slice(0, 2).map(tag => (
-                            <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded"
-                              style={{ background: 'rgba(212,175,55,0.08)', color: '#D4AF37' }}
+                            <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                              style={{ background: 'rgba(212,175,55,0.06)', color: 'var(--crm-gold)' }}
                             >{tag}</span>
                           ))}
                           {conv.lead.tags.length > 2 && (
@@ -767,7 +789,7 @@ export default function InboxPage() {
                       )}
                     </div>
                   </div>
-                </button>
+                </motion.button>
               )
             })
           )}
@@ -775,7 +797,7 @@ export default function InboxPage() {
       </div>
 
       {/* ━━━ Column 2: Chat ━━━ */}
-      <div className="flex-1 flex flex-col min-w-0" style={{ background: '#0A0A0B' }}>
+      <div className="flex-1 flex flex-col min-w-0" style={{ background: 'var(--crm-bg)' }}>
         {!selectedId ? (
           <div className="flex-1 flex items-center justify-center">
             <EmptyChat />
@@ -783,32 +805,41 @@ export default function InboxPage() {
         ) : (
           <>
             {/* Chat Header */}
-            <div className="px-4 py-2.5 border-b flex items-center justify-between shrink-0"
-              style={{ borderColor: '#2A2A32', background: '#111114' }}
+            <div className="px-4 py-3 border-b flex items-center justify-between shrink-0"
+              style={{
+                borderColor: 'var(--crm-border)',
+                background: 'rgba(17,17,20,0.92)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+              }}
             >
               <div className="flex items-center gap-3 min-w-0">
-                {/* Mobile back button */}
                 <button
                   onClick={() => setSelectedId(null)}
                   className="sm:hidden p-1"
-                  style={{ color: '#8B8A94' }}
+                  style={{ color: 'var(--crm-text-muted)' }}
                 >
                   <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <polyline points="15 18 9 12 15 6" />
                   </svg>
                 </button>
-                <div className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-sm font-bold"
-                  style={{ background: `${getStatusColor(selectedConv?.lead.status ?? '')}18`, color: getStatusColor(selectedConv?.lead.status ?? '') }}
-                >
-                  {selectedConv?.lead.name.charAt(0).toUpperCase()}
+                <div className="relative">
+                  <div className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-sm font-bold"
+                    style={{ background: `${getStatusColor(selectedConv?.lead.status ?? '')}18`, color: getStatusColor(selectedConv?.lead.status ?? '') }}
+                  >
+                    {selectedConv?.lead.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-[1.5px]"
+                    style={{ borderColor: 'rgba(17,17,20,0.92)', background: getStatusColor(selectedConv?.lead.status ?? '') }}
+                  />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: '#F0EDE8' }}>{selectedConv?.lead.name}</p>
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--crm-text)' }}>{selectedConv?.lead.name}</p>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px]" style={{ color: '#8B8A94' }}>{selectedConv?.lead.phone}</span>
+                    <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>{selectedConv?.lead.phone}</span>
                     {selectedConv?.lead.stage && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded"
-                        style={{ background: `${selectedConv.lead.stage.color ?? '#8B8A94'}18`, color: selectedConv.lead.stage.color ?? '#8B8A94' }}
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                        style={{ background: `${selectedConv.lead.stage.color ?? '#8B8A94'}18`, color: selectedConv.lead.stage.color ?? 'var(--crm-text-muted)' }}
                       >
                         {selectedConv.lead.stage.name}
                       </span>
@@ -818,27 +849,29 @@ export default function InboxPage() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {selectedConv?.lead.aiScore != null && (
-                  <span className="text-[10px] font-bold px-2 py-1 rounded"
-                    style={{ background: 'rgba(212,175,55,0.12)', color: '#D4AF37' }}
+                  <span className="text-[10px] font-bold px-2 py-1 rounded-lg"
+                    style={{ background: 'rgba(212,175,55,0.08)', color: 'var(--crm-gold)' }}
                   >
                     ★ {selectedConv.lead.aiScore}
                   </span>
                 )}
                 {selectedConv?.lead.expectedValue != null && selectedConv.lead.expectedValue > 0 && (
-                  <span className="text-[10px] font-medium px-2 py-1 rounded hidden md:inline-block"
-                    style={{ background: '#1A1A1F', color: '#D4AF37' }}
+                  <span className="text-[10px] font-semibold px-2 py-1 rounded-lg hidden md:inline-block"
+                    style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-gold)' }}
                   >
                     {currencyFmt.format(selectedConv.lead.expectedValue)}
                   </span>
                 )}
-                {/* Toggle lead panel */}
                 <button
                   onClick={() => setShowLeadPanel(p => !p)}
-                  className="p-1.5 rounded-lg transition-colors hidden lg:block"
-                  style={{ background: showLeadPanel ? 'rgba(212,175,55,0.1)' : 'transparent', color: showLeadPanel ? '#D4AF37' : '#8B8A94' }}
+                  className="p-2 rounded-lg transition-all hidden lg:block"
+                  style={{
+                    background: showLeadPanel ? 'rgba(212,175,55,0.08)' : 'transparent',
+                    color: showLeadPanel ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
+                  }}
                   title="Painel do lead"
                 >
-                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                     <line x1="15" y1="3" x2="15" y2="21" />
                   </svg>
@@ -852,11 +885,10 @@ export default function InboxPage() {
               className="flex-1 overflow-y-auto px-4 py-3"
               onScroll={handleScroll}
             >
-              {/* Load more indicator */}
               {isLoadingMore && (
                 <div className="flex justify-center py-3">
                   <div className="w-5 h-5 border-2 rounded-full animate-spin"
-                    style={{ borderColor: '#2A2A32', borderTopColor: '#D4AF37' }}
+                    style={{ borderColor: 'var(--crm-border)', borderTopColor: 'var(--crm-gold)' }}
                   />
                 </div>
               )}
@@ -865,17 +897,20 @@ export default function InboxPage() {
               )}
 
               {isLoadingMessages ? (
-                <div className="flex-1 flex items-center justify-center py-20">
+                <div className="flex-1 flex flex-col items-center justify-center py-20 gap-3">
                   <div className="w-6 h-6 border-2 rounded-full animate-spin"
-                    style={{ borderColor: '#2A2A32', borderTopColor: '#D4AF37' }}
+                    style={{ borderColor: 'var(--crm-border)', borderTopColor: 'var(--crm-gold)' }}
                   />
+                  <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>Carregando mensagens...</span>
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 opacity-40">
-                  <svg width="32" height="32" fill="none" stroke="#5A5A64" strokeWidth="1" viewBox="0 0 24 24">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                  <p className="text-xs mt-2" style={{ color: '#5A5A64' }}>Início da conversa</p>
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3" style={{ background: 'rgba(212,175,55,0.04)' }}>
+                    <svg width="24" height="24" fill="none" stroke="#5A5A64" strokeWidth="1" viewBox="0 0 24 24">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                  </div>
+                  <p className="text-xs font-medium" style={{ color: '#5A5A64' }}>Início da conversa</p>
                 </div>
               ) : (
                 <AnimatePresence initial={false}>
@@ -883,14 +918,7 @@ export default function InboxPage() {
                     <div key={gi}>
                       <DaySeparator label={formatDateGroup(group.date)} />
                       {group.messages.map((msg) => (
-                        <motion.div
-                          key={msg.id}
-                          initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          transition={{ duration: 0.15 }}
-                        >
-                          <MessageBubble message={msg} />
-                        </motion.div>
+                        <MessageBubble key={msg.id} message={msg} />
                       ))}
                     </div>
                   ))}
@@ -900,9 +928,13 @@ export default function InboxPage() {
             </div>
 
             {/* Input Area */}
-            <div className="p-3 border-t shrink-0" style={{ borderColor: '#2A2A32', background: '#111114' }}>
+            <div className="p-3.5 border-t shrink-0" style={{
+              borderColor: 'var(--crm-border)',
+              background: 'rgba(17,17,20,0.92)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+            }}>
               <div className="flex items-end gap-2 relative">
-                {/* Quick Replies */}
                 <AnimatePresence>
                   {showQuickReplies && (
                     <QuickRepliesPopover
@@ -912,31 +944,29 @@ export default function InboxPage() {
                   )}
                 </AnimatePresence>
 
-                {/* Attachment / Quick reply button */}
                 <div className="flex shrink-0 gap-1">
                   <button
                     onClick={() => setShowQuickReplies(p => !p)}
-                    className="p-2.5 rounded-lg transition-colors"
-                    style={{ background: showQuickReplies ? 'rgba(212,175,55,0.15)' : '#1A1A1F', color: showQuickReplies ? '#D4AF37' : '#8B8A94' }}
+                    className="p-2.5 rounded-xl transition-all"
+                    style={{ background: showQuickReplies ? 'rgba(212,175,55,0.12)' : 'var(--crm-surface-2)', color: showQuickReplies ? 'var(--crm-gold)' : 'var(--crm-text-muted)' }}
                     title="Respostas rápidas"
                   >
-                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                       <line x1="8" y1="9" x2="16" y2="9" /><line x1="8" y1="13" x2="12" y2="13" />
                     </svg>
                   </button>
 
-                  {/* Concierge AI */}
                   <button
                     onClick={handleConcierge}
                     disabled={isGenerating}
-                    className="p-2.5 rounded-lg transition-colors disabled:opacity-40"
-                    style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37' }}
+                    className="p-2.5 rounded-xl transition-all disabled:opacity-40"
+                    style={{ background: 'rgba(212,175,55,0.08)', color: 'var(--crm-gold)' }}
                     title="Gerar resposta com IA"
                   >
                     {isGenerating ? (
                       <div className="w-4 h-4 border-2 rounded-full animate-spin"
-                        style={{ borderColor: '#D4AF37', borderTopColor: 'transparent' }}
+                        style={{ borderColor: 'var(--crm-gold)', borderTopColor: 'transparent' }}
                       />
                     ) : (
                       <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
@@ -946,7 +976,6 @@ export default function InboxPage() {
                   </button>
                 </div>
 
-                {/* Textarea */}
                 <textarea
                   ref={textareaRef}
                   value={newMessage}
@@ -959,32 +988,37 @@ export default function InboxPage() {
                   }}
                   placeholder="Digite uma mensagem..."
                   rows={1}
-                  className="flex-1 resize-none rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1"
+                  className="flex-1 resize-none rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 transition-all"
                   style={{
-                    background: '#1A1A1F',
-                    color: '#F0EDE8',
-                    border: '1px solid #2A2A32',
+                    background: 'var(--crm-surface-2)',
+                    color: 'var(--crm-text)',
+                    border: '1px solid var(--crm-border)',
                     maxHeight: '120px',
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
                   }}
                 />
 
-                {/* Send */}
-                <button
+                <motion.button
                   onClick={handleSend}
                   disabled={!newMessage.trim() || isSending}
-                  className="shrink-0 p-2.5 rounded-lg transition-all disabled:opacity-30"
-                  style={{ background: '#D4AF37', color: '#0A0A0B' }}
+                  className="shrink-0 p-2.5 rounded-xl transition-all disabled:opacity-30"
+                  whileTap={{ scale: 0.94 }}
+                  style={{
+                    background: newMessage.trim() ? 'linear-gradient(135deg, #D4AF37, #B8962E)' : 'var(--crm-surface-2)',
+                    color: newMessage.trim() ? 'var(--crm-bg)' : 'var(--crm-text-muted)',
+                    boxShadow: newMessage.trim() ? '0 2px 12px rgba(212,175,55,0.25)' : 'none',
+                  }}
                 >
                   {isSending ? (
                     <div className="w-4 h-4 border-2 rounded-full animate-spin"
-                      style={{ borderColor: '#0A0A0B', borderTopColor: 'transparent' }}
+                      style={{ borderColor: 'var(--crm-bg)', borderTopColor: 'transparent' }}
                     />
                   ) : (
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                     </svg>
                   )}
-                </button>
+                </motion.button>
               </div>
             </div>
           </>

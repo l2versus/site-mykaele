@@ -21,6 +21,7 @@ interface LeadCard {
   lastInteractionAt: string | null
   createdAt: string
   lastMessage: { content: string; fromMe: boolean; createdAt: string } | null
+  patientId: string | null
 }
 
 interface StageData {

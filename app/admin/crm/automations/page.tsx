@@ -66,7 +66,7 @@ function AutomationsSkeleton() {
   return (
     <div className="space-y-3">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="h-20 rounded-xl animate-pulse" style={{ background: '#111114' }} />
+        <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: 'var(--crm-surface)' }} />
       ))}
     </div>
   )
@@ -77,21 +77,21 @@ function EmptyState({ onCreateFirst }: { onCreateFirst: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-20">
       <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-5"
-        style={{ background: 'rgba(212,175,55,0.08)' }}
+        style={{ background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.1)' }}
       >
-        <svg width="36" height="36" fill="none" stroke="#D4AF37" strokeWidth="1.2" viewBox="0 0 24 24">
+        <svg width="36" height="36" fill="none" stroke="var(--crm-gold)" strokeWidth="1.2" viewBox="0 0 24 24">
           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
         </svg>
       </div>
-      <p className="text-base font-semibold" style={{ color: '#F0EDE8' }}>Automatize seu CRM</p>
-      <p className="text-xs mt-1 max-w-xs text-center" style={{ color: '#8B8A94' }}>
+      <p className="text-base font-semibold" style={{ color: 'var(--crm-text)' }}>Automatize seu CRM</p>
+      <p className="text-xs mt-1.5 max-w-xs text-center" style={{ color: 'var(--crm-text-muted)' }}>
         Crie regras automáticas que reagem a eventos como novas mensagens,
         mudanças de estágio e agendamentos.
       </p>
       <button
         onClick={onCreateFirst}
-        className="mt-6 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:brightness-110 active:scale-[0.98]"
-        style={{ background: '#D4AF37', color: '#0A0A0B' }}
+        className="mt-6 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all hover:brightness-110 active:scale-[0.98]"
+        style={{ background: 'linear-gradient(135deg, #D4AF37, #B8962E)', color: 'var(--crm-bg)', boxShadow: '0 4px 16px rgba(212,175,55,0.25)' }}
       >
         + Criar Automação
       </button>
@@ -137,10 +137,10 @@ function AutomationModal({ onClose, onSave, existing }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
       <motion.div
         className="relative w-full max-w-lg rounded-2xl border p-6 max-h-[85vh] overflow-y-auto"
-        style={{ background: '#111114', borderColor: '#2A2A32' }}
+        style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }}
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
       >
@@ -292,10 +292,10 @@ function ExecutionLog() {
   ]
 
   return (
-    <div className="rounded-xl border overflow-hidden" style={{ borderColor: '#2A2A32' }}>
-      <div className="px-4 py-2.5" style={{ background: '#111114', borderBottom: '1px solid #2A2A32' }}>
-        <span className="text-xs font-medium" style={{ color: '#F0EDE8' }}>Log de Execução</span>
-        <span className="text-[10px] ml-2" style={{ color: '#8B8A94' }}>Últimas execuções</span>
+    <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--crm-border)', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+      <div className="px-4 py-3" style={{ background: 'var(--crm-surface)', borderBottom: '1px solid var(--crm-border)' }}>
+        <span className="text-xs font-semibold" style={{ color: 'var(--crm-text)' }}>Log de Execução</span>
+        <span className="text-[10px] ml-2" style={{ color: 'var(--crm-text-muted)' }}>Últimas execuções</span>
       </div>
       {logs.map(log => (
         <div key={log.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderBottom: '1px solid #1A1A1F' }}>
@@ -431,8 +431,15 @@ export default function AutomationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: '#F0EDE8' }}>Automações</h1>
-          <p className="text-xs mt-0.5" style={{ color: '#8B8A94' }}>
+          <h1 className="text-xl font-bold tracking-tight flex items-center gap-2.5" style={{ color: 'var(--crm-text)' }}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'rgba(212,175,55,0.08)' }}>
+              <svg width="16" height="16" fill="none" stroke="var(--crm-gold)" strokeWidth="1.5" viewBox="0 0 24 24">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+            </div>
+            Automações
+          </h1>
+          <p className="text-xs mt-1 ml-[42px]" style={{ color: 'var(--crm-text-muted)' }}>
             {automations.length} {automations.length === 1 ? 'regra' : 'regras'} · {automations.filter(a => a.isActive).length} ativas
           </p>
         </div>
@@ -441,19 +448,19 @@ export default function AutomationsPage() {
             <>
               <button
                 onClick={() => setShowLog(p => !p)}
-                className="px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+                className="px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all"
                 style={{
-                  background: showLog ? 'rgba(212,175,55,0.1)' : '#1A1A1F',
-                  color: showLog ? '#D4AF37' : '#8B8A94',
-                  border: '1px solid #2A2A32',
+                  background: showLog ? 'rgba(212,175,55,0.08)' : 'var(--crm-surface-2)',
+                  color: showLog ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
+                  border: '1px solid var(--crm-border)',
                 }}
               >
                 Log
               </button>
               <button
                 onClick={() => setShowModal(true)}
-                className="px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all hover:brightness-110 active:scale-[0.98]"
-                style={{ background: '#D4AF37', color: '#0A0A0B' }}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all hover:brightness-110 active:scale-[0.98]"
+                style={{ background: 'linear-gradient(135deg, #D4AF37, #B8962E)', color: 'var(--crm-bg)', boxShadow: '0 4px 16px rgba(212,175,55,0.25)' }}
               >
                 + Nova Regra
               </button>
@@ -473,14 +480,16 @@ export default function AutomationsPage() {
               return (
                 <motion.div
                   key={automation.id}
-                  className="flex items-center gap-4 p-4 rounded-xl border transition-colors"
+                  className="flex items-center gap-4 p-4 rounded-xl border transition-all"
                   style={{
-                    background: '#111114',
-                    borderColor: automation.isActive ? 'rgba(212,175,55,0.2)' : '#2A2A32',
+                    background: 'var(--crm-surface)',
+                    borderColor: automation.isActive ? 'rgba(212,175,55,0.2)' : 'var(--crm-border)',
+                    boxShadow: automation.isActive ? '0 0 0 1px rgba(212,175,55,0.06)' : 'none',
                   }}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
+                  whileHover={{ y: -1, boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }}
                 >
                   {/* Icon */}
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"

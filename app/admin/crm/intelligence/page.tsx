@@ -71,12 +71,12 @@ function IntelligenceSkeleton() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-24 rounded-xl animate-pulse" style={{ background: '#111114' }} />
+          <div key={i} className="h-28 rounded-2xl animate-pulse" style={{ background: 'var(--crm-surface)' }} />
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-64 rounded-xl animate-pulse" style={{ background: '#111114' }} />
+          <div key={i} className="h-64 rounded-2xl animate-pulse" style={{ background: 'var(--crm-surface)' }} />
         ))}
       </div>
     </div>
@@ -123,8 +123,13 @@ function MessageHeatmap({ leads }: { leads: LeadInsight[] }) {
   const maxVal = Math.max(1, ...grid.flat())
 
   return (
-    <div className="rounded-xl border p-4" style={{ background: '#111114', borderColor: '#2A2A32' }}>
-      <h3 className="text-sm font-semibold mb-4" style={{ color: '#F0EDE8' }}>Mapa de Calor — Interações</h3>
+    <div className="rounded-xl border p-4" style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--crm-text)' }}>
+        <svg width="14" height="14" fill="none" stroke="var(--crm-gold)" strokeWidth="1.5" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2" /><rect x="7" y="7" width="3" height="3" /><rect x="14" y="7" width="3" height="3" /><rect x="7" y="14" width="3" height="3" />
+        </svg>
+        Mapa de Calor — Interações
+      </h3>
       <div className="overflow-x-auto">
         <div className="min-w-[400px]">
           {/* Hour labels */}
@@ -337,18 +342,30 @@ export default function IntelligencePage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: '#F0EDE8' }}>Inteligência</h1>
-          <p className="text-xs mt-0.5" style={{ color: '#8B8A94' }}>
+          <h1 className="text-xl font-bold tracking-tight flex items-center gap-2.5" style={{ color: 'var(--crm-text)' }}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'rgba(212,175,55,0.08)' }}>
+              <svg width="16" height="16" fill="none" stroke="var(--crm-gold)" strokeWidth="1.5" viewBox="0 0 24 24">
+                <path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z" />
+                <line x1="9" y1="21" x2="15" y2="21" />
+              </svg>
+            </div>
+            Inteligência
+          </h1>
+          <p className="text-xs mt-1 ml-[42px]" style={{ color: 'var(--crm-text-muted)' }}>
             Insights de IA sobre seus {activeLeads.length} leads ativos
           </p>
         </div>
-        <div className="flex gap-1 p-1 rounded-lg" style={{ background: '#111114' }}>
+        <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'var(--crm-surface)', border: '1px solid var(--crm-border)' }}>
           {(['7d', '30d', '90d'] as const).map(p => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className="px-3 py-1.5 rounded-md text-[10px] font-medium transition-colors"
-              style={{ background: period === p ? '#1A1A1F' : 'transparent', color: period === p ? '#D4AF37' : '#8B8A94' }}
+              className="px-3.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all"
+              style={{
+                background: period === p ? 'var(--crm-surface-2)' : 'transparent',
+                color: period === p ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
+                boxShadow: period === p ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
+              }}
             >
               {p === '7d' ? '7 dias' : p === '30d' ? '30 dias' : '90 dias'}
             </button>
@@ -366,16 +383,18 @@ export default function IntelligencePage() {
         ]).map((kpi, i) => (
           <motion.div
             key={kpi.label}
-            className="rounded-xl p-4 border relative overflow-hidden"
-            style={{ background: '#111114', borderColor: '#2A2A32' }}
+            className="rounded-xl p-4 border relative overflow-hidden group"
+            style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)' }}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
+            whileHover={{ y: -1 }}
           >
-            <div className="absolute top-3 right-3 text-lg opacity-20" style={{ color: kpi.color }}>{kpi.icon}</div>
-            <p className="text-[10px] uppercase tracking-wider font-medium" style={{ color: '#8B8A94' }}>{kpi.label}</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: kpi.color }}>{kpi.value}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: '#8B8A94' }}>{kpi.sublabel}</p>
+            <div className="absolute inset-0 opacity-[0.03] transition-opacity group-hover:opacity-[0.05]" style={{ background: `radial-gradient(circle at 80% 20%, ${kpi.color}, transparent 60%)` }} />
+            <div className="absolute top-3 right-3 text-lg opacity-15 transition-opacity group-hover:opacity-30" style={{ color: kpi.color }}>{kpi.icon}</div>
+            <p className="text-[10px] uppercase tracking-wider font-semibold relative z-10" style={{ color: 'var(--crm-text-muted)' }}>{kpi.label}</p>
+            <p className="text-2xl font-bold mt-1.5 relative z-10" style={{ color: kpi.color }}>{kpi.value}</p>
+            <p className="text-[10px] mt-0.5 relative z-10" style={{ color: 'var(--crm-text-muted)' }}>{kpi.sublabel}</p>
           </motion.div>
         ))}
       </div>
@@ -518,7 +537,7 @@ export default function IntelligencePage() {
       )}
 
       {/* Detail Tabs */}
-      <div className="inline-flex gap-1 mb-4 p-1 rounded-lg" style={{ background: '#111114' }}>
+      <div className="inline-flex gap-1 mb-4 p-1 rounded-xl" style={{ background: 'var(--crm-surface)', border: '1px solid var(--crm-border)' }}>
         {([
           { key: 'score' as const, label: 'Score IA', count: scoredLeads.length },
           { key: 'window' as const, label: 'Janela de Ouro', count: goldenWindowLeads.length },
@@ -527,13 +546,14 @@ export default function IntelligencePage() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className="px-4 py-2 rounded-md text-xs font-medium transition-all"
+            className="px-4 py-2 rounded-lg text-xs font-semibold transition-all"
             style={{
-              background: activeTab === tab.key ? '#1A1A1F' : 'transparent',
-              color: activeTab === tab.key ? '#D4AF37' : '#8B8A94',
+              background: activeTab === tab.key ? 'var(--crm-surface-2)' : 'transparent',
+              color: activeTab === tab.key ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
+              boxShadow: activeTab === tab.key ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
             }}
           >
-            {tab.label} <span className="opacity-50 ml-1">({tab.count})</span>
+            {tab.label} <span className="opacity-40 ml-1">({tab.count})</span>
           </button>
         ))}
       </div>

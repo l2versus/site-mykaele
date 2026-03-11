@@ -23,6 +23,7 @@ interface ContactLead {
   source: string | null
   lastInteractionAt: string | null
   createdAt: string
+  patientId: string | null
 }
 
 interface StageInfo {
@@ -72,12 +73,12 @@ function ContactsSkeleton() {
     <div className="space-y-3">
       <div className="flex gap-3 mb-6">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-20 flex-1 rounded-xl animate-pulse" style={{ background: '#111114' }} />
+          <div key={i} className="h-24 flex-1 rounded-2xl animate-pulse" style={{ background: 'var(--crm-surface)' }} />
         ))}
       </div>
-      <div className="h-10 rounded-lg animate-pulse mb-4" style={{ background: '#111114' }} />
+      <div className="h-11 rounded-xl animate-pulse mb-4" style={{ background: 'var(--crm-surface)' }} />
       {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="h-14 rounded-xl animate-pulse" style={{ background: '#111114' }} />
+        <div key={i} className="h-16 rounded-xl animate-pulse" style={{ background: 'var(--crm-surface)' }} />
       ))}
     </div>
   )
@@ -87,20 +88,20 @@ function ContactsSkeleton() {
 function EmptyState({ hasFilters }: { hasFilters: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center py-20">
-      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-        style={{ background: 'rgba(212,175,55,0.08)' }}
+      <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-5"
+        style={{ background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.1)' }}
       >
-        <svg width="28" height="28" fill="none" stroke="#D4AF37" strokeWidth="1.2" viewBox="0 0 24 24">
+        <svg width="32" height="32" fill="none" stroke="var(--crm-gold)" strokeWidth="1.2" viewBox="0 0 24 24">
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
           <circle cx="9" cy="7" r="4" />
           <line x1="19" y1="8" x2="19" y2="14" />
           <line x1="22" y1="11" x2="16" y2="11" />
         </svg>
       </div>
-      <p className="text-sm font-medium" style={{ color: '#F0EDE8' }}>
+      <p className="text-base font-semibold" style={{ color: 'var(--crm-text)' }}>
         {hasFilters ? 'Nenhum resultado encontrado' : 'Nenhum contato ainda'}
       </p>
-      <p className="text-xs mt-1" style={{ color: '#8B8A94' }}>
+      <p className="text-xs mt-1.5 max-w-xs text-center" style={{ color: 'var(--crm-text-muted)' }}>
         {hasFilters ? 'Ajuste os filtros para encontrar contatos' : 'Crie leads no Pipeline para vê-los aqui'}
       </p>
     </div>
@@ -180,11 +181,16 @@ function LeadDrawer({ lead, stages, onClose, onUpdate }: {
         exit={{ x: '100%' }}
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
         className="fixed right-0 top-0 h-full w-full sm:w-96 z-50 overflow-y-auto"
-        style={{ background: '#111114', borderLeft: '1px solid #2A2A32' }}
+        style={{ background: 'var(--crm-surface)', borderLeft: '1px solid var(--crm-border)', boxShadow: '-8px 0 32px rgba(0,0,0,0.5)' }}
       >
         {/* Header */}
         <div className="sticky top-0 z-10 px-5 py-4 flex items-center justify-between"
-          style={{ background: '#111114', borderBottom: '1px solid #2A2A32' }}
+          style={{
+            background: 'rgba(17,17,20,0.92)',
+            borderBottom: '1px solid var(--crm-border)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+          }}
         >
           <h3 className="text-sm font-semibold" style={{ color: '#F0EDE8' }}>Detalhes do Contato</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5" style={{ color: '#8B8A94' }}>
@@ -264,6 +270,16 @@ function LeadDrawer({ lead, stages, onClose, onUpdate }: {
             <div className="flex justify-between">
               <span className="text-xs" style={{ color: '#8B8A94' }}>Última interação</span>
               <span className="text-xs" style={{ color: '#F0EDE8' }}>{timeAgo(lead.lastInteractionAt)}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs" style={{ color: '#8B8A94' }}>Paciente</span>
+              {lead.patientId ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded"
+                  style={{ background: 'rgba(46,204,138,0.12)', color: '#2ECC8A' }}
+                >Vinculado</span>
+              ) : (
+                <span className="text-xs" style={{ color: '#5A5A64' }}>Não convertido</span>
+              )}
             </div>
           </div>
 
@@ -384,7 +400,13 @@ function BulkActionsBar({ count, onClear, onExport, onTag, stages, onMoveAll }: 
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
       className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl"
-      style={{ background: '#1A1A1F', border: '1px solid #2A2A32', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }}
+      style={{
+        background: 'rgba(26,26,31,0.95)',
+        border: '1px solid rgba(212,175,55,0.2)',
+        boxShadow: '0 25px 50px rgba(0,0,0,0.6), 0 0 0 1px rgba(212,175,55,0.08)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+      }}
     >
       <span className="text-sm font-medium" style={{ color: '#D4AF37' }}>{count} selecionado{count > 1 ? 's' : ''}</span>
       <div className="w-px h-5" style={{ background: '#2A2A32' }} />
@@ -466,7 +488,7 @@ function BulkActionsBar({ count, onClear, onExport, onTag, stages, onMoveAll }: 
 
 // ━━━ CSV Export ━━━
 function exportCSV(contacts: ContactLead[]) {
-  const headers = ['Nome', 'Telefone', 'Email', 'Status', 'Etapa', 'Valor', 'Score IA', 'Tags', 'Fonte', 'Criado em']
+  const headers = ['Nome', 'Telefone', 'Email', 'Status', 'Etapa', 'Valor', 'Score IA', 'Tags', 'Fonte', 'Paciente', 'Criado em']
   const rows = contacts.map(c => [
     c.name,
     c.phone,
@@ -477,6 +499,7 @@ function exportCSV(contacts: ContactLead[]) {
     c.aiScore?.toString() ?? '',
     c.tags.join('; '),
     c.source ?? '',
+    c.patientId ? 'Sim' : 'Não',
     formatDate(c.createdAt),
   ])
 
@@ -728,15 +751,23 @@ export default function ContactsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: '#F0EDE8' }}>Contatos</h1>
-          <p className="text-xs mt-0.5" style={{ color: '#8B8A94' }}>
+          <h1 className="text-xl font-bold tracking-tight flex items-center gap-2.5" style={{ color: 'var(--crm-text)' }}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'rgba(212,175,55,0.08)' }}>
+              <svg width="16" height="16" fill="none" stroke="var(--crm-gold)" strokeWidth="1.5" viewBox="0 0 24 24">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </div>
+            Contatos
+          </h1>
+          <p className="text-xs mt-1 ml-[42px]" style={{ color: 'var(--crm-text-muted)' }}>
             {stats.total} contatos · {currencyFmt.format(stats.totalValue)} em pipeline
           </p>
         </div>
         <button
           onClick={() => exportCSV(filteredContacts)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
-          style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:brightness-110 active:scale-[0.98]"
+          style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
         >
           <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
@@ -748,21 +779,25 @@ export default function ContactsPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         {([
-          { label: 'Total', value: stats.total, color: '#D4AF37' },
-          { label: 'Quentes', value: stats.hot, color: '#FF6B4A' },
-          { label: 'Mornos', value: stats.warm, color: '#F0A500' },
-          { label: 'Frios', value: stats.cold, color: '#4A7BFF' },
-          { label: 'Ganhos', value: stats.won, color: '#2ECC8A' },
-        ]).map(stat => (
+          { label: 'Total', value: stats.total, color: '#D4AF37', icon: '◈' },
+          { label: 'Quentes', value: stats.hot, color: '#FF6B4A', icon: '●' },
+          { label: 'Mornos', value: stats.warm, color: '#F0A500', icon: '●' },
+          { label: 'Frios', value: stats.cold, color: '#4A7BFF', icon: '●' },
+          { label: 'Ganhos', value: stats.won, color: '#2ECC8A', icon: '✓' },
+        ]).map((stat, i) => (
           <motion.div
             key={stat.label}
-            className="rounded-xl p-3 border"
-            style={{ background: '#111114', borderColor: '#2A2A32' }}
+            className="rounded-xl p-4 border relative overflow-hidden group"
+            style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)' }}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.04 }}
+            whileHover={{ y: -1 }}
           >
-            <p className="text-[10px] uppercase tracking-wider font-medium" style={{ color: '#8B8A94' }}>{stat.label}</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: stat.color }}>{stat.value}</p>
+            <div className="absolute top-3 right-3 text-base opacity-15 transition-opacity group-hover:opacity-25" style={{ color: stat.color }}>{stat.icon}</div>
+            <div className="absolute inset-0 opacity-[0.02]" style={{ background: `radial-gradient(circle at 80% 20%, ${stat.color}, transparent 60%)` }} />
+            <p className="text-[10px] uppercase tracking-wider font-semibold relative z-10" style={{ color: 'var(--crm-text-muted)' }}>{stat.label}</p>
+            <p className="text-2xl font-bold mt-1.5 relative z-10" style={{ color: stat.color }}>{stat.value}</p>
           </motion.div>
         ))}
       </div>
@@ -770,20 +805,20 @@ export default function ContactsPage() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative flex-1 min-w-[200px]">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40" width="14" height="14" fill="none" stroke="#8B8A94" strokeWidth="1.5" viewBox="0 0 24 24">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40" width="14" height="14" fill="none" stroke="var(--crm-text-muted)" strokeWidth="1.5" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
             value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); setPage(1) }}
             placeholder="Buscar por nome, telefone, email ou tag..."
-            className="w-full pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none"
-            style={{ background: '#111114', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+            className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-1 transition-all"
+            style={{ background: 'var(--crm-surface)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)' }}
           />
           {searchQuery && (
             <button onClick={() => { setSearchQuery(''); setPage(1) }}
-              className="absolute right-3 top-1/2 -translate-y-1/2"
-              style={{ color: '#8B8A94' }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-white/5 transition-colors"
+              style={{ color: 'var(--crm-text-muted)' }}
             >
               <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -794,8 +829,8 @@ export default function ContactsPage() {
         <select
           value={statusFilter}
           onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-          className="px-3 py-2 rounded-lg text-sm focus:outline-none"
-          style={{ background: '#111114', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+          className="px-3 py-2.5 rounded-xl text-sm focus:outline-none transition-all"
+          style={{ background: 'var(--crm-surface)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
         >
           <option value="ALL">Todos os status</option>
           <option value="HOT">Quentes</option>
@@ -808,8 +843,8 @@ export default function ContactsPage() {
           <select
             value={tagFilter}
             onChange={e => { setTagFilter(e.target.value); setPage(1) }}
-            className="px-3 py-2 rounded-lg text-sm focus:outline-none"
-            style={{ background: '#111114', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+            className="px-3 py-2.5 rounded-xl text-sm focus:outline-none transition-all"
+            style={{ background: 'var(--crm-surface)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
           >
             <option value="">Todas as tags</option>
             {allTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
@@ -818,8 +853,8 @@ export default function ContactsPage() {
         {hasFilters && (
           <button
             onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); setTagFilter(''); setPage(1) }}
-            className="text-xs px-3 py-2 rounded-lg"
-            style={{ color: '#D4AF37', background: 'rgba(212,175,55,0.08)' }}
+            className="text-xs px-3.5 py-2.5 rounded-xl font-medium transition-all hover:brightness-110"
+            style={{ color: 'var(--crm-gold)', background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.12)' }}
           >
             Limpar filtros
           </button>
@@ -838,10 +873,10 @@ export default function ContactsPage() {
       {filteredContacts.length === 0 ? (
         <EmptyState hasFilters={hasFilters} />
       ) : (
-        <div className="rounded-xl border overflow-hidden" style={{ borderColor: '#2A2A32' }}>
+        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--crm-border)', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }}>
           {/* Desktop header */}
-          <div className="hidden lg:grid grid-cols-[40px_1fr_120px_90px_90px_80px_70px_90px] gap-2 px-4 py-2.5 items-center"
-            style={{ background: '#111114', borderBottom: '1px solid #2A2A32' }}
+          <div className="hidden lg:grid grid-cols-[40px_1fr_120px_90px_90px_80px_70px_70px_90px] gap-2 px-4 py-3 items-center"
+            style={{ background: 'var(--crm-surface)', borderBottom: '1px solid var(--crm-border)' }}
           >
             <label className="flex items-center justify-center">
               <input
@@ -857,6 +892,7 @@ export default function ContactsPage() {
             <SortHeader label="Valor" field="value" currentSort={sortField} currentDir={sortDir} onSort={handleSort} />
             <SortHeader label="Score" field="aiScore" currentSort={sortField} currentDir={sortDir} onSort={handleSort} />
             <SortHeader label="Churn" field="churn" currentSort={sortField} currentDir={sortDir} onSort={handleSort} />
+            <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--crm-text-muted)' }}>Paciente</span>
             <SortHeader label="Interação" field="lastInteraction" currentSort={sortField} currentDir={sortDir} onSort={handleSort} />
           </div>
 
@@ -875,7 +911,7 @@ export default function ContactsPage() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.015 }}
                   onClick={() => setDrawerLead(contact)}
-                  className="grid grid-cols-1 lg:grid-cols-[40px_1fr_120px_90px_90px_80px_70px_90px] gap-2 px-4 py-3 items-center transition-colors cursor-pointer"
+                  className="grid grid-cols-1 lg:grid-cols-[40px_1fr_120px_90px_90px_80px_70px_70px_90px] gap-2 px-4 py-3 items-center transition-colors cursor-pointer"
                   style={{
                     borderBottom: '1px solid #1A1A1F',
                     background: isSelected ? 'rgba(212,175,55,0.04)' : 'transparent',
@@ -969,6 +1005,17 @@ export default function ContactsPage() {
                       >
                         {contact.churnRisk}%
                       </span>
+                    ) : (
+                      <span className="text-[10px]" style={{ color: '#5A5A64' }}>—</span>
+                    )}
+                  </div>
+
+                  {/* Paciente */}
+                  <div className="hidden lg:flex items-center justify-center">
+                    {contact.patientId ? (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                        style={{ background: 'rgba(46,204,138,0.12)', color: '#2ECC8A' }}
+                      >Sim</span>
                     ) : (
                       <span className="text-[10px]" style={{ color: '#5A5A64' }}>—</span>
                     )}

@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
         source: true,
         lastInteractionAt: true,
         createdAt: true,
+        patientId: true,
       },
       orderBy: { position: 'asc' },
     })
