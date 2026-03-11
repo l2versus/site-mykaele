@@ -542,10 +542,11 @@ model CrmTenant {
   leads         Lead[]
   channels      CrmChannel[]
   conversations Conversation[]
-  automations   CrmAutomation[]
-  integrations  CrmIntegration[]
-  auditLogs     CrmAuditLog[]
-  knowledgeBase CrmKnowledgeBase[]
+  automations     CrmAutomation[]
+  integrations    CrmIntegration[]
+  auditLogs       CrmAuditLog[]
+  knowledgeBase   CrmKnowledgeBase[]
+  automationLogs  CrmAutomationLog[]
 }
 
 model CrmIntegration {
@@ -772,9 +773,27 @@ model CrmAutomation {
   isActive Boolean           @default(false)
 
   tenant CrmTenant @relation(fields: [tenantId], references: [id])
+  logs   CrmAutomationLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([tenantId, trigger, isActive])
+}
+
+model CrmAutomationLog {
+  id           String   @id @default(cuid())
+  tenantId     String
+  automationId String
+  status       String   // "SUCCESS" | "FAILED" | "SKIPPED"
+  error        String?
+  jobId        String?
+  payload      Json?
+  executedAt   DateTime @default(now())
+
+  tenant     CrmTenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  automation CrmAutomation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, executedAt(sort: Desc)])
+  @@index([automationId])
 }

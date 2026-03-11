@@ -43,4 +43,15 @@ export async function registerScheduledJobs(): Promise<void> {
       jobId: 'stage-cache-refresh',
     },
   )
+
+  // Agendador de automações temporais — a cada minuto
+  // Verifica CONTACT_IDLE, APPOINTMENT_BOOKED, APPOINTMENT_COMPLETED
+  await schedulerQueue.add(
+    'automation-scheduler',
+    { type: 'automation-scheduler' },
+    {
+      repeat: { pattern: '* * * * *' },
+      jobId: 'automation-scheduler-1min',
+    },
+  )
 }

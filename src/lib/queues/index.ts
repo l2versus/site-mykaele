@@ -1,27 +1,10 @@
 // src/lib/queues/index.ts — BullMQ (versão gratuita) com DLQ integrada
+// Importa Redis centralizado de src/lib/redis.ts
 import { Queue, QueueEvents } from 'bullmq'
-import IORedis from 'ioredis'
+import { redis, parseBullConnection, isRedisReady } from '@/lib/redis'
 
-const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379'
-
-// Conexão compartilhada para publicar/subscribar SSE (fora do BullMQ)
-export const redis = new IORedis(redisUrl, {
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false,
-  lazyConnect: true,
-})
-
-// Parse Redis URL para connection options
-function parseBullConnection() {
-  const parsed = new URL(redisUrl)
-  return {
-    host: parsed.hostname,
-    port: Number(parsed.port) || 6379,
-    password: parsed.password || undefined,
-    db: parsed.pathname ? Number(parsed.pathname.slice(1)) || 0 : 0,
-    maxRetriesPerRequest: null as null,
-  }
-}
+// Re-exporta para código que já importa daqui
+export { redis }
 
 export const bullConnection = parseBullConnection()
 
@@ -69,22 +52,50 @@ export function getDlqQueue(): Queue {
   return _dlqQueue
 }
 
-// Aliases para compatibilidade
-export const inboxQueue = { add: (...args: Parameters<Queue['add']>) => getInboxQueue().add(...args), getJob: (...args: Parameters<Queue['getJob']>) => getInboxQueue().getJob(...args), get name() { return getInboxQueue().name } }
-export const automationQueue = { add: (...args: Parameters<Queue['add']>) => getAutomationQueue().add(...args), getJob: (...args: Parameters<Queue['getJob']>) => getAutomationQueue().getJob(...args), get name() { return getAutomationQueue().name } }
-export const aiQueue = { add: (...args: Parameters<Queue['add']>) => getAiQueue().add(...args), getJob: (...args: Parameters<Queue['getJob']>) => getAiQueue().getJob(...args), get name() { return getAiQueue().name } }
-export const schedulerQueue = {
-  add: (...args: Parameters<Queue['add']>) => getSchedulerQueue().add(...args),
-  getRepeatableJobs: () => getSchedulerQueue().getRepeatableJobs(),
-  removeRepeatableByKey: (key: string) => getSchedulerQueue().removeRepeatableByKey(key),
-  get name() { return getSchedulerQueue().name },
+// Aliases com proxy seguro — se Redis offline, loga e não crasheia
+function safeQueueProxy(getQueue: () => Queue, queueName: string) {
+  return {
+    add: async (...args: Parameters<Queue['add']>) => {
+      if (!isRedisReady()) {
+        console.error(`[queues] Redis offline — job descartado na fila "${queueName}":`, args[0])
+        return null
+      }
+      return getQueue().add(...args)
+    },
+    getJob: async (...args: Parameters<Queue['getJob']>) => {
+      if (!isRedisReady()) return null
+      return getQueue().getJob(...args)
+    },
+    get name() { return queueName },
+  }
 }
+
+export const inboxQueue = safeQueueProxy(getInboxQueue, 'crm-inbox')
+export const automationQueue = safeQueueProxy(getAutomationQueue, 'crm-automation')
+export const aiQueue = safeQueueProxy(getAiQueue, 'crm-ai')
+
+export const schedulerQueue = {
+  ...safeQueueProxy(getSchedulerQueue, 'crm-scheduler'),
+  getRepeatableJobs: async () => {
+    if (!isRedisReady()) return []
+    return getSchedulerQueue().getRepeatableJobs()
+  },
+  removeRepeatableByKey: async (key: string) => {
+    if (!isRedisReady()) return
+    return getSchedulerQueue().removeRepeatableByKey(key)
+  },
+}
+
 export const dlqQueue = {
-  add: (...args: Parameters<Queue['add']>) => getDlqQueue().add(...args),
-  getJob: (...args: Parameters<Queue['getJob']>) => getDlqQueue().getJob(...args),
-  getWaiting: (...args: Parameters<Queue['getWaiting']>) => getDlqQueue().getWaiting(...args),
-  getCompleted: (...args: Parameters<Queue['getCompleted']>) => getDlqQueue().getCompleted(...args),
-  get name() { return getDlqQueue().name },
+  ...safeQueueProxy(getDlqQueue, 'crm-dlq'),
+  getWaiting: async (...args: Parameters<Queue['getWaiting']>) => {
+    if (!isRedisReady()) return []
+    return getDlqQueue().getWaiting(...args)
+  },
+  getCompleted: async (...args: Parameters<Queue['getCompleted']>) => {
+    if (!isRedisReady()) return []
+    return getDlqQueue().getCompleted(...args)
+  },
 }
 
 /** Move job falho para DLQ com contexto completo */
@@ -94,6 +105,10 @@ export async function moveToDLQ(params: {
   reason: string
   payload: unknown
 }): Promise<void> {
+  if (!isRedisReady()) {
+    console.error('[queues] Redis offline — não foi possível mover job para DLQ:', params.jobId)
+    return
+  }
   await getDlqQueue().add('dead-job', {
     ...params,
     failedAt: new Date().toISOString(),
@@ -102,6 +117,10 @@ export async function moveToDLQ(params: {
 
 /** Anexa listener de falha que move para DLQ automaticamente */
 export function attachDLQListener(queue: { name: string }): void {
+  if (!isRedisReady()) {
+    console.error(`[queues] Redis offline — DLQ listener não anexado para "${queue.name}"`)
+    return
+  }
   const events = new QueueEvents(queue.name, { connection: bullConnection })
   events.on('failed', async ({ jobId, failedReason }) => {
     const realQueue = new Queue(queue.name, { connection: bullConnection })

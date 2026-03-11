@@ -325,6 +325,7 @@ export default function AutomationsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [editingAutomation, setEditingAutomation] = useState<AutomationItem | null>(null)
   const [toggling, setToggling] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [showLog, setShowLog] = useState(false)
@@ -375,6 +376,23 @@ export default function AutomationsPage() {
     }
   }
 
+  const handleEdit = async (data: { name: string; trigger: string; flowJson: Record<string, unknown> }) => {
+    if (!editingAutomation) return
+    try {
+      const res = await fetch(`/api/admin/crm/automations/${editingAutomation.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...data, tenantId: TENANT_ID }),
+      })
+      if (!res.ok) throw new Error('Falha ao atualizar automação')
+      setEditingAutomation(null)
+      addToast('Automação atualizada')
+      fetchAutomations()
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Erro ao atualizar', 'error')
+    }
+  }
+
   const handleToggle = async (automation: AutomationItem) => {
     setToggling(automation.id)
     // Optimistic
@@ -399,11 +417,11 @@ export default function AutomationsPage() {
     if (!confirm('Excluir esta automação?')) return
     setDeleting(automationId)
     try {
-      await fetch(`/api/admin/crm/automations/${automationId}`, {
+      const res = await fetch(`/api/admin/crm/automations/${automationId}?tenantId=${TENANT_ID}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tenantId: TENANT_ID }),
+        headers: { Authorization: `Bearer ${token}` },
       })
+      if (!res.ok) throw new Error('Falha ao excluir')
       setAutomations(prev => prev.filter(a => a.id !== automationId))
       addToast('Automação excluída')
     } catch {
@@ -539,6 +557,16 @@ export default function AutomationsPage() {
                   {/* Actions */}
                   <div className="flex items-center gap-2 shrink-0">
                     <button
+                      onClick={() => setEditingAutomation(automation)}
+                      className="p-1.5 rounded-lg transition-colors hover:bg-white/5"
+                      style={{ color: '#8B8A94' }}
+                      title="Editar"
+                    >
+                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    </button>
+                    <button
                       onClick={() => handleDelete(automation.id)}
                       disabled={deleting === automation.id}
                       className="p-1.5 rounded-lg transition-colors disabled:opacity-50 hover:bg-white/5"
@@ -583,11 +611,20 @@ export default function AutomationsPage() {
         </motion.div>
       )}
 
-      {/* Modal */}
+      {/* Modal — Create */}
       {showModal && (
         <AutomationModal
           onClose={() => setShowModal(false)}
           onSave={handleCreate}
+        />
+      )}
+
+      {/* Modal — Edit */}
+      {editingAutomation && (
+        <AutomationModal
+          existing={editingAutomation}
+          onClose={() => setEditingAutomation(null)}
+          onSave={handleEdit}
         />
       )}
     </div>

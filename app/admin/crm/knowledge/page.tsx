@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useToastStore } from '@/stores/toast-store'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ━━━ Types ━━━
@@ -39,139 +40,28 @@ interface UsageEntry {
   timestamp: string
 }
 
-// ━━━ Mock Data ━━━
+const TENANT_ID = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID ?? 'clinica-mykaele-procopio'
 
-const MOCK_SOURCES: KnowledgeSource[] = [
-  {
-    id: 'kb-1',
-    name: 'Fatos importantes',
-    type: 'TEXT',
-    content: 'A Clinica Mykaele Procopio e referencia em harmonizacao facial no Rio de Janeiro. Fundada em 2019, a clinica atende mais de 200 pacientes por mes com foco em procedimentos minimamente invasivos de alta qualidade. Todos os produtos utilizados sao importados e aprovados pela ANVISA.',
-    chunks: [{ index: 0, preview: 'A Clinica Mykaele Procopio e referencia em harmonizacao facial no Rio de Janeiro...', tokenCount: 87 }],
+// Mapeia resposta da API para o formato da interface da página
+function mapApiSource(src: Record<string, unknown>): KnowledgeSource {
+  return {
+    id: src.id as string,
+    name: src.name as string,
+    type: (src.type as SourceType) ?? 'TEXT',
+    content: src.content as string,
+    chunks: (src.chunks as ChunkInfo[]) ?? [],
     timesUsed: 0,
     language: 'pt-BR',
-    updatedBy: { name: 'Robo', avatar: null },
-    updatedAt: '2026-03-09T14:30:00Z',
-    createdAt: '2026-03-09T14:30:00Z',
-    isActive: true,
-    tags: ['institucional'],
-    sourceFile: null,
-    sourceUrl: null,
-    embeddingStatus: 'ready',
-  },
-  {
-    id: 'kb-2',
-    name: 'Produtos e servicos',
-    type: 'TEXT',
-    content: 'Botox Allergan: aplicacao a partir de R$1.200. Preenchimento labial com acido hialuronico Juvederm: a partir de R$2.500. Harmonizacao facial completa: a partir de R$4.000. Bioestimuladores de colageno Sculptra: a partir de R$3.500 por sessao. Skinbooster Restylane: a partir de R$1.800.',
-    chunks: [{ index: 0, preview: 'Botox Allergan: aplicacao a partir de R$1.200. Preenchimento labial...', tokenCount: 112 }],
-    timesUsed: 0,
-    language: 'pt-BR',
-    updatedBy: { name: 'Robo', avatar: null },
-    updatedAt: '2026-03-09T15:00:00Z',
-    createdAt: '2026-03-09T15:00:00Z',
-    isActive: true,
-    tags: ['precos', 'servicos'],
-    sourceFile: null,
-    sourceUrl: null,
-    embeddingStatus: 'ready',
-  },
-  {
-    id: 'kb-3',
-    name: 'Visao geral do negocio',
-    type: 'TEXT',
-    content: 'Horario de funcionamento: segunda a sexta das 9h as 19h, sabado das 9h as 14h. Endereco: Barra da Tijuca, Rio de Janeiro. Formas de pagamento: PIX, cartao de credito em ate 12x, boleto bancario. Agendamento online disponivel 24h pelo site e WhatsApp.',
-    chunks: [{ index: 0, preview: 'Horario de funcionamento: segunda a sexta das 9h as 19h...', tokenCount: 95 }],
-    timesUsed: 0,
-    language: 'pt-BR',
-    updatedBy: { name: 'Robo', avatar: null },
-    updatedAt: '2026-03-09T15:30:00Z',
-    createdAt: '2026-03-09T15:30:00Z',
-    isActive: true,
-    tags: ['institucional'],
-    sourceFile: null,
-    sourceUrl: null,
-    embeddingStatus: 'ready',
-  },
-  {
-    id: 'kb-4',
-    name: 'Protocolos clinicos',
-    type: 'FILE',
-    content: 'Protocolo de Botox: aplicacao em pontos especificos da face superior para reducao de rugas dinamicas. Intervalo entre sessoes: 4-6 meses. Contraindicacoes: gestantes, lactantes, alergia a albumina.\n\nProtocolo de Preenchimento: utilizacao de acido hialuronico em diferentes viscosidades conforme a regiao tratada. Volume maximo por sessao: 4ml. Retorno para avaliacao em 15 dias.\n\nProtocolo de Bioestimuladores: Sculptra diluido em 8ml de agua esteril + 2ml de lidocaina. Aplicacao em pontos de ancoragem facial. Serie de 3 sessoes com intervalo de 30 dias.',
-    chunks: [
-      { index: 0, preview: 'Protocolo de Botox: aplicacao em pontos especificos da face superior...', tokenCount: 134 },
-      { index: 1, preview: 'Protocolo de Preenchimento: utilizacao de acido hialuronico em diferentes...', tokenCount: 98 },
-      { index: 2, preview: 'Protocolo de Bioestimuladores: Sculptra diluido em 8ml de agua esteril...', tokenCount: 87 },
-    ],
-    timesUsed: 12,
-    language: 'pt-BR',
     updatedBy: { name: 'Admin', avatar: null },
-    updatedAt: '2026-03-10T10:00:00Z',
-    createdAt: '2026-03-10T09:30:00Z',
-    isActive: true,
-    tags: ['clinico', 'protocolos'],
-    sourceFile: 'protocolos-clinicos-v3.pdf',
+    updatedAt: src.updatedAt as string,
+    createdAt: src.createdAt as string,
+    isActive: src.isActive as boolean,
+    tags: [],
+    sourceFile: (src.sourceFile as string) ?? null,
     sourceUrl: null,
-    embeddingStatus: 'ready',
-  },
-  {
-    id: 'kb-5',
-    name: 'Perguntas frequentes',
-    type: 'TEXT',
-    content: 'Doi? A maioria dos procedimentos utiliza anestesia topica, o desconforto e minimo.\n\nQuanto tempo dura? Botox dura 4-6 meses, preenchimento 12-18 meses, bioestimuladores ate 2 anos.\n\nPosso tomar sol depois? Evitar exposicao solar direta por 48h apos qualquer procedimento.\n\nTem garantia? Oferecemos retoque gratuito em ate 15 dias para preenchimentos.\n\nQuanto custa a primeira consulta? A avaliacao inicial e gratuita e sem compromisso.',
-    chunks: [
-      { index: 0, preview: 'Doi? A maioria dos procedimentos utiliza anestesia topica...', tokenCount: 67 },
-      { index: 1, preview: 'Quanto tempo dura? Botox dura 4-6 meses, preenchimento 12-18 meses...', tokenCount: 78 },
-      { index: 2, preview: 'Posso tomar sol depois? Evitar exposicao solar direta por 48h...', tokenCount: 45 },
-      { index: 3, preview: 'Tem garantia? Oferecemos retoque gratuito em ate 15 dias...', tokenCount: 52 },
-      { index: 4, preview: 'Quanto custa a primeira consulta? A avaliacao inicial e gratuita...', tokenCount: 38 },
-    ],
-    timesUsed: 28,
-    language: 'pt-BR',
-    updatedBy: { name: 'Admin', avatar: null },
-    updatedAt: '2026-03-11T08:00:00Z',
-    createdAt: '2026-03-11T07:00:00Z',
-    isActive: true,
-    tags: ['faq', 'atendimento'],
-    sourceFile: null,
-    sourceUrl: null,
-    embeddingStatus: 'ready',
-  },
-  {
-    id: 'kb-6',
-    name: 'Procedimentos esteticos',
-    type: 'FILE',
-    content: 'Catalogo completo de procedimentos da clinica com descricoes detalhadas, indicacoes, contraindicacoes, preparo pre-procedimento, cuidados pos-procedimento e precos atualizados para 2026. Inclui: Botox, Preenchimento Labial, Harmonizacao Facial, Bioestimuladores, Skinbooster, Peeling Quimico, Microagulhamento, Limpeza de Pele Premium.',
-    chunks: [
-      { index: 0, preview: 'Catalogo completo de procedimentos da clinica com descricoes detalhadas...', tokenCount: 145 },
-      { index: 1, preview: 'Botox: Toxina botulinica tipo A para tratamento de rugas dinamicas...', tokenCount: 132 },
-      { index: 2, preview: 'Preenchimento Labial: Acido hialuronico de alta viscosidade para...', tokenCount: 128 },
-      { index: 3, preview: 'Harmonizacao Facial: Combinacao de tecnicas para equilibrio e simetria...', tokenCount: 156 },
-      { index: 4, preview: 'Bioestimuladores: Sculptra e Radiesse para estimulo de colageno...', tokenCount: 119 },
-      { index: 5, preview: 'Skinbooster: Restylane Vital para hidratacao profunda da pele...', tokenCount: 98 },
-      { index: 6, preview: 'Peeling Quimico: Acidos combinados para renovacao celular...', tokenCount: 87 },
-      { index: 7, preview: 'Microagulhamento: Drug delivery com dermaroller e principios ativos...', tokenCount: 94 },
-    ],
-    timesUsed: 45,
-    language: 'pt-BR',
-    updatedBy: { name: 'Admin', avatar: null },
-    updatedAt: '2026-03-11T09:30:00Z',
-    createdAt: '2026-03-10T16:00:00Z',
-    isActive: true,
-    tags: ['procedimentos', 'catalogo', 'precos'],
-    sourceFile: 'catalogo-procedimentos-2026.pdf',
-    sourceUrl: null,
-    embeddingStatus: 'ready',
-  },
-]
-
-const MOCK_USAGE_HISTORY: UsageEntry[] = [
-  { query: 'Quanto custa o botox?', similarity: 0.94, timestamp: '2026-03-11T10:30:00Z' },
-  { query: 'Quais procedimentos voces oferecem?', similarity: 0.91, timestamp: '2026-03-11T09:15:00Z' },
-  { query: 'Horario de funcionamento da clinica', similarity: 0.88, timestamp: '2026-03-11T08:45:00Z' },
-  { query: 'Preenchimento labial doi?', similarity: 0.86, timestamp: '2026-03-10T17:20:00Z' },
-  { query: 'Quanto tempo dura harmonizacao facial?', similarity: 0.83, timestamp: '2026-03-10T15:10:00Z' },
-]
+    embeddingStatus: (src.embeddingStatus as KnowledgeSource['embeddingStatus']) ?? 'ready',
+  }
+}
 
 // ━━━ Helpers ━━━
 
@@ -1082,7 +972,7 @@ function SourceDetailDrawer({ source, onClose, usageHistory }: DrawerProps) {
 // ━━━ Main Page Component ━━━
 
 export default function KnowledgeBasePage() {
-  const [sources, setSources] = useState<KnowledgeSource[]>(MOCK_SOURCES)
+  const [sources, setSources] = useState<KnowledgeSource[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<'ALL' | SourceType>('ALL')
@@ -1092,12 +982,28 @@ export default function KnowledgeBasePage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingSource, setEditingSource] = useState<KnowledgeSource | null>(null)
   const [drawerSource, setDrawerSource] = useState<KnowledgeSource | null>(null)
+  const addToast = useToastStore(s => s.addToast)
 
-  // Simulate loading
-  useState(() => {
-    const timeout = setTimeout(() => setLoading(false), 600)
-    return () => clearTimeout(timeout)
-  })
+  const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null
+
+  const fetchSources = useCallback(async () => {
+    if (!token) return
+    try {
+      setLoading(true)
+      const res = await fetch(`/api/admin/crm/knowledge?tenantId=${TENANT_ID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Falha ao carregar fontes')
+      const data = await res.json()
+      setSources((data.sources ?? []).map(mapApiSource))
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Erro ao carregar', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }, [token, addToast])
+
+  useEffect(() => { fetchSources() }, [fetchSources])
 
   // ━━━ Filtered & Sorted ━━━
 
@@ -1182,50 +1088,80 @@ export default function KnowledgeBasePage() {
     setModalOpen(true)
   }, [])
 
-  const handleSave = useCallback((partial: Partial<KnowledgeSource>) => {
-    if (partial.id) {
-      setSources((prev) =>
-        prev.map((s) =>
-          s.id === partial.id
-            ? { ...s, ...partial, updatedAt: new Date().toISOString() }
-            : s
+  const handleSave = useCallback(async (partial: Partial<KnowledgeSource>) => {
+    if (!token) return
+    try {
+      if (partial.id) {
+        const res = await fetch(`/api/admin/crm/knowledge`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            id: partial.id,
+            name: partial.name,
+            content: partial.content,
+            isActive: partial.isActive,
+          }),
+        })
+        if (!res.ok) throw new Error('Falha ao atualizar')
+        addToast('Fonte atualizada')
+      } else {
+        const res = await fetch(`/api/admin/crm/knowledge?tenantId=${TENANT_ID}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            name: partial.name,
+            content: partial.content,
+            sourceFile: partial.sourceFile,
+            tenantId: TENANT_ID,
+          }),
+        })
+        if (!res.ok) throw new Error('Falha ao criar')
+        addToast('Fonte criada')
+      }
+      fetchSources()
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Erro ao salvar', 'error')
+    }
+  }, [token, addToast, fetchSources])
+
+  const handleDelete = useCallback(async (id: string) => {
+    if (!token) return
+    try {
+      const res = await fetch(`/api/admin/crm/knowledge?id=${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Falha ao excluir')
+      setSources((prev) => prev.filter((s) => s.id !== id))
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+      addToast('Fonte excluída')
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Erro ao excluir', 'error')
+    }
+  }, [token, addToast])
+
+  const handleBulkDelete = useCallback(async () => {
+    if (!token) return
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id =>
+          fetch(`/api/admin/crm/knowledge?id=${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+          })
         )
       )
-    } else {
-      const newSource: KnowledgeSource = {
-        id: `kb-${Date.now()}`,
-        name: partial.name ?? 'Sem nome',
-        type: partial.type ?? 'TEXT',
-        content: partial.content ?? '',
-        chunks: [],
-        timesUsed: 0,
-        language: partial.language ?? 'pt-BR',
-        updatedBy: { name: 'Admin', avatar: null },
-        updatedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        isActive: true,
-        tags: partial.tags ?? [],
-        sourceFile: partial.sourceFile ?? null,
-        sourceUrl: partial.sourceUrl ?? null,
-        embeddingStatus: 'pending',
-      }
-      setSources((prev) => [newSource, ...prev])
+      setSources((prev) => prev.filter((s) => !selectedIds.has(s.id)))
+      setSelectedIds(new Set())
+      addToast(`${selectedIds.size} fonte(s) excluída(s)`)
+    } catch {
+      addToast('Erro ao excluir fontes', 'error')
     }
-  }, [])
-
-  const handleDelete = useCallback((id: string) => {
-    setSources((prev) => prev.filter((s) => s.id !== id))
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      next.delete(id)
-      return next
-    })
-  }, [])
-
-  const handleBulkDelete = useCallback(() => {
-    setSources((prev) => prev.filter((s) => !selectedIds.has(s.id)))
-    setSelectedIds(new Set())
-  }, [selectedIds])
+  }, [selectedIds, token, addToast])
 
   const handleBulkDeactivate = useCallback(() => {
     setSources((prev) =>
@@ -1725,7 +1661,7 @@ export default function KnowledgeBasePage() {
       <SourceDetailDrawer
         source={drawerSource}
         onClose={() => setDrawerSource(null)}
-        usageHistory={drawerSource?.timesUsed && drawerSource.timesUsed > 0 ? MOCK_USAGE_HISTORY : []}
+        usageHistory={[]}
       />
     </div>
   )

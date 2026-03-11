@@ -24,8 +24,18 @@ services:
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      # CRM
+      - REDIS_URL=redis://redis:6379
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - DEFAULT_TENANT_ID=${DEFAULT_TENANT_ID}
+      - EVOLUTION_API_URL=http://evolution:8080
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - EVOLUTION_WEBHOOK_SECRET=${EVOLUTION_WEBHOOK_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - mykaele-net
@@ -48,8 +58,75 @@ services:
     networks:
       - mykaele-net
 
+  # --- Redis (BullMQ + SSE Pub/Sub) ---
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - mykaele-net
+
+  # --- Evolution API v2 (WhatsApp) ---
+  evolution:
+    image: atendai/evolution-api:v2.2.3
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
+      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://mykaele:${DB_PASSWORD}@db:5432/mykaele_db
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=true
+      - DATABASE_SAVE_DATA_CONTACTS=true
+      - LOG_LEVEL=WARN
+      - DEL_INSTANCE=false
+      - WEBHOOK_GLOBAL_ENABLED=false
+      - WEBHOOK_GLOBAL_URL=
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - mykaele-net
+
+  # --- CRM Workers (BullMQ) ---
+  crm-worker:
+    build: .
+    restart: always
+    command: npx tsx src/workers/crm/index.ts
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://mykaele:${DB_PASSWORD}@db:5432/mykaele_db
+      - REDIS_URL=redis://redis:6379
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - DEFAULT_TENANT_ID=${DEFAULT_TENANT_ID}
+      - EVOLUTION_API_URL=http://evolution:8080
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - RETENTION_RADAR_CRON=${RETENTION_RADAR_CRON:-0 8 * * *}
+      - RETENTION_RISK_THRESHOLD=${RETENTION_RISK_THRESHOLD:-70}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - mykaele-net
+
 volumes:
   pgdata:
+  redisdata:
 
 networks:
   mykaele-net:

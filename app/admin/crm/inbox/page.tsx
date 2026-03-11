@@ -66,6 +66,14 @@ interface MessageItem {
   createdAt: string
 }
 
+interface StageInfo {
+  id: string
+  name: string
+  type: string
+  color: string | null
+  order: number
+}
+
 // ━━━ Helpers ━━━
 
 function formatTime(dateStr: string): string {
@@ -272,11 +280,20 @@ function DaySeparator({ label }: { label: string }) {
 
 // ━━━ Lead Panel (3rd column) ━━━
 
-function LeadPanel({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
+function LeadPanel({ lead, onClose, stages, onStageChange, isMovingStage, aiInsight, isLoadingInsight }: {
+  lead: LeadInfo
+  onClose: () => void
+  stages: StageInfo[]
+  onStageChange: (leadId: string, fromStageId: string, toStageId: string) => void
+  isMovingStage: boolean
+  aiInsight: { insight: string; sentiment: string; engagementLevel: string; detectedIntents: string[] } | null
+  isLoadingInsight: boolean
+}) {
   const statusColor = getStatusColor(lead.status)
+  const [stageOpen, setStageOpen] = useState(false)
 
   return (
-    <div className="w-72 shrink-0 border-l flex flex-col overflow-y-auto"
+    <div className="w-72 shrink-0 border-l flex flex-col overflow-y-auto crm-scroll"
       style={{ borderColor: 'var(--crm-border)', background: 'var(--crm-surface)' }}
     >
       {/* Header */}
@@ -306,19 +323,87 @@ function LeadPanel({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
         </div>
       </div>
 
-      {/* Status & Stage */}
+      {/* Status & Stage Dropdown */}
       <div className="p-4 border-b" style={{ borderColor: 'var(--crm-border)' }}>
-        <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center justify-between mb-3">
           <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--crm-text-muted)' }}>Status</span>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${statusColor}18`, color: statusColor }}>
             {getStatusLabel(lead.status)}
           </span>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--crm-text-muted)' }}>Etapa</span>
-          <span className="text-xs font-medium" style={{ color: lead.stage.color ?? 'var(--crm-text)' }}>
-            {lead.stage.name}
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider block mb-2" style={{ color: 'var(--crm-text-muted)' }}>
+            Etapa do Funil
           </span>
+          <div className="relative">
+            <button
+              onClick={() => setStageOpen(p => !p)}
+              disabled={isMovingStage}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all"
+              style={{
+                background: 'var(--crm-surface-2)',
+                border: `1px solid ${stageOpen ? 'var(--crm-gold)' : 'var(--crm-border)'}`,
+                color: lead.stage.color ?? 'var(--crm-text)',
+                boxShadow: stageOpen ? '0 0 0 1px rgba(212,175,55,0.2)' : 'none',
+              }}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: lead.stage.color ?? 'var(--crm-text-muted)' }} />
+                <span className="truncate">{lead.stage.name}</span>
+              </div>
+              {isMovingStage ? (
+                <div className="w-3 h-3 border rounded-full animate-spin shrink-0" style={{ borderColor: 'var(--crm-border)', borderTopColor: 'var(--crm-gold)' }} />
+              ) : (
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="shrink-0 transition-transform" style={{ transform: stageOpen ? 'rotate(180deg)' : 'rotate(0)' }}>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              )}
+            </button>
+            <AnimatePresence>
+              {stageOpen && stages.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute top-full left-0 right-0 mt-1.5 rounded-xl overflow-hidden shadow-2xl z-30"
+                  style={{ background: 'var(--crm-surface-2)', border: '1px solid var(--crm-border)', backdropFilter: 'blur(20px)' }}
+                >
+                  <div className="py-1.5 max-h-56 overflow-y-auto crm-scroll">
+                    {stages.map(stage => {
+                      const isActive = stage.id === lead.stageId
+                      return (
+                        <button
+                          key={stage.id}
+                          onClick={() => {
+                            if (!isActive) onStageChange(lead.id, lead.stageId, stage.id)
+                            setStageOpen(false)
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs transition-all"
+                          style={{
+                            background: isActive ? 'rgba(212,175,55,0.06)' : 'transparent',
+                            color: isActive ? 'var(--crm-gold)' : 'var(--crm-text)',
+                          }}
+                          onMouseEnter={e => { if (!isActive) (e.target as HTMLElement).style.background = 'rgba(255,255,255,0.04)' }}
+                          onMouseLeave={e => { if (!isActive) (e.target as HTMLElement).style.background = 'transparent' }}
+                        >
+                          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: stage.color ?? '#8B8A94' }} />
+                          <span className="truncate font-medium">{stage.name}</span>
+                          {stage.type === 'WON' && <span className="text-[9px] ml-auto shrink-0" style={{ color: 'var(--crm-won)' }}>Ganho</span>}
+                          {stage.type === 'LOST' && <span className="text-[9px] ml-auto shrink-0" style={{ color: 'var(--crm-text-muted)' }}>Perdido</span>}
+                          {isActive && (
+                            <svg width="12" height="12" fill="none" stroke="var(--crm-gold)" strokeWidth="2.5" viewBox="0 0 24 24" className="ml-auto shrink-0">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
@@ -377,6 +462,88 @@ function LeadPanel({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
           </div>
         </div>
       )}
+
+      {/* AI Insight */}
+      <div className="p-4 border-b" style={{ borderColor: 'var(--crm-border)' }}>
+        {isLoadingInsight ? (
+          <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(212,175,55,0.03)', border: '1px solid rgba(212,175,55,0.08)' }}>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded animate-pulse" style={{ background: 'rgba(212,175,55,0.2)' }} />
+              <div className="w-20 h-2.5 rounded animate-pulse" style={{ background: 'var(--crm-surface-2)' }} />
+            </div>
+            <div className="w-full h-2 rounded animate-pulse" style={{ background: 'var(--crm-surface-2)' }} />
+            <div className="w-3/4 h-2 rounded animate-pulse" style={{ background: 'var(--crm-surface-2)' }} />
+          </div>
+        ) : aiInsight ? (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl p-3 relative overflow-hidden"
+            style={{
+              background: aiInsight.sentiment === 'urgent'
+                ? 'rgba(255,107,74,0.04)'
+                : aiInsight.sentiment === 'positive'
+                  ? 'rgba(46,204,138,0.04)'
+                  : aiInsight.sentiment === 'negative'
+                    ? 'rgba(255,107,74,0.04)'
+                    : 'rgba(212,175,55,0.03)',
+              border: `1px solid ${
+                aiInsight.sentiment === 'urgent'
+                  ? 'rgba(255,107,74,0.15)'
+                  : aiInsight.sentiment === 'positive'
+                    ? 'rgba(46,204,138,0.12)'
+                    : aiInsight.sentiment === 'negative'
+                      ? 'rgba(255,107,74,0.12)'
+                      : 'rgba(212,175,55,0.08)'
+              }`,
+            }}
+          >
+            {/* Shimmer accent */}
+            <motion.div
+              className="absolute top-0 left-0 right-0 h-[1px]"
+              style={{
+                background: aiInsight.sentiment === 'positive'
+                  ? 'linear-gradient(90deg, transparent, rgba(46,204,138,0.4), transparent)'
+                  : aiInsight.sentiment === 'urgent' || aiInsight.sentiment === 'negative'
+                    ? 'linear-gradient(90deg, transparent, rgba(255,107,74,0.4), transparent)'
+                    : 'linear-gradient(90deg, transparent, rgba(212,175,55,0.3), transparent)',
+              }}
+              animate={{ x: ['-100%', '100%'] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+            />
+
+            <span className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 mb-2" style={{
+              color: aiInsight.sentiment === 'positive' ? 'var(--crm-won)'
+                : aiInsight.sentiment === 'urgent' || aiInsight.sentiment === 'negative' ? 'var(--crm-hot)'
+                : 'var(--crm-gold)',
+            }}>
+              <svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+              </svg>
+              Insight da IA
+            </span>
+            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--crm-text)' }}>
+              {aiInsight.insight}
+            </p>
+            {aiInsight.detectedIntents.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {aiInsight.detectedIntents.map(intent => (
+                  <span key={intent} className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                    style={{ background: 'rgba(212,175,55,0.08)', color: 'var(--crm-gold)' }}
+                  >{intent}</span>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        ) : (
+          <div className="rounded-xl p-3 flex items-center gap-2" style={{ background: 'rgba(139,138,148,0.04)', border: '1px solid var(--crm-border)' }}>
+            <svg width="12" height="12" fill="none" stroke="var(--crm-text-muted)" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+            </svg>
+            <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>Sem insight disponível</span>
+          </div>
+        )}
+      </div>
 
       {/* Tags */}
       {lead.tags.length > 0 && (
@@ -464,6 +631,10 @@ export default function InboxPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [showQuickReplies, setShowQuickReplies] = useState(false)
   const [showLeadPanel, setShowLeadPanel] = useState(true)
+  const [stages, setStages] = useState<StageInfo[]>([])
+  const [isMovingStage, setIsMovingStage] = useState(false)
+  const [aiInsight, setAiInsight] = useState<{ insight: string; sentiment: string; engagementLevel: string; detectedIntents: string[] } | null>(null)
+  const [isLoadingInsight, setIsLoadingInsight] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -523,7 +694,41 @@ export default function InboxPage() {
     }
   }, [token])
 
-  useEffect(() => { fetchConversations() }, [fetchConversations])
+  // Fetch stages para o dropdown do Lead Panel
+  const fetchStages = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await fetch(`/api/admin/crm/pipeline?tenantId=${TENANT_ID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.stages) setStages(data.stages)
+    } catch {
+      // silently fail
+    }
+  }, [token])
+
+  // Fetch AI insight for selected lead
+  const fetchAiInsight = useCallback(async (leadId: string) => {
+    if (!token) return
+    setIsLoadingInsight(true)
+    setAiInsight(null)
+    try {
+      const res = await fetch(`/api/admin/crm/ai/insight?leadId=${leadId}&tenantId=${TENANT_ID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.insight) setAiInsight(data)
+    } catch {
+      // Silencioso — insight é um bônus, não bloqueia UX
+    } finally {
+      setIsLoadingInsight(false)
+    }
+  }, [token])
+
+  useEffect(() => { fetchConversations(); fetchStages() }, [fetchConversations, fetchStages])
 
   useEffect(() => {
     if (selectedId) {
@@ -531,20 +736,72 @@ export default function InboxPage() {
       setHasMore(false)
       setNextCursor(null)
       fetchMessages(selectedId)
-    }
-  }, [selectedId, fetchMessages])
 
-  // SSE: real-time updates
+      // Buscar insight do lead selecionado
+      const conv = conversations.find(c => c.id === selectedId)
+      if (conv?.lead?.id) fetchAiInsight(conv.lead.id)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, fetchMessages, fetchAiInsight])
+
+  // SSE: real-time updates — cirúrgico, sem refetch total
   useCrmStream(TENANT_ID, useCallback((event) => {
     if (event.type === 'new-message') {
-      playFeedback('message')
-      fetchConversations()
-      const convId = event.data.conversationId as string
-      if (convId === selectedId) {
-        fetchMessages(convId)
+      const { conversationId: convId, fromMe, content, messageType, messageId, leadId } = event.data as {
+        conversationId: string; fromMe: boolean; content: string; messageType: string; messageId: string; leadId: string
+      }
+
+      // Só toca som se não é mensagem nossa (evita duplo feedback no envio)
+      if (!fromMe) playFeedback('message')
+
+      // Atualizar lista de conversas: reordenar e incrementar unread
+      setConversations(prev => {
+        const idx = prev.findIndex(c => c.id === convId)
+        if (idx === -1) {
+          // Nova conversa — precisamos buscar a lista completa
+          fetchConversations()
+          return prev
+        }
+        const updated = [...prev]
+        const conv = { ...updated[idx] }
+        conv.lastMessageAt = new Date().toISOString()
+        conv.lastMessage = {
+          content: content ?? '',
+          fromMe,
+          type: messageType ?? 'TEXT',
+          createdAt: new Date().toISOString(),
+        }
+        if (!fromMe && convId !== selectedId) {
+          conv.unreadCount = conv.unreadCount + 1
+        }
+        // Mover para o topo
+        updated.splice(idx, 1)
+        updated.unshift(conv)
+        return updated
+      })
+
+      // Se é a conversa ativa, inserir a mensagem diretamente (sem refetch)
+      if (convId === selectedId && !fromMe) {
+        const newMsg: MessageItem = {
+          id: messageId ?? `sse-${Date.now()}`,
+          fromMe,
+          type: messageType ?? 'TEXT',
+          content: content ?? '',
+          mediaMimeType: null,
+          mediaUrl: null,
+          isClinicalMedia: false,
+          status: 'RECEIVED',
+          createdAt: new Date().toISOString(),
+        }
+        setMessages(prev => {
+          // Deduplicação
+          if (prev.some(m => m.id === newMsg.id)) return prev
+          return [...prev, newMsg]
+        })
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
       }
     }
-  }, [fetchConversations, fetchMessages, selectedId]))
+  }, [fetchConversations, selectedId]))
 
   // Send message
   const handleSend = async () => {
@@ -586,6 +843,46 @@ export default function InboxPage() {
     }
   }
 
+  // Move lead to different stage
+  const handleStageChange = async (leadId: string, fromStageId: string, toStageId: string) => {
+    if (fromStageId === toStageId || isMovingStage) return
+    setIsMovingStage(true)
+
+    // Otimista: atualizar lead no estado local
+    const destStage = stages.find(s => s.id === toStageId)
+    if (destStage) {
+      setConversations(prev => prev.map(c =>
+        c.lead.id === leadId
+          ? { ...c, lead: { ...c.lead, stageId: toStageId, stage: { name: destStage.name, color: destStage.color } } }
+          : c
+      ))
+    }
+
+    try {
+      const res = await fetch('/api/admin/crm/leads/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ leadId, fromStageId, toStageId, position: 1.0, tenantId: TENANT_ID }),
+      })
+      if (!res.ok) throw new Error()
+      addToast('Estágio atualizado', 'success')
+      playFeedback('drop')
+    } catch {
+      // Reverter otimista
+      const origStage = stages.find(s => s.id === fromStageId)
+      if (origStage) {
+        setConversations(prev => prev.map(c =>
+          c.lead.id === leadId
+            ? { ...c, lead: { ...c.lead, stageId: fromStageId, stage: { name: origStage.name, color: origStage.color } } }
+            : c
+        ))
+      }
+      addToast('Falha ao mover estágio', 'error')
+    } finally {
+      setIsMovingStage(false)
+    }
+  }
+
   // Concierge RAG
   const handleConcierge = async () => {
     if (!selectedId || isGenerating) return
@@ -599,7 +896,17 @@ export default function InboxPage() {
       if (!res.ok) throw new Error()
       const data = await res.json()
       setNewMessage(data.reply)
-      addToast('Sugestão gerada pela IA', 'info')
+      // Auto-resize textarea e focar para edição
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto'
+          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px'
+          textareaRef.current.focus()
+          textareaRef.current.setSelectionRange(data.reply.length, data.reply.length)
+        }
+      }, 50)
+      playFeedback('click')
+      addToast('Sugestão da IA pronta — revise e envie', 'info')
     } catch {
       addToast('Concierge indisponível', 'error')
     } finally {
@@ -957,23 +1264,48 @@ export default function InboxPage() {
                     </svg>
                   </button>
 
-                  <button
+                  <motion.button
                     onClick={handleConcierge}
                     disabled={isGenerating}
-                    className="p-2.5 rounded-xl transition-all disabled:opacity-40"
-                    style={{ background: 'rgba(212,175,55,0.08)', color: 'var(--crm-gold)' }}
-                    title="Gerar resposta com IA"
+                    className="relative p-2.5 rounded-xl transition-all disabled:cursor-wait group overflow-hidden"
+                    style={{
+                      background: isGenerating
+                        ? 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(184,150,46,0.1))'
+                        : 'rgba(212,175,55,0.08)',
+                      color: 'var(--crm-gold)',
+                      boxShadow: isGenerating ? '0 0 16px rgba(212,175,55,0.15)' : 'none',
+                    }}
+                    whileHover={{ scale: 1.05, boxShadow: '0 0 16px rgba(212,175,55,0.2)' }}
+                    whileTap={{ scale: 0.92 }}
+                    title="Concierge IA — gerar sugestão de resposta"
                   >
-                    {isGenerating ? (
-                      <div className="w-4 h-4 border-2 rounded-full animate-spin"
-                        style={{ borderColor: 'var(--crm-gold)', borderTopColor: 'transparent' }}
+                    {/* Shimmer sweep enquanto gera */}
+                    {isGenerating && (
+                      <motion.div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          background: 'linear-gradient(90deg, transparent 0%, rgba(212,175,55,0.12) 50%, transparent 100%)',
+                        }}
+                        animate={{ x: ['-100%', '200%'] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
                       />
+                    )}
+                    {isGenerating ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      >
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
+                          <path d="M12 3V6M12 18V21M6 12H3M21 12H18M5.636 5.636L7.758 7.758M16.242 16.242L18.364 18.364M5.636 18.364L7.758 16.242M16.242 7.758L18.364 5.636" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                      </motion.div>
                     ) : (
                       <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2L9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61z" />
+                        <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+                        <path d="M20 3v4M22 5h-4" opacity="0.6" />
                       </svg>
                     )}
-                  </button>
+                  </motion.button>
                 </div>
 
                 <textarea
@@ -1028,7 +1360,15 @@ export default function InboxPage() {
       {/* ━━━ Column 3: Lead Panel ━━━ */}
       {selectedConv && showLeadPanel && (
         <div className="hidden lg:block">
-          <LeadPanel lead={selectedConv.lead} onClose={() => setShowLeadPanel(false)} />
+          <LeadPanel
+            lead={selectedConv.lead}
+            onClose={() => setShowLeadPanel(false)}
+            stages={stages}
+            onStageChange={handleStageChange}
+            isMovingStage={isMovingStage}
+            aiInsight={aiInsight}
+            isLoadingInsight={isLoadingInsight}
+          />
         </div>
       )}
     </div>

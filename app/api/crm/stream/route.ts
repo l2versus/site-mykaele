@@ -1,6 +1,7 @@
 // app/api/crm/stream/route.ts — SSE com Redis pub/sub para tempo real do CRM
 import { NextRequest } from 'next/server'
 import IORedis from 'ioredis'
+import { isRedisReady } from '@/lib/redis'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -14,14 +15,24 @@ export async function GET(req: NextRequest): Promise<Response> {
     return new Response('tenantId é obrigatório', { status: 400 })
   }
 
+  // Se Redis offline, retorna SSE vazio com heartbeat (não crasheia)
+  if (!isRedisReady()) {
+    console.error('[sse] Redis offline — SSE iniciado sem pub/sub')
+  }
+
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({
     start(controller) {
-      // Subscriber dedicado (não compartilhar conexão de subscribe)
+      // Subscriber dedicado (pub/sub exige conexão separada do Redis)
       const subscriber = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
         maxRetriesPerRequest: null,
         enableReadyCheck: false,
+        lazyConnect: false,
+        retryStrategy(times) {
+          if (times > 10) return null
+          return Math.min(times * 1000, 15_000)
+        },
       })
 
       // Envia evento inicial

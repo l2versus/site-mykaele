@@ -99,4 +99,18 @@ export const evolutionApi = {
         },
       },
     ),
+
+  /** Desconecta a instância (logout do WhatsApp) */
+  logoutInstance: (instanceId: string) =>
+    request<{ status: string }>('DELETE', `/instance/logout/${instanceId}`),
+
+  /** Reinicia a instância para reconectar */
+  restartInstance: (instanceId: string) =>
+    request<{ status: string }>('PUT', `/instance/restart/${instanceId}`),
+
+  /** Lista todas as instâncias */
+  fetchInstances: () =>
+    request<Array<{
+      instance: { instanceName: string; instanceId: string; owner: string; status: string }
+    }>>('GET', '/instance/fetchInstances'),
 }

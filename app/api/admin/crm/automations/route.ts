@@ -80,9 +80,9 @@ export async function POST(req: NextRequest) {
     createAuditLog({
       tenantId: resolvedTenantId,
       userId: payload.userId,
-      action: CRM_ACTIONS.AUTOMATION_TRIGGERED,
+      action: CRM_ACTIONS.AUTOMATION_CREATED,
       entityId: automation.id,
-      details: { action: 'created', name, trigger },
+      details: { name, trigger },
     })
 
     return NextResponse.json(automation, { status: 201 })

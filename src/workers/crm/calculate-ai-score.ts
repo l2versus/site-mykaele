@@ -4,7 +4,13 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 5,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 5_000,
+})
+pool.on('error', (err) => console.error('[worker/calculate-ai-score] Pool error:', err.message))
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 

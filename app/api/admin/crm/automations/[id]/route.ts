@@ -54,12 +54,9 @@ export async function PATCH(
     createAuditLog({
       tenantId: resolvedTenantId,
       userId: payload.userId,
-      action: CRM_ACTIONS.AUTOMATION_TRIGGERED,
+      action: CRM_ACTIONS.AUTOMATION_UPDATED,
       entityId: id,
-      details: {
-        action: 'updated',
-        changes: Object.keys(updateData),
-      },
+      details: { changes: Object.keys(updateData) },
     })
 
     return NextResponse.json(updated)
@@ -106,9 +103,9 @@ export async function DELETE(
     createAuditLog({
       tenantId: resolvedTenantId,
       userId: payload.userId,
-      action: CRM_ACTIONS.AUTOMATION_TRIGGERED,
+      action: CRM_ACTIONS.AUTOMATION_DELETED,
       entityId: id,
-      details: { action: 'deleted', name: existing.name },
+      details: { name: existing.name },
     })
 
     return NextResponse.json({ ok: true })

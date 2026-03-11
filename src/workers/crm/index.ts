@@ -4,17 +4,24 @@ import { Worker } from 'bullmq'
 import { redis, bullConnection, inboxQueue, automationQueue, aiQueue, schedulerQueue,
          attachDLQListener } from '../../lib/queues'
 import { registerScheduledJobs } from '../../lib/queues/scheduler'
-import { processWebhook } from './process-webhook'
+import { processWebhook, type WebhookResult } from './process-webhook'
 import { calculateAiScore } from './calculate-ai-score'
 import { calculateGoldenWindow } from './golden-window'
 import { runRetentionRadar } from './retention-radar'
 import { executeAutomation } from './execute-automation'
 import { reconcileMessages } from './reconcile-messages'
+import { runAutomationScheduler } from './automation-scheduler'
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 5,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 5_000,
+})
+pool.on('error', (err) => console.error('[worker/index] Pool error:', err.message))
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 
@@ -24,21 +31,19 @@ const workers: Worker[] = []
 const inboxWorker = new Worker(
   'crm-inbox',
   async (job) => {
-    await processWebhook(job)
+    const result: WebhookResult | null = await processWebhook(job)
 
     // Após processar mensagem, enfileirar cálculo de AI score
-    const leadId = job.data.leadId as string | undefined
-    const tenantId = job.data.tenantId as string | undefined
-    if (leadId && tenantId) {
+    if (result) {
       await aiQueue.add('calculate-score', {
         type: 'calculate-ai-score',
-        leadId,
-        tenantId,
+        leadId: result.leadId,
+        tenantId: result.tenantId,
       })
       await aiQueue.add('golden-window', {
         type: 'golden-window',
-        leadId,
-        tenantId,
+        leadId: result.leadId,
+        tenantId: result.tenantId,
       })
     }
   },
@@ -88,6 +93,9 @@ const schedulerWorker = new Worker(
         break
       case 'refresh-stage-cache':
         await refreshStageCache()
+        break
+      case 'automation-scheduler':
+        await runAutomationScheduler()
         break
     }
   },

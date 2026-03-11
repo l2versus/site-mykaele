@@ -5,10 +5,25 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 import IORedis from 'ioredis'
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 5,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 5_000,
+})
+pool.on('error', (err) => console.error('[worker/retention] Pool error:', err.message))
+
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
-const redis = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379')
+
+const redis = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+  maxRetriesPerRequest: null,
+  retryStrategy(times) {
+    if (times > 10) return null
+    return Math.min(times * 500, 15_000)
+  },
+})
+redis.on('error', (err) => console.error('[worker/retention] Redis error:', err.message))
 
 const CRM_CHANNEL = 'crm:events'
 

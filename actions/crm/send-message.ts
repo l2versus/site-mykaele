@@ -6,6 +6,7 @@ import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { evolutionApi } from '@/lib/evolution-api'
 import { createAuditLog, CRM_ACTIONS } from '@/lib/audit'
+import { redis, isRedisReady } from '@/lib/redis'
 
 const sendMessageSchema = z.object({
   conversationId: z.string().min(1),
@@ -86,6 +87,22 @@ export async function sendMessage(input: z.input<typeof sendMessageSchema>): Pro
     entityId: message.id,
     details: { conversationId, leadId: conversation.leadId },
   })
+
+  // Notificar front-end via SSE (fire-and-forget)
+  if (isRedisReady()) {
+    redis.publish('crm:events', JSON.stringify({
+      type: 'new-message',
+      tenantId,
+      data: {
+        conversationId,
+        leadId: conversation.leadId,
+        messageId: message.id,
+        fromMe: true,
+        content: text.slice(0, 100),
+        messageType: 'TEXT',
+      },
+    })).catch(() => {})
+  }
 
   return { ok: true, messageId: message.id }
 }

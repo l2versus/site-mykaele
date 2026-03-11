@@ -3,10 +3,16 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToastStore } from '@/stores/toast-store'
+import {
+  getWhatsAppStatus,
+  connectWhatsApp,
+  disconnectWhatsApp,
+  restartWhatsApp,
+} from '../../../../actions/crm/whatsapp-connection'
 
 // ━━━ Types ━━━
 
-type TabId = 'general' | 'pipeline' | 'notifications' | 'team' | 'ai' | 'knowledge'
+type TabId = 'general' | 'pipeline' | 'whatsapp' | 'notifications' | 'team' | 'ai' | 'knowledge'
 
 interface BusinessHour {
   day: string
@@ -96,6 +102,11 @@ const TABS: { id: TabId; label: string; iconPath: string }[] = [
     id: 'pipeline',
     label: 'Pipeline',
     iconPath: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+  },
+  {
+    id: 'whatsapp',
+    label: 'WhatsApp',
+    iconPath: 'M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z',
   },
   {
     id: 'notifications',
@@ -244,6 +255,9 @@ function Toggle({ enabled, onToggle, size = 'md' }: { enabled: boolean; onToggle
 // ━━━ Tab: Geral ━━━
 
 function GeneralTab() {
+  const TENANT_ID = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID ?? 'clinica-mykaele-procopio'
+  const PROVIDER_KEY = 'crm-general'
+
   const [workspaceName, setWorkspaceName] = useState('Clínica Mykaele Procópio')
   const [timezone, setTimezone] = useState('America/Fortaleza')
   const [language, setLanguage] = useState('pt-BR')
@@ -257,6 +271,52 @@ function GeneralTab() {
     { day: 'Sábado', enabled: true, open: '09:00', close: '14:00' },
     { day: 'Domingo', enabled: false, open: '09:00', close: '13:00' },
   ])
+  const hasFetched = useRef(false)
+
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || localStorage.getItem('token')) : null
+
+  // Carregar configurações gerais do banco
+  useEffect(() => {
+    if (hasFetched.current || !token) return
+    hasFetched.current = true
+
+    fetch(`/api/admin/crm/settings?tenantId=${TENANT_ID}&provider=${PROVIDER_KEY}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.settings) {
+          const s = data.settings
+          if (s.workspaceName) setWorkspaceName(s.workspaceName as string)
+          if (s.timezone) setTimezone(s.timezone as string)
+          if (s.language) setLanguage(s.language as string)
+          if (s.businessHours) {
+            try { setBusinessHours(s.businessHours as BusinessHour[]) } catch { /* ignore */ }
+          }
+        }
+      })
+      .catch(() => { /* primeira vez sem settings */ })
+  }, [TENANT_ID, token])
+
+  // Salvar quando o botão global "Salvar" é clicado
+  useEffect(() => {
+    const handleSaveEvent = () => {
+      if (!token) return
+      fetch('/api/admin/crm/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          tenantId: TENANT_ID,
+          workspaceName,
+          timezone,
+          language,
+          businessHours,
+        }),
+      }).catch(() => { /* silently fail */ })
+    }
+    window.addEventListener('crm-settings-save', handleSaveEvent)
+    return () => window.removeEventListener('crm-settings-save', handleSaveEvent)
+  }, [token, TENANT_ID, workspaceName, timezone, language, businessHours])
 
   const toggleDay = (idx: number) => {
     setBusinessHours(prev => prev.map((h, i) => i === idx ? { ...h, enabled: !h.enabled } : h))
@@ -917,6 +977,496 @@ function PipelineTab() {
   )
 }
 
+// ━━━ Tab: WhatsApp ━━━
+
+type WaConnectionState = 'open' | 'close' | 'connecting' | 'unknown'
+
+function WhatsAppTab() {
+  const [connectionState, setConnectionState] = useState<WaConnectionState>('unknown')
+  const [qrBase64, setQrBase64] = useState<string | null>(null)
+  const [instanceName, setInstanceName] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const qrTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const addToast = useToastStore(s => s.addToast)
+
+  // Limpa polling e timeouts
+  const clearTimers = useCallback(() => {
+    if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null }
+    if (qrTimeoutRef.current) { clearTimeout(qrTimeoutRef.current); qrTimeoutRef.current = null }
+  }, [])
+
+  // Busca status da conexão
+  const fetchStatus = useCallback(async () => {
+    try {
+      const result = await getWhatsAppStatus()
+      if (result.ok && result.data) {
+        const newState = result.data.state
+        setConnectionState(newState)
+        setInstanceName(result.data.instanceName)
+
+        // Se conectou, limpar QR e parar polling
+        if (newState === 'open') {
+          setQrBase64(null)
+          clearTimers()
+        }
+      }
+    } catch {
+      // Silencioso — polling não deve crashar a UI
+    } finally {
+      setLoading(false)
+    }
+  }, [clearTimers])
+
+  // Busca status inicial ao montar
+  useEffect(() => {
+    fetchStatus()
+    return clearTimers
+  }, [fetchStatus, clearTimers])
+
+  // Inicia polling quando QR está visível
+  const startPolling = useCallback(() => {
+    clearTimers()
+
+    pollingRef.current = setInterval(() => {
+      fetchStatus()
+    }, 4000)
+
+    // QR expira em 45s — solicitar novo automaticamente
+    qrTimeoutRef.current = setTimeout(() => {
+      setQrBase64(null)
+      setError('QR Code expirou. Clique para gerar um novo.')
+      clearTimers()
+    }, 45_000)
+  }, [fetchStatus, clearTimers])
+
+  // Handler: Gerar QR Code
+  const handleConnect = useCallback(async () => {
+    setActionLoading(true)
+    setError(null)
+    setQrBase64(null)
+
+    try {
+      const result = await connectWhatsApp()
+
+      if (!result.ok || !result.data) {
+        setError(result.error || 'Erro desconhecido')
+        return
+      }
+
+      setQrBase64(result.data.base64)
+      setInstanceName(result.data.instanceName)
+      setConnectionState('connecting')
+      startPolling()
+    } catch {
+      setError('Falha na comunicação com o servidor')
+    } finally {
+      setActionLoading(false)
+    }
+  }, [startPolling])
+
+  // Handler: Desconectar
+  const handleDisconnect = useCallback(async () => {
+    setActionLoading(true)
+    setError(null)
+
+    try {
+      const result = await disconnectWhatsApp()
+
+      if (result.ok) {
+        setConnectionState('close')
+        setQrBase64(null)
+        setInstanceName(null)
+        addToast('WhatsApp desconectado com sucesso')
+      } else {
+        setError(result.error || 'Erro ao desconectar')
+      }
+    } catch {
+      setError('Falha na comunicação com o servidor')
+    } finally {
+      setActionLoading(false)
+    }
+  }, [addToast])
+
+  // Handler: Reiniciar
+  const handleRestart = useCallback(async () => {
+    setActionLoading(true)
+    setError(null)
+
+    try {
+      const result = await restartWhatsApp()
+
+      if (result.ok) {
+        addToast('Instância reiniciada. Aguarde a reconexão...')
+        setConnectionState('connecting')
+        setTimeout(fetchStatus, 3000)
+      } else {
+        setError(result.error || 'Erro ao reiniciar')
+      }
+    } catch {
+      setError('Falha na comunicação com o servidor')
+    } finally {
+      setActionLoading(false)
+    }
+  }, [addToast, fetchStatus])
+
+  const isConnected = connectionState === 'open'
+  const isConnecting = connectionState === 'connecting' || qrBase64 !== null
+
+  return (
+    <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      {/* Header */}
+      <motion.div variants={staggerItem}>
+        <SectionTitle>Conexão WhatsApp</SectionTitle>
+        <p className="text-xs -mt-1 mb-4" style={{ color: 'var(--crm-text-muted)' }}>
+          Conecte o WhatsApp da clínica para enviar e receber mensagens pelo CRM
+        </p>
+      </motion.div>
+
+      {/* Status Card */}
+      <motion.div variants={staggerItem}>
+        <div
+          className="rounded-xl border overflow-hidden"
+          style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)' }}
+        >
+          {/* Status Header */}
+          <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: 'var(--crm-border)' }}>
+            <div className="flex items-center gap-3">
+              {/* WhatsApp Icon */}
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{
+                  background: isConnected
+                    ? 'rgba(46,204,138,0.1)'
+                    : 'rgba(139,138,148,0.1)',
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={isConnected ? '#2ECC8A' : '#8B8A94'}>
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" />
+                </svg>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold" style={{ color: 'var(--crm-text)' }}>
+                  WhatsApp Business
+                </h4>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--crm-text-muted)' }}>
+                  {instanceName ? `Instância: ${instanceName}` : 'Nenhuma instância configurada'}
+                </p>
+              </div>
+            </div>
+
+            {/* Status Badge */}
+            {loading ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: 'rgba(139,138,148,0.1)' }}>
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#8B8A94' }} />
+                <span className="text-xs font-medium" style={{ color: '#8B8A94' }}>Verificando...</span>
+              </div>
+            ) : isConnected ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: 'rgba(46,204,138,0.1)' }}>
+                <div className="relative">
+                  <div className="w-2 h-2 rounded-full" style={{ background: '#2ECC8A' }} />
+                  <div className="absolute inset-0 w-2 h-2 rounded-full animate-ping" style={{ background: '#2ECC8A', opacity: 0.4 }} />
+                </div>
+                <span className="text-xs font-semibold" style={{ color: '#2ECC8A' }}>Conectado</span>
+              </div>
+            ) : isConnecting ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: 'rgba(240,165,0,0.1)' }}>
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#F0A500' }} />
+                <span className="text-xs font-semibold" style={{ color: '#F0A500' }}>Aguardando leitura</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,107,74,0.1)' }}>
+                <div className="w-2 h-2 rounded-full" style={{ background: '#FF6B4A' }} />
+                <span className="text-xs font-semibold" style={{ color: '#FF6B4A' }}>Desconectado</span>
+              </div>
+            )}
+          </div>
+
+          {/* Body */}
+          <div className="p-5">
+            {/* Error message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 px-4 py-3 rounded-lg flex items-center gap-2.5 text-xs"
+                style={{ background: 'rgba(255,107,74,0.08)', border: '1px solid rgba(255,107,74,0.15)' }}
+              >
+                <svg width="14" height="14" fill="none" stroke="#FF6B4A" strokeWidth="2" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span style={{ color: '#FF6B4A' }}>{error}</span>
+              </motion.div>
+            )}
+
+            {/* State: Connected */}
+            {isConnected && !loading && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                className="space-y-5"
+              >
+                {/* Connected illustration */}
+                <div className="flex flex-col items-center py-6">
+                  <div
+                    className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(46,204,138,0.15), rgba(46,204,138,0.05))',
+                      border: '1px solid rgba(46,204,138,0.2)',
+                    }}
+                  >
+                    <svg width="36" height="36" fill="none" stroke="#2ECC8A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                      <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                  </div>
+                  <h4 className="text-base font-semibold" style={{ color: 'var(--crm-text)' }}>
+                    Tudo pronto!
+                  </h4>
+                  <p className="text-xs mt-1 text-center max-w-xs" style={{ color: 'var(--crm-text-muted)' }}>
+                    O WhatsApp está conectado e pronto para enviar e receber mensagens pelo CRM.
+                  </p>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={handleRestart}
+                    disabled={actionLoading}
+                    className="px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+                    style={{
+                      background: 'var(--crm-surface-2)',
+                      border: '1px solid var(--crm-border)',
+                      color: 'var(--crm-text-muted)',
+                    }}
+                  >
+                    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <polyline points="23 4 23 10 17 10" />
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                    </svg>
+                    Reiniciar
+                  </button>
+
+                  <button
+                    onClick={handleDisconnect}
+                    disabled={actionLoading}
+                    className="px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+                    style={{
+                      background: 'rgba(255,107,74,0.08)',
+                      border: '1px solid rgba(255,107,74,0.2)',
+                      color: '#FF6B4A',
+                    }}
+                  >
+                    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    Desconectar
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* State: QR Code visible */}
+            {qrBase64 && !isConnected && !loading && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                className="flex flex-col items-center py-4"
+              >
+                {/* QR Code container */}
+                <div
+                  className="relative p-4 rounded-2xl mb-5"
+                  style={{
+                    background: '#FFFFFF',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1)',
+                  }}
+                >
+                  {/* Scanning indicator corners */}
+                  <div className="absolute top-2 left-2 w-5 h-5 border-t-2 border-l-2 rounded-tl-md" style={{ borderColor: '#25D366' }} />
+                  <div className="absolute top-2 right-2 w-5 h-5 border-t-2 border-r-2 rounded-tr-md" style={{ borderColor: '#25D366' }} />
+                  <div className="absolute bottom-2 left-2 w-5 h-5 border-b-2 border-l-2 rounded-bl-md" style={{ borderColor: '#25D366' }} />
+                  <div className="absolute bottom-2 right-2 w-5 h-5 border-b-2 border-r-2 rounded-br-md" style={{ borderColor: '#25D366' }} />
+
+                  {/* Scanning line animation */}
+                  <div className="absolute inset-x-4 top-4 bottom-4 overflow-hidden rounded-lg pointer-events-none">
+                    <motion.div
+                      className="absolute inset-x-0 h-0.5"
+                      style={{ background: 'linear-gradient(90deg, transparent, #25D366, transparent)' }}
+                      animate={{ top: ['0%', '100%', '0%'] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                    />
+                  </div>
+
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={qrBase64.startsWith('data:') ? qrBase64 : `data:image/png;base64,${qrBase64}`}
+                    alt="QR Code WhatsApp"
+                    className="w-56 h-56 rounded-lg relative z-10"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                </div>
+
+                <h4 className="text-sm font-semibold mb-1" style={{ color: 'var(--crm-text)' }}>
+                  Escaneie o QR Code
+                </h4>
+                <p className="text-xs text-center max-w-xs mb-4" style={{ color: 'var(--crm-text-muted)' }}>
+                  Abra o WhatsApp no celular &rarr; Configurações &rarr; Dispositivos conectados &rarr; Conectar dispositivo
+                </p>
+
+                {/* Progress timer */}
+                <div className="w-48 h-1 rounded-full overflow-hidden" style={{ background: 'var(--crm-border)' }}>
+                  <motion.div
+                    className="h-full rounded-full"
+                    style={{ background: 'linear-gradient(90deg, #25D366, #2ECC8A)' }}
+                    initial={{ width: '100%' }}
+                    animate={{ width: '0%' }}
+                    transition={{ duration: 45, ease: 'linear' }}
+                  />
+                </div>
+                <p className="text-[10px] mt-1.5" style={{ color: 'var(--crm-text-muted)' }}>
+                  QR Code expira em 45 segundos
+                </p>
+
+                <button
+                  onClick={() => { setQrBase64(null); clearTimers(); setConnectionState('close') }}
+                  className="mt-4 px-4 py-2 rounded-lg text-xs font-medium transition-all hover:brightness-110"
+                  style={{
+                    background: 'var(--crm-surface-2)',
+                    border: '1px solid var(--crm-border)',
+                    color: 'var(--crm-text-muted)',
+                  }}
+                >
+                  Cancelar
+                </button>
+              </motion.div>
+            )}
+
+            {/* State: Disconnected — show connect button */}
+            {!isConnected && !qrBase64 && !loading && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                className="flex flex-col items-center py-8"
+              >
+                <div
+                  className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(139,138,148,0.1), rgba(139,138,148,0.03))',
+                    border: '1px solid var(--crm-border)',
+                  }}
+                >
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--crm-text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                </div>
+
+                <h4 className="text-sm font-semibold mb-1" style={{ color: 'var(--crm-text)' }}>
+                  WhatsApp não conectado
+                </h4>
+                <p className="text-xs text-center max-w-xs mb-5" style={{ color: 'var(--crm-text-muted)' }}>
+                  Conecte um número de WhatsApp para enviar e receber mensagens diretamente pelo CRM
+                </p>
+
+                <button
+                  onClick={handleConnect}
+                  disabled={actionLoading}
+                  className="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  style={{
+                    background: 'linear-gradient(135deg, #25D366, #128C7E)',
+                    color: '#FFFFFF',
+                    boxShadow: '0 4px 16px rgba(37,211,102,0.25)',
+                  }}
+                >
+                  {actionLoading ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="animate-spin">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                      Gerando QR Code...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" />
+                      </svg>
+                      Conectar Aparelho
+                    </>
+                  )}
+                </button>
+              </motion.div>
+            )}
+
+            {/* Loading skeleton */}
+            {loading && (
+              <div className="flex flex-col items-center py-8 gap-3">
+                <div className="w-20 h-20 rounded-2xl animate-pulse" style={{ background: 'var(--crm-surface-2)' }} />
+                <div className="w-40 h-4 rounded-lg animate-pulse" style={{ background: 'var(--crm-surface-2)' }} />
+                <div className="w-56 h-3 rounded-lg animate-pulse" style={{ background: 'var(--crm-surface-2)' }} />
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Info cards */}
+      <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {[
+          {
+            icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+            title: 'Criptografia E2E',
+            desc: 'Mensagens protegidas pela criptografia nativa do WhatsApp',
+          },
+          {
+            icon: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+            title: 'Tempo Real',
+            desc: 'Mensagens entregues instantaneamente via Evolution API',
+          },
+          {
+            icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z M12 6v6l4 2',
+            title: 'Sempre Ativo',
+            desc: 'Conexão mantida 24h pelo servidor — não depende do celular ligado',
+          },
+        ].map((card) => (
+          <div
+            key={card.title}
+            className="rounded-xl border p-4"
+            style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)' }}
+          >
+            <div className="flex items-center gap-2.5 mb-2">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{ background: 'rgba(212,175,55,0.08)' }}
+              >
+                <svg width="13" height="13" fill="none" stroke="var(--crm-gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <path d={card.icon} />
+                </svg>
+              </div>
+              <span className="text-xs font-semibold" style={{ color: 'var(--crm-text)' }}>
+                {card.title}
+              </span>
+            </div>
+            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--crm-text-muted)' }}>
+              {card.desc}
+            </p>
+          </div>
+        ))}
+      </motion.div>
+    </motion.div>
+  )
+}
+
 // ━━━ Tab: Notificações ━━━
 
 function NotificationsTab() {
@@ -1203,6 +1753,9 @@ function TeamTab() {
 // ━━━ Tab: IA ━━━
 
 function AiTab() {
+  const TENANT_ID = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID ?? 'clinica-mykaele-procopio'
+  const addToast = useToastStore(s => s.addToast)
+
   const [features, setFeatures] = useState<AiFeature[]>([
     {
       id: 'copilot',
@@ -1224,17 +1777,291 @@ function AiTab() {
       enabled: true,
     },
   ])
-  const [model, setModel] = useState('GPT-4o')
+  const [provider, setProvider] = useState('openai')
+  const [model, setModel] = useState('gpt-4o-mini')
+  const [apiKey, setApiKey] = useState('')
+  const [apiKeySet, setApiKeySet] = useState(false)
+  const [baseUrl, setBaseUrl] = useState('')
   const [confidence, setConfidence] = useState(75)
   const [maxTokens, setMaxTokens] = useState('2048')
   const [temperature, setTemperature] = useState(0.7)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
+  const hasFetched = useRef(false)
+
+  const PROVIDERS = [
+    { value: 'openai', label: 'OpenAI', hint: 'GPT-4o, GPT-4o-mini' },
+    { value: 'groq', label: 'Groq (Grátis)', hint: 'Llama 3, Mixtral — rápido e grátis' },
+    { value: 'together', label: 'Together AI', hint: 'Llama 3.1, Mixtral — free tier' },
+    { value: 'openrouter', label: 'OpenRouter', hint: 'Múltiplos modelos, free tier' },
+    { value: 'custom', label: 'Custom (OpenAI-compatível)', hint: 'Qualquer API compatível' },
+  ]
+
+  const MODEL_OPTIONS: Record<string, { value: string; label: string }[]> = {
+    openai: [
+      { value: 'gpt-4o-mini', label: 'GPT-4o Mini (barato)' },
+      { value: 'gpt-4o', label: 'GPT-4o' },
+      { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano (mais barato)' },
+    ],
+    groq: [
+      { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B (grátis)' },
+      { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant (grátis)' },
+      { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B (grátis)' },
+      { value: 'gemma2-9b-it', label: 'Gemma 2 9B (grátis)' },
+    ],
+    together: [
+      { value: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', label: 'Llama 3.1 70B' },
+      { value: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', label: 'Llama 3.1 8B' },
+      { value: 'mistralai/Mixtral-8x7B-Instruct-v0.1', label: 'Mixtral 8x7B' },
+    ],
+    openrouter: [
+      { value: 'meta-llama/llama-3.1-8b-instruct:free', label: 'Llama 3.1 8B (grátis)' },
+      { value: 'google/gemma-2-9b-it:free', label: 'Gemma 2 9B (grátis)' },
+      { value: 'mistralai/mistral-7b-instruct:free', label: 'Mistral 7B (grátis)' },
+    ],
+    custom: [
+      { value: 'custom', label: 'Modelo customizado' },
+    ],
+  }
+
+  const BASE_URLS: Record<string, string> = {
+    openai: 'https://api.openai.com/v1',
+    groq: 'https://api.groq.com/openai/v1',
+    together: 'https://api.together.xyz/v1',
+    openrouter: 'https://openrouter.ai/api/v1',
+    custom: '',
+  }
+
+  // Carregar settings do banco
+  useEffect(() => {
+    if (hasFetched.current) return
+    hasFetched.current = true
+
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || localStorage.getItem('token')) : null
+    if (!token) { setLoading(false); return }
+
+    fetch(`/api/admin/crm/settings?tenantId=${TENANT_ID}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.settings) {
+          const s = data.settings
+          if (s.provider) setProvider(s.provider as string)
+          if (s.model) setModel(s.model as string)
+          if (s.apiKey_set) setApiKeySet(true)
+          if (s.apiKey) setApiKey(s.apiKey as string)
+          if (s.baseUrl) setBaseUrl(s.baseUrl as string)
+          if (s.confidence) setConfidence(Number(s.confidence))
+          if (s.maxTokens) setMaxTokens(String(s.maxTokens))
+          if (s.temperature !== undefined) setTemperature(Number(s.temperature))
+          if (s.features) {
+            try {
+              const savedFeatures = s.features as Record<string, boolean>
+              setFeatures(prev => prev.map(f => ({
+                ...f,
+                enabled: savedFeatures[f.id] !== undefined ? savedFeatures[f.id] : f.enabled,
+              })))
+            } catch { /* ignore */ }
+          }
+        }
+      })
+      .catch(() => { /* first time, no settings */ })
+      .finally(() => setLoading(false))
+  }, [TENANT_ID])
+
+  // Quando troca provider, atualizar model e baseUrl
+  const handleProviderChange = (newProvider: string) => {
+    setProvider(newProvider)
+    const models = MODEL_OPTIONS[newProvider]
+    if (models?.[0]) setModel(models[0].value)
+    setBaseUrl(BASE_URLS[newProvider] || '')
+  }
 
   const toggleFeature = (featureId: string) => {
     setFeatures(prev => prev.map(f => f.id === featureId ? { ...f, enabled: !f.enabled } : f))
   }
 
+  // Salvar no banco
+  const handleSave = async () => {
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || localStorage.getItem('token')) : null
+    if (!token) return
+
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/crm/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          tenantId: TENANT_ID,
+          provider,
+          model,
+          apiKey: apiKey,
+          baseUrl: baseUrl || BASE_URLS[provider] || '',
+          confidence,
+          maxTokens: Number(maxTokens),
+          temperature,
+          features: Object.fromEntries(features.map(f => [f.id, f.enabled])),
+        }),
+      })
+      if (!res.ok) throw new Error('Falha ao salvar')
+      setApiKeySet(apiKey.length > 0 && !apiKey.includes('*'))
+      addToast('Configurações de IA salvas')
+    } catch {
+      addToast('Erro ao salvar configurações', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Testar conexão
+  const handleTestConnection = async () => {
+    if (!apiKey || apiKey.includes('*')) {
+      addToast('Insira a API key antes de testar', 'error')
+      return
+    }
+
+    setTestStatus('testing')
+    try {
+      const url = (baseUrl || BASE_URLS[provider]) + '/models'
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (res.ok) {
+        setTestStatus('success')
+        addToast('Conexão OK — API key válida')
+      } else {
+        setTestStatus('error')
+        addToast(`Erro ${res.status} — verifique a API key`, 'error')
+      }
+    } catch {
+      setTestStatus('error')
+      addToast('Falha na conexão — verifique URL e key', 'error')
+    }
+
+    setTimeout(() => setTestStatus('idle'), 4000)
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-20 rounded-xl animate-pulse" style={{ background: 'var(--crm-surface-2)' }} />
+        ))}
+      </div>
+    )
+  }
+
   return (
     <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      {/* API Key + Provider */}
+      <motion.div variants={staggerItem}>
+        <SectionTitle>Provedor de IA</SectionTitle>
+        <SectionCard>
+          <div className="space-y-4">
+            {/* Provider selector */}
+            <div>
+              <label className="block text-xs font-medium mb-2" style={{ color: 'var(--crm-text-muted)' }}>
+                Provedor
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {PROVIDERS.map(p => (
+                  <button
+                    key={p.value}
+                    onClick={() => handleProviderChange(p.value)}
+                    className="flex flex-col items-start gap-0.5 px-3.5 py-3 rounded-xl text-left transition-all"
+                    style={{
+                      background: provider === p.value ? 'rgba(212,175,55,0.08)' : 'var(--crm-surface-2)',
+                      border: `1px solid ${provider === p.value ? 'rgba(212,175,55,0.3)' : 'var(--crm-border)'}`,
+                      color: provider === p.value ? 'var(--crm-gold)' : 'var(--crm-text)',
+                    }}
+                  >
+                    <span className="text-sm font-semibold">{p.label}</span>
+                    <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>{p.hint}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* API Key */}
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--crm-text-muted)' }}>
+                API Key {apiKeySet && <span className="text-[10px] ml-1" style={{ color: 'var(--crm-won)' }}>Configurada</span>}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={e => setApiKey(e.target.value)}
+                  placeholder={provider === 'groq' ? 'gsk_...' : provider === 'openai' ? 'sk-...' : 'Sua API key'}
+                  className="flex-1 rounded-lg px-3 py-2.5 text-sm outline-none transition-all font-mono"
+                  style={{
+                    background: 'var(--crm-surface-2)',
+                    border: '1px solid var(--crm-border)',
+                    color: 'var(--crm-text)',
+                  }}
+                  onFocus={e => { e.currentTarget.style.borderColor = 'var(--crm-gold)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'var(--crm-border)' }}
+                />
+                <button
+                  onClick={handleTestConnection}
+                  disabled={testStatus === 'testing'}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap disabled:opacity-50"
+                  style={{
+                    background: testStatus === 'success' ? 'rgba(46,204,138,0.1)' : testStatus === 'error' ? 'rgba(255,107,74,0.1)' : 'var(--crm-surface-2)',
+                    color: testStatus === 'success' ? '#2ECC8A' : testStatus === 'error' ? '#FF6B4A' : 'var(--crm-text)',
+                    border: `1px solid ${testStatus === 'success' ? 'rgba(46,204,138,0.3)' : testStatus === 'error' ? 'rgba(255,107,74,0.3)' : 'var(--crm-border)'}`,
+                  }}
+                >
+                  {testStatus === 'testing' ? 'Testando...' : testStatus === 'success' ? 'OK' : testStatus === 'error' ? 'Falhou' : 'Testar'}
+                </button>
+              </div>
+              {provider === 'groq' && (
+                <p className="text-[10px] mt-1.5" style={{ color: 'var(--crm-text-muted)' }}>
+                  Crie sua key grátis em <span style={{ color: 'var(--crm-gold)' }}>console.groq.com</span> — sem cartão de crédito
+                </p>
+              )}
+              {provider === 'openrouter' && (
+                <p className="text-[10px] mt-1.5" style={{ color: 'var(--crm-text-muted)' }}>
+                  Crie sua key em <span style={{ color: 'var(--crm-gold)' }}>openrouter.ai</span> — modelos grátis disponíveis
+                </p>
+              )}
+            </div>
+
+            {/* Base URL (only for custom) */}
+            {provider === 'custom' && (
+              <InputField
+                label="Base URL (compatível com OpenAI API)"
+                value={baseUrl}
+                onChange={setBaseUrl}
+                placeholder="https://api.example.com/v1"
+              />
+            )}
+
+            {/* Model selector */}
+            <SelectField
+              label="Modelo"
+              value={model}
+              onChange={setModel}
+              options={MODEL_OPTIONS[provider] || [{ value: model, label: model }]}
+            />
+
+            {/* Save button inline */}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #D4AF37, #B8962E)', color: 'var(--crm-bg)', boxShadow: '0 4px 16px rgba(212,175,55,0.2)' }}
+            >
+              {saving ? 'Salvando...' : 'Salvar Configuração de IA'}
+            </button>
+          </div>
+        </SectionCard>
+      </motion.div>
+
+      {/* Features toggles */}
       <motion.div variants={staggerItem}>
         <SectionTitle>Funcionalidades de IA</SectionTitle>
         <div className="space-y-3">
@@ -1273,17 +2100,11 @@ function AiTab() {
         </div>
       </motion.div>
 
+      {/* Advanced config */}
       <motion.div variants={staggerItem}>
         <SectionTitle>Configurações Avançadas</SectionTitle>
         <SectionCard>
           <div className="space-y-5">
-            <SelectField
-              label="Modelo de IA"
-              value={model}
-              onChange={setModel}
-              options={AI_MODELS.map(m => ({ value: m, label: m }))}
-            />
-
             {/* Confidence Threshold */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -1642,18 +2463,21 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const addToast = useToastStore(s => s.addToast)
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     setSaving(true)
-    setTimeout(() => {
-      setSaving(false)
-      addToast('Salvo com sucesso')
-    }, 800)
+    // Dispara evento customizado para que cada tab salve seus dados
+    window.dispatchEvent(new CustomEvent('crm-settings-save'))
+    // Pequeno delay para os handlers executarem
+    await new Promise(r => setTimeout(r, 600))
+    setSaving(false)
+    addToast('Configurações salvas')
   }, [addToast])
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'general': return <GeneralTab />
       case 'pipeline': return <PipelineTab />
+      case 'whatsapp': return <WhatsAppTab />
       case 'notifications': return <NotificationsTab />
       case 'team': return <TeamTab />
       case 'ai': return <AiTab />

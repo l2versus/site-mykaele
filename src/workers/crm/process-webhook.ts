@@ -6,10 +6,25 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 import IORedis from 'ioredis'
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 5,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 5_000,
+})
+pool.on('error', (err) => console.error('[worker/webhook] Pool error:', err.message))
+
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
-const redis = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379')
+
+const redis = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+  maxRetriesPerRequest: null,
+  retryStrategy(times) {
+    if (times > 10) return null
+    return Math.min(times * 500, 15_000)
+  },
+})
+redis.on('error', (err) => console.error('[worker/webhook] Redis error:', err.message))
 
 const CRM_CHANNEL = 'crm:events'
 
@@ -82,7 +97,15 @@ function extractContent(message: WebhookPayload['data']['message']): {
   return { type: 'TEXT', content: text, mediaMimeType: null, mediaUrl: null }
 }
 
-export async function processWebhook(job: Job<WebhookPayload>): Promise<void> {
+export interface WebhookResult {
+  tenantId: string
+  leadId: string
+  conversationId: string
+  messageId: string
+  isNewLead: boolean
+}
+
+export async function processWebhook(job: Job<WebhookPayload>): Promise<WebhookResult | null> {
   const { event, instance, data } = job.data
 
   if (event === 'connection.update') {
@@ -97,16 +120,16 @@ export async function processWebhook(job: Job<WebhookPayload>): Promise<void> {
         data: { channelId: channel.id, status: data.status },
       }))
     }
-    return
+    return null
   }
 
-  if (event !== 'messages.upsert') return
+  if (event !== 'messages.upsert') return null
 
   const key = data.key
-  if (!key?.id || !key.remoteJid) return
+  if (!key?.id || !key.remoteJid) return null
 
   // Ignorar mensagens de grupo e status
-  if (key.remoteJid.endsWith('@g.us') || key.remoteJid === 'status@broadcast') return
+  if (key.remoteJid.endsWith('@g.us') || key.remoteJid === 'status@broadcast') return null
 
   // Encontrar canal pela instância
   const channel = await prisma.crmChannel.findFirst({
@@ -114,7 +137,7 @@ export async function processWebhook(job: Job<WebhookPayload>): Promise<void> {
   })
   if (!channel) {
     console.error(`[webhook] Canal não encontrado para instância: ${instance}`)
-    return
+    return null
   }
 
   const tenantId = channel.tenantId
@@ -123,7 +146,7 @@ export async function processWebhook(job: Job<WebhookPayload>): Promise<void> {
   const existingMsg = await prisma.message.findUnique({
     where: { waMessageId: key.id },
   })
-  if (existingMsg) return
+  if (existingMsg) return null
 
   // Buscar ou criar conversa + lead em transação
   const { type, content, mediaMimeType, mediaUrl } = extractContent(data.message)
@@ -136,6 +159,8 @@ export async function processWebhook(job: Job<WebhookPayload>): Promise<void> {
       where: { tenantId_remoteJid: { tenantId, remoteJid: key.remoteJid } },
       include: { lead: true },
     })
+
+    let isNewLead = false
 
     if (!conversation) {
       // Buscar pipeline padrão
@@ -173,6 +198,7 @@ export async function processWebhook(job: Job<WebhookPayload>): Promise<void> {
             position: lastLead ? lastLead.position + 1.0 : 1.0,
           },
         })
+        isNewLead = true
 
         // Atualizar cache do estágio
         await tx.stage.update({
@@ -230,7 +256,7 @@ export async function processWebhook(job: Job<WebhookPayload>): Promise<void> {
       data: { lastInteractionAt: new Date() },
     })
 
-    return { conversation, message, lead: conversation.lead, isNew: !conversation.lead }
+    return { conversation, message, lead: conversation.lead, isNewLead }
   })
 
   // Publicar evento SSE
@@ -246,4 +272,12 @@ export async function processWebhook(job: Job<WebhookPayload>): Promise<void> {
       messageType: type,
     },
   }))
+
+  return {
+    tenantId,
+    leadId: result.lead.id,
+    conversationId: result.conversation.id,
+    messageId: result.message.id,
+    isNewLead: result.isNewLead,
+  }
 }
