@@ -20,6 +20,7 @@ interface LeadCard {
   source: string | null
   lastInteractionAt: string | null
   createdAt: string
+  lastMessage: { content: string; fromMe: boolean; createdAt: string } | null
 }
 
 interface StageData {
