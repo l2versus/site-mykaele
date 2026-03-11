@@ -127,20 +127,6 @@ function AutomationModal({ onClose, onSave, existing }: {
             </select>
           </div>
 
-          {/* Placeholder visual para o construtor React Flow */}
-          <div className="rounded-lg p-4 text-center" style={{ background: '#0A0A0B', border: '1px dashed #2A2A32' }}>
-            <svg className="mx-auto mb-2 opacity-30" width="32" height="32" fill="none" stroke="#D4AF37" strokeWidth="1.2" viewBox="0 0 24 24">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="8" y="14" width="7" height="7" rx="1" />
-              <line x1="6.5" y1="10" x2="6.5" y2="14" />
-              <line x1="17.5" y1="10" x2="17.5" y2="14" />
-            </svg>
-            <p className="text-[10px]" style={{ color: '#8B8A94' }}>
-              O editor visual de fluxo estará disponível após criar a automação
-            </p>
-          </div>
-
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose}
               className="flex-1 py-2.5 rounded-lg text-sm font-medium"
@@ -163,6 +149,7 @@ export default function AutomationsPage() {
   const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [toggling, setToggling] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null
 
@@ -224,6 +211,23 @@ export default function AutomationsPage() {
       // revert silently
     } finally {
       setToggling(null)
+    }
+  }
+
+  const handleDelete = async (automationId: string) => {
+    if (!confirm('Excluir esta automação?')) return
+    setDeleting(automationId)
+    try {
+      await fetch(`/api/admin/crm/automations/${automationId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tenantId: TENANT_ID }),
+      })
+      setAutomations(prev => prev.filter(a => a.id !== automationId))
+    } catch {
+      setError('Erro ao excluir automação')
+    } finally {
+      setDeleting(null)
     }
   }
 
@@ -312,8 +316,21 @@ export default function AutomationsPage() {
                     </div>
                   </div>
 
-                  {/* Toggle */}
-                  <button
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => handleDelete(automation.id)}
+                      disabled={deleting === automation.id}
+                      className="p-1.5 rounded-lg transition-colors disabled:opacity-50"
+                      style={{ color: '#8B8A94' }}
+                      title="Excluir"
+                    >
+                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                        <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                    {/* Toggle */}
+                    <button
                     onClick={() => handleToggle(automation)}
                     disabled={toggling === automation.id}
                     className="flex-shrink-0 w-11 h-6 rounded-full relative transition-colors disabled:opacity-50"
@@ -330,32 +347,11 @@ export default function AutomationsPage() {
                       }}
                     />
                   </button>
+                  </div>
                 </motion.div>
               )
             })}
           </AnimatePresence>
-
-          {/* Visual builder info card */}
-          <div className="rounded-xl p-4 mt-6" style={{ background: '#111114', border: '1px dashed #2A2A32' }}>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(212,175,55,0.08)' }}
-              >
-                <svg width="16" height="16" fill="none" stroke="#D4AF37" strokeWidth="1.5" viewBox="0 0 24 24">
-                  <rect x="3" y="3" width="7" height="7" rx="1" />
-                  <rect x="14" y="3" width="7" height="7" rx="1" />
-                  <rect x="8" y="14" width="7" height="7" rx="1" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-medium" style={{ color: '#F0EDE8' }}>Editor Visual de Fluxo</p>
-                <p className="text-xs mt-0.5" style={{ color: '#8B8A94' }}>
-                  O construtor visual com React Flow permite criar fluxos complexos com
-                  condições, ações e delays. Clique em uma automação para editar o fluxo.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
