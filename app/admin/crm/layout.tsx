@@ -3,6 +3,7 @@
 import { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { CrmToasts } from '@/components/crm/CrmToast'
 
 const CRM_NAV = [
   { href: '/admin/crm/pipeline', label: 'Pipeline' },
@@ -54,6 +55,8 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
       <div className="p-4 lg:p-6">
         {children}
       </div>
+
+      <CrmToasts />
 
       {/* CSS Variables para CRM — :root para disponibilidade global */}
       <style jsx global>{`

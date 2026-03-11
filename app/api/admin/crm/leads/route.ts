@@ -51,7 +51,36 @@ export async function GET(req: NextRequest) {
       orderBy: { position: 'asc' },
     })
 
-    return NextResponse.json({ leads })
+    // Enrich leads com preview da última mensagem (anti-N+1: 1 query extra)
+    const leadIds = leads.map((l: { id: string }) => l.id)
+    let lastMessageMap = new Map<string, { content: string; fromMe: boolean; createdAt: Date }>()
+
+    if (leadIds.length > 0) {
+      const conversations = await prisma.conversation.findMany({
+        where: { leadId: { in: leadIds } },
+        select: {
+          leadId: true,
+          messages: {
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+            select: { content: true, fromMe: true, createdAt: true },
+          },
+        },
+      })
+
+      for (const conv of conversations) {
+        if (conv.messages[0] && !lastMessageMap.has(conv.leadId)) {
+          lastMessageMap.set(conv.leadId, conv.messages[0])
+        }
+      }
+    }
+
+    const enrichedLeads = leads.map((l: { id: string }) => ({
+      ...l,
+      lastMessage: lastMessageMap.get(l.id) ?? null,
+    }))
+
+    return NextResponse.json({ leads: enrichedLeads })
   } catch (err) {
     console.error('[leads] GET error:', err instanceof Error ? err.message : err)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
