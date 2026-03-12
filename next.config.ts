@@ -49,7 +49,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https: http: https://*.tile.openstreetmap.org",
               "font-src 'self' https://fonts.gstatic.com data:",
-              `connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://api.mercadopago.com https://connect.facebook.net https://wa.me https://cloudflareinsights.com https://static.cloudflareinsights.com https://*.tile.openstreetmap.org ${SITE_URL}`,
+              `connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://api.mercadopago.com https://connect.facebook.net https://wa.me https://cloudflareinsights.com https://static.cloudflareinsights.com https://*.tile.openstreetmap.org https://generativelanguage.googleapis.com https://api.openai.com https://api.groq.com https://api.together.xyz https://openrouter.ai ${SITE_URL}`,
               "frame-src 'self' https://www.google.com https://www.mercadopago.com.br",
               "media-src 'self' blob: data:",
               "worker-src 'self' blob:",
