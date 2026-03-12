@@ -555,6 +555,7 @@ model CrmTenant {
   broadcasts              CrmBroadcast[]
   npsConfig               CrmNpsConfig?
   npsResponses            CrmNpsResponse[]
+  proposals               CrmProposal[]
 }
 
 model CrmIntegration {
@@ -996,4 +997,50 @@ model CrmNpsResponse {
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([tenantId, category])
   @@index([tenantId, leadId])
+}
+
+// ============================================================
+// MÓDULO CRM v8.5 — PROPOSTAS / ORÇAMENTOS
+// ============================================================
+
+model CrmProposal {
+  id            String    @id @default(cuid())
+  tenantId      String
+  leadId        String
+  leadName      String
+  title         String
+  description   String?   @db.Text
+  discount      Float     @default(0)
+  discountType  String    @default("percent") // percent, fixed
+  totalValue    Float     @default(0)
+  validUntil    DateTime?
+  status        String    @default("DRAFT") // DRAFT, SENT, VIEWED, ACCEPTED, REJECTED, EXPIRED
+  publicToken   String    @unique @default(cuid())
+  sentAt        DateTime?
+  viewedAt      DateTime?
+  respondedAt   DateTime?
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant CrmTenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items  CrmProposalItem[]
+
+  @@index([tenantId, leadId])
+  @@index([tenantId, status])
+  @@index([publicToken])
+}
+
+model CrmProposalItem {
+  id         String @id @default(cuid())
+  proposalId String
+  name       String
+  description String?
+  quantity   Int    @default(1)
+  unitPrice  Float
+  sortOrder  Int    @default(0)
+
+  proposal CrmProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
 }

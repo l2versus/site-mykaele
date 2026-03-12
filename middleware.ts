@@ -21,7 +21,7 @@ const PUBLIC_PATHS = [
 ]
 
 // Prefixos de rotas públicas
-const PUBLIC_PREFIXES = ['/check-in/', '/api/crm/stream']
+const PUBLIC_PREFIXES = ['/check-in/', '/api/crm/stream', '/proposta/', '/api/public/proposals/']
 
 // Prefixos de rotas estáticas
 const STATIC_PREFIXES = ['/_next', '/favicon', '/media', '/images', '/icon', '/apple-icon', '/uploads']
