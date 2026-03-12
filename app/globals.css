@@ -617,7 +617,7 @@ body {
   --admin-accent-light: #d4a0a7;
   --admin-accent-bg: rgba(183,110,121,0.15);
   --admin-accent-shadow: rgba(183,110,121,0.1);
-  --admin-header-bg: rgba(19,17,26,0.8);
+  --admin-header-bg: #13111a;
   --admin-profile-bg: rgba(255,255,255,0.04);
   --admin-logout-text: #f87171;
   --admin-logout-hover: rgba(239,68,68,0.1);
@@ -639,7 +639,7 @@ body {
   --admin-accent-light: #c28a93;
   --admin-accent-bg: rgba(183,110,121,0.1);
   --admin-accent-shadow: rgba(183,110,121,0.08);
-  --admin-header-bg: rgba(255,255,255,0.85);
+  --admin-header-bg: #ffffff;
   --admin-profile-bg: rgba(0,0,0,0.04);
   --admin-logout-text: #dc2626;
   --admin-logout-hover: rgba(220,38,38,0.08);
