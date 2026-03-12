@@ -2010,37 +2010,30 @@ function AiTab() {
     return () => window.removeEventListener('crm-settings-save', handleGlobalSave)
   }, [TENANT_ID, PROVIDER_KEY, provider, model, apiKey, baseUrl, confidence, maxTokens, temperature, features])
 
-  // Testar conexão
+  // Testar conexão — via server-side para evitar CORS/CSP
   const handleTestConnection = async () => {
     if (!apiKey || apiKey.includes('*')) {
       addToast('Insira a API key antes de testar', 'error')
       return
     }
 
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || localStorage.getItem('token')) : null
+    if (!token) return
+
     setTestStatus('testing')
     try {
-      let url: string
-      let headers: Record<string, string>
-
-      if (provider === 'gemini') {
-        // Gemini usa query param para auth
-        url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
-        headers = {}
-      } else {
-        url = (baseUrl || BASE_URLS[provider]) + '/models'
-        headers = { Authorization: `Bearer ${apiKey}` }
-      }
-
-      const res = await fetch(url, {
-        headers,
-        signal: AbortSignal.timeout(8000),
+      const res = await fetch('/api/crm/test-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ provider, apiKey, baseUrl: baseUrl || BASE_URLS[provider] || '' }),
       })
+      const data = await res.json()
       if (res.ok) {
         setTestStatus('success')
         addToast('Conexão OK — API key válida')
       } else {
         setTestStatus('error')
-        addToast(`Erro ${res.status} — verifique a API key`, 'error')
+        addToast(data.error || 'Erro — verifique a API key', 'error')
       }
     } catch {
       setTestStatus('error')
