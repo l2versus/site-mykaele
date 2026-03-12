@@ -556,6 +556,7 @@ model CrmTenant {
   npsConfig               CrmNpsConfig?
   npsResponses            CrmNpsResponse[]
   proposals               CrmProposal[]
+  teamMembers             CrmTeamMember[]
 }
 
 model CrmIntegration {
@@ -674,6 +675,7 @@ model Lead {
 
   patientId           String?
   linkedAppointmentId String?
+  assignedToUserId    String?
 
   pipeline      Pipeline       @relation(fields: [pipelineId], references: [id])
   stage         Stage          @relation(fields: [stageId], references: [id])
@@ -691,6 +693,7 @@ model Lead {
   @@index([tenantId, deletedAt])
   @@index([tenantId, lastInteractionAt])
   @@index([tenantId, phone])
+  @@index([tenantId, assignedToUserId])
 }
 
 model LeadActivity {
@@ -1002,6 +1005,32 @@ model CrmNpsResponse {
 // ============================================================
 // MÓDULO CRM v8.5 — PROPOSTAS / ORÇAMENTOS
 // ============================================================
+
+// ============================================================
+// MÓDULO CRM v8.6 — MULTI-USUÁRIO / EQUIPE
+// ============================================================
+
+model CrmTeamMember {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String?  // FK to User (optional — can invite by email before they register)
+  name      String
+  email     String
+  phone     String?
+  role      String   @default("agent") // owner, admin, manager, agent
+  avatar    String?
+  isActive  Boolean  @default(true)
+  invitedBy String?
+  joinedAt  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId, isActive])
+  @@index([tenantId, role])
+}
 
 model CrmProposal {
   id            String    @id @default(cuid())
