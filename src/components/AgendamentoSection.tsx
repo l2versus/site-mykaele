@@ -253,11 +253,13 @@ export default function AgendamentoSection() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-[#2d2d2d] group-hover:text-[#b76e79] transition-colors">{service.name}</p>
-                        <p className="text-xs text-[#8a8580] mt-0.5">{service.description}</p>
+                        {service.description && (
+                          <p className="text-xs text-[#8a8580] mt-0.5 line-clamp-2 sm:line-clamp-3">{service.description}</p>
+                        )}
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-semibold text-[#b76e79]">{formatCurrency(service.price)}</p>
-                        <p className="text-[10px] text-[#8a8580] uppercase tracking-wider">{service.duration} min</p>
+                      <div className="text-right flex-shrink-0 ml-2">
+                        <p className="text-sm font-semibold text-[#b76e79] whitespace-nowrap">{formatCurrency(service.price)}</p>
+                        <p className="text-[10px] text-[#8a8580] uppercase tracking-wider whitespace-nowrap">{service.duration} min</p>
                       </div>
                       <svg className="w-4 h-4 text-[#8a8580] group-hover:text-[#b76e79] group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
