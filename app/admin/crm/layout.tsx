@@ -123,7 +123,7 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
     <div className="-m-4 lg:-m-6 min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)]" style={{ background: 'var(--crm-bg)' }}>
       {/* Sub-navegação horizontal premium + slot para ações da página */}
       <div
-        className="sticky top-14 lg:top-16 z-20 border-b"
+        className="border-b"
         style={{
           borderColor: 'var(--crm-border)',
           background: 'var(--crm-bg)',
