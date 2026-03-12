@@ -255,6 +255,7 @@ function SectionHeader({ title, icon, delay }: { title: string; icon: React.Reac
 
 export default function IntegrationsPage() {
   const [waStatus, setWaStatus] = useState<ConnectionStatus>('disconnected')
+  const [waError, setWaError] = useState<string | null>(null)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [instanceId, setInstanceId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -286,9 +287,12 @@ export default function IntegrationsPage() {
 
   const fetchStatus = useCallback(async () => {
     if (!token) return
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5_000)
     try {
       const res = await fetch(`/api/admin/crm/integrations/whatsapp/status?tenantId=${TENANT_ID}`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       })
       if (!res.ok) return
       const data: { status: ConnectionStatus; instanceId?: string } = await res.json()
@@ -301,30 +305,40 @@ export default function IntegrationsPage() {
       }
     } catch {
       // silently fail — SSE or next poll will retry
+    } finally {
+      clearTimeout(timeout)
     }
   }, [token, addToast, stopPolling])
 
   const handleConnect = async () => {
     if (!token) return
     setWaStatus('connecting')
+    setWaError(null)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 12_000)
     try {
       const res = await fetch('/api/admin/crm/integrations/whatsapp/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ tenantId: TENANT_ID }),
+        signal: controller.signal,
       })
+      const data = await res.json()
       if (!res.ok) {
         setWaStatus('error')
+        setWaError(data.error || `Erro ${res.status}`)
         return
       }
-      const data: { qrCode?: string; instanceId?: string } = await res.json()
       if (data.qrCode) setQrCode(data.qrCode)
       if (data.instanceId) setInstanceId(data.instanceId)
       stopPolling()
       pollingRef.current = setInterval(fetchStatus, 3000)
-    } catch {
+    } catch (err) {
       setWaStatus('error')
-      addToast('Erro ao conectar WhatsApp', 'error')
+      const isTimeout = err instanceof DOMException && err.name === 'AbortError'
+      setWaError(isTimeout ? 'Evolution API não respondeu (timeout). Verifique se o serviço está rodando.' : 'Sem conexão com o servidor')
+    } finally {
+      clearTimeout(timeout)
     }
   }
 
@@ -527,13 +541,23 @@ export default function IntegrationsPage() {
         )}
 
         {waStatus === 'error' && (
-          <button
-            onClick={handleConnect}
-            className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:brightness-110"
-            style={{ background: 'rgba(255,107,74,0.12)', color: '#FF6B4A', border: '1px solid rgba(255,107,74,0.25)' }}
-          >
-            Tentar novamente
-          </button>
+          <div className="space-y-3">
+            {waError && (
+              <div
+                className="px-4 py-3 rounded-xl text-xs leading-relaxed"
+                style={{ background: 'rgba(255,107,74,0.08)', border: '1px solid rgba(255,107,74,0.15)', color: '#FF6B4A' }}
+              >
+                {waError}
+              </div>
+            )}
+            <button
+              onClick={handleConnect}
+              className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:brightness-110"
+              style={{ background: 'rgba(255,107,74,0.12)', color: '#FF6B4A', border: '1px solid rgba(255,107,74,0.25)' }}
+            >
+              Tentar novamente
+            </button>
+          </div>
         )}
       </motion.div>
 

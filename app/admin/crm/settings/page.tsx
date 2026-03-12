@@ -453,7 +453,7 @@ function PipelineTab() {
   // Buscar token do localStorage
   const getToken = useCallback(() => {
     if (typeof window === 'undefined') return null
-    return localStorage.getItem('token') || document.cookie.match(/token=([^;]+)/)?.[1] || null
+    return localStorage.getItem('admin_token') || localStorage.getItem('token') || document.cookie.match(/token=([^;]+)/)?.[1] || null
   }, [])
 
   // Carregar estágios do banco
@@ -1007,11 +1007,20 @@ function WhatsAppTab() {
         const newState = result.data.state
         setConnectionState(newState)
         setInstanceName(result.data.instanceName)
+        setError(null)
 
         // Se conectou, limpar QR e parar polling
         if (newState === 'open') {
           setQrBase64(null)
           clearTimers()
+        }
+      } else if (result.error) {
+        // Erro de auth ou tenant — mostrar como desconectado sem travar
+        setConnectionState('close')
+        if (result.error === 'Não autorizado') {
+          setError('Sessão expirada. Faça logout e login novamente.')
+        } else {
+          setError(result.error)
         }
       }
     } catch {
@@ -1566,9 +1575,9 @@ function NotificationsTab() {
             transition={{ duration: 0.2 }}
           >
             <SectionTitle>Canais por Evento</SectionTitle>
-            <SectionCard className="overflow-hidden">
+            <SectionCard className="overflow-x-auto">
               {/* Table Header */}
-              <div className="grid grid-cols-[1fr_70px_70px_70px_120px] gap-2 pb-3 mb-1 border-b" style={{ borderColor: 'var(--crm-border)' }}>
+              <div className="grid grid-cols-[1fr_70px_70px_70px_120px] gap-2 pb-3 mb-1 border-b min-w-[480px]" style={{ borderColor: 'var(--crm-border)' }}>
                 <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--crm-text-muted)' }}>Evento</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-center" style={{ color: 'var(--crm-text-muted)' }}>Email</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-center" style={{ color: 'var(--crm-text-muted)' }}>WhatsApp</span>
@@ -1581,7 +1590,7 @@ function NotificationsTab() {
                 {events.map(event => (
                   <div
                     key={event.id}
-                    className="grid grid-cols-[1fr_70px_70px_70px_120px] gap-2 items-center py-2.5 px-1 rounded-lg transition-colors hover:bg-white/[0.02]"
+                    className="grid grid-cols-[1fr_70px_70px_70px_120px] gap-2 items-center py-2.5 px-1 min-w-[480px] rounded-lg transition-colors hover:bg-white/[0.02]"
                   >
                     <span className="text-sm" style={{ color: 'var(--crm-text)' }}>{event.label}</span>
                     <div className="flex justify-center">
@@ -2350,7 +2359,7 @@ function KnowledgeTab() {
           ) : (
             <>
               {/* Table Header */}
-              <div className="grid grid-cols-[1fr_60px_70px_70px_70px_80px_90px_60px] gap-2 pb-2.5 mb-1 border-b" style={{ borderColor: 'var(--crm-border)' }}>
+              <div className="grid grid-cols-[1fr_60px_70px_70px_70px_80px_90px_60px] gap-2 pb-2.5 mb-1 border-b min-w-[600px]" style={{ borderColor: 'var(--crm-border)' }}>
                 {['Nome', 'Tipo', 'Subseções', 'Uso', 'Idioma', 'Atualizado', 'Data', ''].map(h => (
                   <span key={h} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--crm-text-muted)' }}>
                     {h}
@@ -2363,7 +2372,7 @@ function KnowledgeTab() {
                 {sources.map(source => (
                   <div
                     key={source.id}
-                    className="grid grid-cols-[1fr_60px_70px_70px_70px_80px_90px_60px] gap-2 items-center py-2.5 px-1 rounded-lg transition-colors hover:bg-white/[0.02] group"
+                    className="grid grid-cols-[1fr_60px_70px_70px_70px_80px_90px_60px] gap-2 items-center py-2.5 px-1 rounded-lg transition-colors hover:bg-white/[0.02] group min-w-[600px]"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <svg width="14" height="14" fill="none" stroke="var(--crm-gold)" strokeWidth="1.5" viewBox="0 0 24 24" className="flex-shrink-0">
@@ -2586,10 +2595,44 @@ export default function SettingsPage() {
         className="rounded-2xl border overflow-hidden"
         style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)' }}
       >
-        <div className="flex min-h-[560px]">
-          {/* Sidebar Navigation */}
+        {/* Mobile: Horizontal scrollable tabs */}
+        <nav
+          className="flex md:hidden overflow-x-auto scrollbar-none border-b gap-0.5 px-2 py-2"
+          style={{ borderColor: 'var(--crm-border)', background: 'rgba(17,17,20,0.5)' }}
+        >
+          {TABS.map(tab => {
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium whitespace-nowrap transition-all flex-shrink-0"
+                style={{
+                  color: isActive ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
+                  background: isActive ? 'var(--crm-gold-subtle)' : 'transparent',
+                }}
+              >
+                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{ opacity: isActive ? 1 : 0.6 }}>
+                  <path d={tab.iconPath} />
+                </svg>
+                {tab.label}
+                {isActive && (
+                  <motion.div
+                    layoutId="settings-tab-mobile"
+                    className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
+                    style={{ background: 'var(--crm-gold)' }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  />
+                )}
+              </button>
+            )
+          })}
+        </nav>
+
+        <div className="flex min-h-[400px] md:min-h-[560px]">
+          {/* Desktop: Sidebar Navigation */}
           <nav
-            className="w-52 flex-shrink-0 border-r py-3 px-2 flex flex-col gap-0.5"
+            className="hidden md:flex w-52 flex-shrink-0 border-r py-3 px-2 flex-col gap-0.5"
             style={{ borderColor: 'var(--crm-border)', background: 'rgba(17,17,20,0.5)' }}
           >
             {TABS.map(tab => {
@@ -2646,7 +2689,7 @@ export default function SettingsPage() {
           </nav>
 
           {/* Tab Content Panel */}
-          <div className="flex-1 p-6 overflow-y-auto" style={{ maxHeight: '680px' }}>
+          <div className="flex-1 p-4 md:p-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 14rem)' }}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}

@@ -14,7 +14,7 @@ interface InstanceStatusResult {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown, timeoutMs = 4_000): Promise<T> {
   const baseUrl = process.env.EVOLUTION_API_URL
   if (!baseUrl) throw new Error('EVOLUTION_API_URL não configurada')
 
@@ -28,7 +28,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       'apikey': apiKey,
     },
     body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(8_000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
 
   if (!res.ok) {
@@ -46,7 +46,7 @@ export const evolutionApi = {
       number: remoteJid,
       text,
       delay: 1200,
-    }),
+    }, 8_000),
 
   /** Envia template (HSM) */
   sendTemplate: (instanceId: string, remoteJid: string, template: string, variables: string[]) =>
@@ -58,7 +58,7 @@ export const evolutionApi = {
         type: 'body',
         parameters: variables.map(v => ({ type: 'text', text: v })),
       }],
-    }),
+    }, 8_000),
 
   /** Busca mensagens recentes de uma instância */
   fetchMessages: (instanceId: string, count = 50) =>
@@ -98,6 +98,7 @@ export const evolutionApi = {
           ],
         },
       },
+      10_000,
     ),
 
   /** Desconecta a instância (logout do WhatsApp) */

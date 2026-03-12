@@ -6,6 +6,14 @@ import { evolutionApi } from '@/lib/evolution-api'
 import { encryptCredentials } from '@/lib/crypto'
 import { createAuditLog, CRM_ACTIONS } from '@/lib/audit'
 
+async function resolveTenantId(value: string): Promise<string | null> {
+  const byId = await prisma.crmTenant.findUnique({ where: { id: value }, select: { id: true } })
+  if (byId) return byId.id
+
+  const bySlug = await prisma.crmTenant.findUnique({ where: { slug: value }, select: { id: true } })
+  return bySlug?.id ?? null
+}
+
 export async function POST(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '')
   if (!token) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -15,8 +23,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  const { tenantId } = await req.json()
-  if (!tenantId) return NextResponse.json({ error: 'tenantId obrigatório' }, { status: 400 })
+  const { tenantId: rawTenantId } = await req.json()
+  if (!rawTenantId) return NextResponse.json({ error: 'tenantId obrigatório' }, { status: 400 })
+
+  const tenantId = await resolveTenantId(rawTenantId)
+  if (!tenantId) {
+    return NextResponse.json(
+      { error: 'Tenant não encontrado. Execute o seed: npx tsx prisma/seeds/crm-pipeline.ts' },
+      { status: 404 },
+    )
+  }
 
   try {
     // Verificar se já existe canal
@@ -61,9 +77,25 @@ export async function POST(req: NextRequest) {
       instanceId: channel.instanceId,
     })
   } catch (err) {
-    console.error('[whatsapp] Falha na conexão:', err instanceof Error ? err.message : err)
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[whatsapp/connect] Falha:', message)
+
+    // Erros específicos para debug
+    if (message.includes('EVOLUTION_API_URL')) {
+      return NextResponse.json({ error: 'Evolution API URL não configurada no .env' }, { status: 500 })
+    }
+    if (message.includes('EVOLUTION_API_KEY')) {
+      return NextResponse.json({ error: 'Evolution API Key não configurada no .env' }, { status: 500 })
+    }
+    if (message.includes('fetch') || message.includes('ECONNREFUSED') || message.includes('timeout') || message.includes('abort') || message.includes('AbortError')) {
+      return NextResponse.json(
+        { error: `Evolution API não respondeu (${process.env.EVOLUTION_API_URL}). Verifique se o serviço está rodando.` },
+        { status: 502 },
+      )
+    }
+
     return NextResponse.json(
-      { error: 'Falha ao conectar com a Evolution API. Verifique se o serviço está rodando.' },
+      { error: `Falha ao conectar: ${message.slice(0, 200)}` },
       { status: 502 },
     )
   }

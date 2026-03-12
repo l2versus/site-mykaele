@@ -3,7 +3,7 @@
 import { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+
 import { CrmToasts } from '@/components/crm/CrmToast'
 
 const CRM_NAV = [
@@ -154,17 +154,7 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
 
       {/* Conteúdo da página CRM */}
       <div className="p-4 lg:p-6">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+        {children}
       </div>
 
       <CrmToasts />

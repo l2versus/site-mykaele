@@ -240,10 +240,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           return
         }
         setToken(t); setUser(JSON.parse(u))
+        document.cookie = `token=${t}; path=/; max-age=${60*60*24*7}; SameSite=Lax`
       }
     } catch {
       localStorage.removeItem('admin_token')
       localStorage.removeItem('admin_user')
+      document.cookie = 'token=; path=/; max-age=0'
     }
   }, [])
 
@@ -259,8 +261,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return res
   }, [token])
 
-  const handleLogin = (t: string, u: AdminUser) => { setToken(t); setUser(u); localStorage.setItem('admin_token', t); localStorage.setItem('admin_user', JSON.stringify(u)) }
-  const logout = () => { setToken(null); setUser(null); localStorage.removeItem('admin_token'); localStorage.removeItem('admin_user') }
+  const handleLogin = (t: string, u: AdminUser) => { setToken(t); setUser(u); localStorage.setItem('admin_token', t); localStorage.setItem('admin_user', JSON.stringify(u)); document.cookie = `token=${t}; path=/; max-age=${60*60*24*7}; SameSite=Lax` }
+  const logout = () => { setToken(null); setUser(null); localStorage.removeItem('admin_token'); localStorage.removeItem('admin_user'); document.cookie = 'token=; path=/; max-age=0' }
 
   if (!mounted) return null
   if (!token || !user) return <LoginScreen onLogin={handleLogin} />

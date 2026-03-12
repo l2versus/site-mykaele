@@ -79,7 +79,12 @@ export async function getWhatsAppStatus(): Promise<ActionResult<ConnectionStatus
   }
 
   try {
-    const status = await evolutionApi.getStatus(channel.instanceId)
+    const statusPromise = evolutionApi.getStatus(channel.instanceId)
+    // Timeout rápido para não travar a UI
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 3_000)
+    )
+    const status = await Promise.race([statusPromise, timeoutPromise])
     return {
       ok: true,
       data: {
