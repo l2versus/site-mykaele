@@ -14,10 +14,17 @@ export async function GET(req: NextRequest) {
     }
 
     const leadId = req.nextUrl.searchParams.get('leadId')
-    const tenantId = req.nextUrl.searchParams.get('tenantId')
+    let tenantId = req.nextUrl.searchParams.get('tenantId')
 
     if (!leadId || !tenantId) {
       return NextResponse.json({ error: 'leadId e tenantId obrigatórios' }, { status: 400 })
+    }
+
+    // Resolver slug → cuid
+    const tenantById = await prisma.crmTenant.findUnique({ where: { id: tenantId } })
+    if (!tenantById) {
+      const tenantBySlug = await prisma.crmTenant.findUnique({ where: { slug: tenantId } })
+      if (tenantBySlug) tenantId = tenantBySlug.id
     }
 
     // Buscar últimas mensagens do lead (apenas do paciente)

@@ -13,9 +13,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const tenantId = req.nextUrl.searchParams.get('tenantId')
+    let tenantId = req.nextUrl.searchParams.get('tenantId')
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId é obrigatório' }, { status: 400 })
+    }
+
+    // Resolver slug → cuid
+    const tenantById = await prisma.crmTenant.findUnique({ where: { id: tenantId } })
+    if (!tenantById) {
+      const tenantBySlug = await prisma.crmTenant.findUnique({ where: { slug: tenantId } })
+      if (tenantBySlug) tenantId = tenantBySlug.id
     }
 
     const search = req.nextUrl.searchParams.get('search')?.toLowerCase()

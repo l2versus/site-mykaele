@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { tenantId, pipelineId, name, color, type } = body as {
+    let { tenantId, pipelineId, name, color, type } = body as {
       tenantId: string
       pipelineId: string
       name: string
@@ -82,6 +82,13 @@ export async function POST(req: NextRequest) {
 
     if (!tenantId || !pipelineId || !name || !color || !type) {
       return NextResponse.json({ error: 'Campos obrigatórios: tenantId, pipelineId, name, color, type' }, { status: 400 })
+    }
+
+    // Resolver slug → cuid
+    const tenantCheck = await prisma.crmTenant.findUnique({ where: { id: tenantId } })
+    if (!tenantCheck) {
+      const tenantBySlug = await prisma.crmTenant.findUnique({ where: { slug: tenantId } })
+      if (tenantBySlug) tenantId = tenantBySlug.id
     }
 
     // Buscar o maior order atual para inserir no final dos OPEN (antes de WON/LOST)
@@ -156,13 +163,20 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { tenantId, stages: stageOrder } = body as {
+    let { tenantId, stages: stageOrder } = body as {
       tenantId: string
       stages: { id: string; order: number }[]
     }
 
     if (!tenantId || !stageOrder || !Array.isArray(stageOrder)) {
       return NextResponse.json({ error: 'Campos obrigatórios: tenantId, stages[]' }, { status: 400 })
+    }
+
+    // Resolver slug → cuid
+    const tenantCheck = await prisma.crmTenant.findUnique({ where: { id: tenantId } })
+    if (!tenantCheck) {
+      const tenantBySlug = await prisma.crmTenant.findUnique({ where: { slug: tenantId } })
+      if (tenantBySlug) tenantId = tenantBySlug.id
     }
 
     await prisma.$transaction(

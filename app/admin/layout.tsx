@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, ReactNode, useCallback } from 'react'
+import { useState, useEffect, ReactNode, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { AdminContextProvider, AdminContextType, AdminUser } from './AdminContext'
@@ -30,30 +30,58 @@ const I = {
   globe: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
   image: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>,
   funnel: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>,
+  sun: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  moon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+  grip: <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.5" fill="currentColor"/><circle cx="15" cy="6" r="1.5" fill="currentColor"/><circle cx="9" cy="12" r="1.5" fill="currentColor"/><circle cx="15" cy="12" r="1.5" fill="currentColor"/><circle cx="9" cy="18" r="1.5" fill="currentColor"/><circle cx="15" cy="18" r="1.5" fill="currentColor"/></svg>,
+  check: <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>,
+  reorder: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><path d="M7 3l-4 3 4 3"/><path d="M17 15l4 3-4 3"/></svg>,
 }
 
-const NAV = [
-  { href: '/admin', label: 'Dashboard', icon: I.grid },
-  { href: '/admin/agenda', label: 'Agenda', icon: I.cal },
-  { href: '/admin/servicos', label: 'Serviços', icon: I.heart },
-  { href: '/admin/clientes', label: 'Clientes', icon: I.users },
-  { href: '/admin/relatorios', label: 'Relatórios', icon: I.chart },
-  { href: '/admin/comissoes', label: 'Comissões', icon: I.percent },
-  { href: '/admin/lista-espera', label: 'Lista Espera', icon: I.clock },
-  { href: '/admin/gift-cards', label: 'Gift Cards', icon: I.gift },
-  { href: '/admin/protocolos', label: 'Protocolos', icon: I.clipboard },
-  { href: '/admin/importar-clientes', label: 'Importar', icon: I.upload },
-  { href: '/admin/mensagens', label: 'Mensagens', icon: I.megaphone },
-  { href: '/admin/indicacoes', label: 'Indicações', icon: I.share },
-  { href: '/admin/financeiro', label: 'Financeiro', icon: I.dollar },
-  { href: '/admin/pro-labore', label: 'Pró-labore', icon: I.briefcase },
-  { href: '/admin/estoque', label: 'Estoque', icon: I.box },
-  { href: '/admin/fidelidade', label: 'Fidelidade', icon: I.diamond },
-  { href: '/admin/configuracoes', label: 'Configurações', icon: I.gear },
-  { href: '/admin/configuracoes/site', label: 'Editar Site', icon: I.globe },
-  { href: '/admin/galeria', label: 'Galeria', icon: I.image },
-  { href: '/admin/crm', label: 'CRM', icon: I.funnel },
+const NAV_ITEMS: { id: string; href: string; label: string; icon: React.ReactNode }[] = [
+  { id: 'dashboard', href: '/admin', label: 'Dashboard', icon: I.grid },
+  { id: 'agenda', href: '/admin/agenda', label: 'Agenda', icon: I.cal },
+  { id: 'servicos', href: '/admin/servicos', label: 'Serviços', icon: I.heart },
+  { id: 'clientes', href: '/admin/clientes', label: 'Clientes', icon: I.users },
+  { id: 'relatorios', href: '/admin/relatorios', label: 'Relatórios', icon: I.chart },
+  { id: 'comissoes', href: '/admin/comissoes', label: 'Comissões', icon: I.percent },
+  { id: 'lista-espera', href: '/admin/lista-espera', label: 'Lista Espera', icon: I.clock },
+  { id: 'gift-cards', href: '/admin/gift-cards', label: 'Gift Cards', icon: I.gift },
+  { id: 'protocolos', href: '/admin/protocolos', label: 'Protocolos', icon: I.clipboard },
+  { id: 'importar', href: '/admin/importar-clientes', label: 'Importar', icon: I.upload },
+  { id: 'mensagens', href: '/admin/mensagens', label: 'Mensagens', icon: I.megaphone },
+  { id: 'indicacoes', href: '/admin/indicacoes', label: 'Indicações', icon: I.share },
+  { id: 'financeiro', href: '/admin/financeiro', label: 'Financeiro', icon: I.dollar },
+  { id: 'pro-labore', href: '/admin/pro-labore', label: 'Pró-labore', icon: I.briefcase },
+  { id: 'estoque', href: '/admin/estoque', label: 'Estoque', icon: I.box },
+  { id: 'fidelidade', href: '/admin/fidelidade', label: 'Fidelidade', icon: I.diamond },
+  { id: 'configuracoes', href: '/admin/configuracoes', label: 'Configurações', icon: I.gear },
+  { id: 'editar-site', href: '/admin/configuracoes/site', label: 'Editar Site', icon: I.globe },
+  { id: 'galeria', href: '/admin/galeria', label: 'Galeria', icon: I.image },
+  { id: 'crm', href: '/admin/crm', label: 'CRM', icon: I.funnel },
 ]
+
+const DEFAULT_ORDER = NAV_ITEMS.map(i => i.id)
+const NAV_MAP = Object.fromEntries(NAV_ITEMS.map(i => [i.id, i]))
+
+function getStoredOrder(): string[] {
+  try {
+    const stored = localStorage.getItem('myka_nav_order')
+    if (!stored) return DEFAULT_ORDER
+    const parsed: string[] = JSON.parse(stored)
+    // Garante que novos itens são incluídos e removidos antigos são ignorados
+    const validIds = new Set(DEFAULT_ORDER)
+    const ordered = parsed.filter(id => validIds.has(id))
+    const missing = DEFAULT_ORDER.filter(id => !ordered.includes(id))
+    return [...ordered, ...missing]
+  } catch { return DEFAULT_ORDER }
+}
+
+function getStoredTheme(): 'dark' | 'light' {
+  try {
+    const stored = localStorage.getItem('myka_admin_theme')
+    return stored === 'light' ? 'light' : 'dark'
+  } catch { return 'dark' }
+}
 
 /* ─── Leaf Logo PNG Component ─── */
 function LeafLogo({ className = '', style = {} }: { className?: string; style?: React.CSSProperties }) {
@@ -222,17 +250,25 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [sb, setSb] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [navOrder, setNavOrder] = useState<string[]>(DEFAULT_ORDER)
+  const [editingNav, setEditingNav] = useState(false)
+  const dragItem = useRef<number | null>(null)
+  const dragOverItem = useRef<number | null>(null)
   const pathname = usePathname()
+
+  const orderedNav = navOrder.map(id => NAV_MAP[id]).filter(Boolean)
 
   const handleCloseSidebar = () => setMobileOpen(false);
   useEffect(() => { setMobileOpen(false) }, [pathname])
   useEffect(() => {
     setMounted(true)
+    setNavOrder(getStoredOrder())
+    setTheme(getStoredTheme())
     try {
       const t = localStorage.getItem('admin_token')
       const u = localStorage.getItem('admin_user')
       if (t && u) {
-        // Verificar expiração do token
         const payload = JSON.parse(atob(t.split('.')[1]))
         if (payload.exp && payload.exp * 1000 < Date.now()) {
           localStorage.removeItem('admin_token')
@@ -248,6 +284,33 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       document.cookie = 'token=; path=/; max-age=0'
     }
   }, [])
+
+  // Aplicar tema no <html>
+  useEffect(() => {
+    if (!mounted) return
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('myka_admin_theme', theme)
+  }, [theme, mounted])
+
+  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark')
+
+  const handleDragStart = (index: number) => { dragItem.current = index }
+  const handleDragEnter = (index: number) => { dragOverItem.current = index }
+  const handleDragEnd = () => {
+    if (dragItem.current === null || dragOverItem.current === null) return
+    const reordered = [...navOrder]
+    const [removed] = reordered.splice(dragItem.current, 1)
+    reordered.splice(dragOverItem.current, 0, removed)
+    setNavOrder(reordered)
+    localStorage.setItem('myka_nav_order', JSON.stringify(reordered))
+    dragItem.current = null
+    dragOverItem.current = null
+  }
+  const resetNavOrder = () => {
+    setNavOrder(DEFAULT_ORDER)
+    localStorage.removeItem('myka_nav_order')
+    setEditingNav(false)
+  }
 
   const fetchWithAuth = useCallback(async (url: string, opts: RequestInit = {}) => {
     const currentToken = token || localStorage.getItem('admin_token')
@@ -269,12 +332,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <AdminContextProvider value={{ user, token, fetchWithAuth, logout }}>
-      <div className="min-h-screen bg-gradient-to-b from-[#0e0b10] via-[#100d14] to-[#0e0b10] flex relative">
+      <div className="admin-shell min-h-screen flex relative transition-colors duration-300"
+        style={{ background: `linear-gradient(to bottom, var(--admin-bg), var(--admin-bg-2), var(--admin-bg))` }}>
 
         {/* ── Mobile Backdrop ── */}
         {mobileOpen && (
           <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden"
+            className="fixed inset-0 z-40 backdrop-blur-sm transition-opacity duration-300 lg:hidden"
+            style={{ background: 'var(--admin-overlay)' }}
             onClick={handleCloseSidebar}
             aria-label="Fechar menu mobile"
           />
@@ -282,79 +347,130 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
         {/* ── Sidebar ── */}
         <aside
-          className={`fixed top-0 left-0 z-50 h-full bg-[#13111a] border-r border-white/[0.06] shadow-xl lg:shadow-none flex flex-col transition-all duration-300 ${
+          className={`fixed top-0 left-0 z-50 h-full shadow-xl lg:shadow-none flex flex-col transition-all duration-300 border-r ${
             mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           } ${sb ? 'w-64 lg:w-60' : 'w-64 lg:w-[68px]'}`}
+          style={{ background: 'var(--admin-surface)', borderColor: 'var(--admin-border)' }}
           aria-hidden={!mobileOpen}
         >
-          {/* Botão fechar mobile (X) - Fica oculto em telas grandes */}
+          {/* Botão fechar mobile (X) */}
           <button
-            className="absolute top-4 right-4 z-60 p-2 rounded-full bg-white/[0.06] hover:bg-white/[0.1] focus:outline-none lg:hidden"
+            className="absolute top-4 right-4 z-60 p-2 rounded-full focus:outline-none lg:hidden"
+            style={{ background: 'var(--admin-surface-hover)', color: 'var(--admin-text-muted)' }}
             onClick={handleCloseSidebar}
             aria-label="Fechar menu"
           >
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
 
-          <div className="px-4 h-14 lg:h-16 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="px-4 h-14 lg:h-16 border-b flex items-center justify-between" style={{ borderColor: 'var(--admin-border)' }}>
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#b76e79] to-[#c28a93] flex items-center justify-center flex-shrink-0 shadow-sm">
                 <LeafLogo className="w-4.5 h-6 text-white" />
               </div>
-              <span className={`text-white/90 text-sm font-semibold tracking-tight ${!sb ? 'lg:hidden' : ''}`}>Mykaele Procópio</span>
+              <span className={`text-sm font-semibold tracking-tight ${!sb ? 'lg:hidden' : ''}`} style={{ color: 'var(--admin-text)' }}>Mykaele Procópio</span>
             </div>
           </div>
 
           {/* Nav */}
           <nav className="flex-1 p-2 space-y-0.5 mt-1 overflow-y-auto">
             <a href="/" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] text-white/30 hover:text-white/50 hover:bg-white/[0.04] transition-all mb-1 border-b border-white/[0.04] pb-2.5">
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] transition-all mb-1 border-b pb-2.5 hover:opacity-80"
+              style={{ color: 'var(--admin-text-muted)', borderColor: 'var(--admin-border)' }}>
               <span className="flex-shrink-0"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
               <span className={!sb ? 'lg:hidden' : ''}>Voltar para Site</span>
             </a>
-            {NAV.map(item => {
+
+            {/* Botão editar ordem */}
+            <div className={`flex items-center justify-between px-3 py-1.5 mb-1 ${!sb ? 'lg:hidden' : ''}`}>
+              <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--admin-text-muted)' }}>Menu</span>
+              <button
+                onClick={() => setEditingNav(!editingNav)}
+                className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-all"
+                style={{
+                  color: editingNav ? 'var(--admin-accent)' : 'var(--admin-text-muted)',
+                  background: editingNav ? 'var(--admin-accent-bg)' : 'transparent',
+                }}
+                title={editingNav ? 'Concluir' : 'Reordenar menu'}
+              >
+                {editingNav ? <>{I.check} <span>OK</span></> : <>{I.reorder}</>}
+              </button>
+            </div>
+
+            {orderedNav.map((item, index) => {
               const active = pathname === item.href
               return (
-                <Link key={item.href} href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-all ${
-                    active
-                      ? 'bg-[#b76e79]/15 text-[#b76e79] font-semibold shadow-sm shadow-[#b76e79]/10'
-                      : 'text-white/35 hover:text-white/60 hover:bg-white/[0.04]'
-                  }`}
-                  onClick={() => setMobileOpen(false)}
+                <div
+                  key={item.id}
+                  draggable={editingNav}
+                  onDragStart={() => handleDragStart(index)}
+                  onDragEnter={() => handleDragEnter(index)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={e => e.preventDefault()}
+                  className={editingNav ? 'cursor-grab active:cursor-grabbing' : ''}
                 >
-                  <span className="flex-shrink-0 [&>svg]:stroke-current">{item.icon}</span>
-                  <span className={!sb ? 'lg:hidden' : ''}>{item.label}</span>
-                </Link>
+                  <Link href={item.href}
+                    className={`admin-nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-all ${editingNav ? 'pointer-events-none' : ''}`}
+                    style={{
+                      color: active ? 'var(--admin-accent)' : 'var(--admin-text-muted)',
+                      background: active ? 'var(--admin-accent-bg)' : 'transparent',
+                      fontWeight: active ? 600 : 400,
+                      boxShadow: active ? '0 1px 3px var(--admin-accent-shadow)' : 'none',
+                    }}
+                    onClick={() => setMobileOpen(false)}
+                    tabIndex={editingNav ? -1 : 0}
+                  >
+                    {editingNav && (
+                      <span className="flex-shrink-0 opacity-50" style={{ color: 'var(--admin-text-muted)' }}>{I.grip}</span>
+                    )}
+                    <span className="flex-shrink-0 [&>svg]:stroke-current">{item.icon}</span>
+                    <span className={!sb ? 'lg:hidden' : ''}>{item.label}</span>
+                  </Link>
+                </div>
               )
             })}
+
+            {/* Resetar ordem */}
+            {editingNav && (
+              <button
+                onClick={resetNavOrder}
+                className="flex items-center gap-2 px-3 py-2 mt-2 w-full rounded-xl text-[11px] transition-all border border-dashed hover:opacity-80"
+                style={{ color: 'var(--admin-text-muted)', borderColor: 'var(--admin-border)' }}
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                <span>Restaurar ordem padrão</span>
+              </button>
+            )}
           </nav>
 
           {/* Sidebar bottom — Mini profile */}
-          <div className={`px-3 py-3 border-t border-white/[0.06] ${!sb ? 'lg:hidden' : ''}`}>
-            <div className="flex items-center gap-3 p-2 rounded-xl bg-white/[0.04]">
+          <div className={`px-3 py-3 border-t ${!sb ? 'lg:hidden' : ''}`} style={{ borderColor: 'var(--admin-border)' }}>
+            <div className="flex items-center gap-3 p-2 rounded-xl" style={{ background: 'var(--admin-profile-bg)' }}>
               <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-[#b76e79]/15 flex-shrink-0 shadow-sm">
                 <img src="/media/profissionais/mykaele-principal.png" alt=""
                   className="w-full h-full object-cover" style={{ objectPosition: 'center 15%' }}
                   onError={(e) => { (e.target as HTMLImageElement).style.display='none' }} />
               </div>
               <div className="min-w-0">
-                <p className="text-white/80 text-[12px] font-semibold truncate">{user.name}</p>
-                <p className="text-white/30 text-[10px] truncate">{user.email}</p>
+                <p className="text-[12px] font-semibold truncate" style={{ color: 'var(--admin-text-secondary)' }}>{user.name}</p>
+                <p className="text-[10px] truncate" style={{ color: 'var(--admin-text-muted)' }}>{user.email}</p>
               </div>
             </div>
           </div>
 
-          <div className="p-2 border-t border-white/[0.06] space-y-1">
-            <button onClick={logout} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-all justify-start">
+          <div className="p-2 border-t space-y-1" style={{ borderColor: 'var(--admin-border)' }}>
+            <button onClick={logout}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] transition-all justify-start hover:opacity-80"
+              style={{ color: 'var(--admin-logout-text)' }}>
               <span className="flex-shrink-0">{I.out}</span>
               <span className={`font-medium ${!sb ? 'lg:hidden' : ''}`}>Sair</span>
             </button>
             <a href="https://www.instagram.com/emmanuelbezerra_" target="_blank" rel="noopener noreferrer"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg group hover:bg-white/[0.04] transition-all ${!sb ? 'lg:justify-center' : ''}`}>
-              <span className={`text-[9px] text-white/20 tracking-wider font-light group-hover:text-white/35 transition-colors ${!sb ? 'lg:hidden' : ''}`}>dev</span>
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg group transition-all ${!sb ? 'lg:justify-center' : ''}`}>
+              <span className={`text-[9px] tracking-wider font-light group-hover:opacity-70 transition-colors ${!sb ? 'lg:hidden' : ''}`} style={{ color: 'var(--admin-text-faint)' }}>dev</span>
               <span className={`text-[8px] text-rose-300/50 ${!sb ? 'lg:hidden' : ''}`}>&#9829;</span>
-              <img src="/media/logo-branding/logo-emmanuel.png" alt="Emmanuel Bezerra" className="h-4 w-auto object-contain opacity-40 group-hover:opacity-70 transition-opacity duration-300" />
+              <img src="/media/logo-branding/logo-emmanuel.png" alt="Emmanuel Bezerra"
+                className={`h-4 w-auto object-contain group-hover:opacity-70 transition-opacity duration-300 ${theme === 'dark' ? 'opacity-40' : 'opacity-60'}`} />
             </a>
           </div>
         </aside>
@@ -362,25 +478,36 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         {/* ── Main area ── */}
         <main className={`flex-1 ml-0 ${sb ? 'lg:ml-60' : 'lg:ml-[68px]'} transition-[margin] duration-300 w-full min-w-0`}>
           {/* Top header */}
-          <header className="h-14 lg:h-16 bg-[#13111a]/80 border-b border-white/[0.06] flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 backdrop-blur-xl">
+          <header className="h-14 lg:h-16 border-b flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 backdrop-blur-xl"
+            style={{ background: 'var(--admin-header-bg)', borderColor: 'var(--admin-border)' }}>
             <div className="flex items-center gap-3">
-              <button onClick={() => setMobileOpen(true)} className="lg:hidden text-white/35 hover:text-white/60 transition-colors">
+              <button onClick={() => setMobileOpen(true)} className="lg:hidden transition-colors" style={{ color: 'var(--admin-text-muted)' }}>
                 {I.menu}
               </button>
-              <button onClick={() => setSb(!sb)} className="hidden lg:block text-white/25 hover:text-white/50 transition-colors">
+              <button onClick={() => setSb(!sb)} className="hidden lg:block transition-colors" style={{ color: 'var(--admin-text-faint)' }}>
                 {sb ? I.left : I.menu}
               </button>
             </div>
             <div className="flex items-center gap-3 lg:gap-4">
-              <LeafLogo className="w-3.5 h-5 text-[#b76e79]/40 hidden sm:block" />
-              <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
+              {/* Theme toggle */}
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-lg transition-all hover:opacity-80"
+                style={{ color: 'var(--admin-text-muted)', background: 'var(--admin-surface-hover)' }}
+                title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+              >
+                {theme === 'dark' ? I.sun : I.moon}
+              </button>
+              <div className="h-8 w-px hidden sm:block" style={{ background: 'var(--admin-border)' }} />
+              <LeafLogo className="w-3.5 h-5 hidden sm:block" style={{ opacity: 0.4 }} />
+              <div className="h-8 w-px hidden sm:block" style={{ background: 'var(--admin-border)' }} />
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-[#b76e79]/10 shadow-sm">
                   <img src="/media/profissionais/mykaele-principal.png" alt=""
                     className="w-full h-full object-cover" style={{ objectPosition: 'center 15%' }}
                     onError={(e) => { const el = e.target as HTMLImageElement; el.style.display='none'; el.parentElement!.innerHTML=`<span class="text-[#b76e79] text-xs font-bold">${user.name?.charAt(0)}</span>` }} />
                 </div>
-                <span className="text-white/70 text-xs font-medium hidden sm:inline">{user.name}</span>
+                <span className="text-xs font-medium hidden sm:inline" style={{ color: 'var(--admin-text-secondary)' }}>{user.name}</span>
               </div>
             </div>
           </header>

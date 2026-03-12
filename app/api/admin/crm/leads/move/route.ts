@@ -14,10 +14,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const { leadId, fromStageId, toStageId, position, tenantId } = await req.json()
+    const { leadId, fromStageId, toStageId, position, tenantId: rawTenantId } = await req.json()
 
-    if (!leadId || !fromStageId || !toStageId || position == null || !tenantId) {
+    if (!leadId || !fromStageId || !toStageId || position == null || !rawTenantId) {
       return NextResponse.json({ error: 'Campos obrigatórios faltando' }, { status: 400 })
+    }
+
+    // Resolver slug → cuid
+    let tenantId = rawTenantId
+    const tenantById = await prisma.crmTenant.findUnique({ where: { id: rawTenantId } })
+    if (!tenantById) {
+      const tenantBySlug = await prisma.crmTenant.findUnique({ where: { slug: rawTenantId } })
+      if (tenantBySlug) tenantId = tenantBySlug.id
     }
 
     const lead = await prisma.lead.findFirst({

@@ -14,11 +14,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const tenantId = req.nextUrl.searchParams.get('tenantId')
+    let tenantId = req.nextUrl.searchParams.get('tenantId')
     const pipelineId = req.nextUrl.searchParams.get('pipelineId')
 
     if (!tenantId || !pipelineId) {
       return NextResponse.json({ error: 'tenantId e pipelineId são obrigatórios' }, { status: 400 })
+    }
+
+    // Resolver slug → cuid (mesmo padrão do pipeline/route.ts)
+    const tenantById = await prisma.crmTenant.findUnique({ where: { id: tenantId } })
+    if (!tenantById) {
+      const tenantBySlug = await prisma.crmTenant.findUnique({ where: { slug: tenantId } })
+      if (tenantBySlug) tenantId = tenantBySlug.id
     }
 
     // Query 2 do padrão anti-N+1: buscar todos os leads do pipeline
@@ -99,10 +106,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { tenantId, pipelineId, stageId, name, phone, email, expectedValue, source, tags } = body
+    const { tenantId: rawTenantId, pipelineId, stageId, name, phone, email, expectedValue, source, tags } = body
 
-    if (!tenantId || !pipelineId || !stageId || !name || !phone) {
+    if (!rawTenantId || !pipelineId || !stageId || !name || !phone) {
       return NextResponse.json({ error: 'Campos obrigatórios faltando' }, { status: 400 })
+    }
+
+    // Resolver slug → cuid
+    let tenantId = rawTenantId
+    const tenantCheck = await prisma.crmTenant.findUnique({ where: { id: rawTenantId } })
+    if (!tenantCheck) {
+      const tenantBySlug = await prisma.crmTenant.findUnique({ where: { slug: rawTenantId } })
+      if (tenantBySlug) tenantId = tenantBySlug.id
     }
 
     // Calcular posição (último da coluna + 1)

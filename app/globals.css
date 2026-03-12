@@ -599,6 +599,52 @@ body {
   animation-delay: 2s;
 }
 
+/* ═══ Admin Panel — Tema claro/escuro ═══ */
+[data-theme="dark"] .admin-shell,
+.admin-shell {
+  --admin-bg: #0e0b10;
+  --admin-bg-2: #100d14;
+  --admin-surface: #13111a;
+  --admin-surface-2: #1a1823;
+  --admin-surface-hover: rgba(255,255,255,0.04);
+  --admin-border: rgba(255,255,255,0.06);
+  --admin-text: rgba(255,255,255,0.9);
+  --admin-text-secondary: rgba(255,255,255,0.7);
+  --admin-text-muted: rgba(255,255,255,0.35);
+  --admin-text-faint: rgba(255,255,255,0.15);
+  --admin-overlay: rgba(0,0,0,0.4);
+  --admin-accent: #b76e79;
+  --admin-accent-light: #d4a0a7;
+  --admin-accent-bg: rgba(183,110,121,0.15);
+  --admin-accent-shadow: rgba(183,110,121,0.1);
+  --admin-header-bg: rgba(19,17,26,0.8);
+  --admin-profile-bg: rgba(255,255,255,0.04);
+  --admin-logout-text: #f87171;
+  --admin-logout-hover: rgba(239,68,68,0.1);
+}
+
+[data-theme="light"] .admin-shell {
+  --admin-bg: #f8f7f5;
+  --admin-bg-2: #faf9f7;
+  --admin-surface: #ffffff;
+  --admin-surface-2: #f5f3f0;
+  --admin-surface-hover: rgba(0,0,0,0.04);
+  --admin-border: rgba(0,0,0,0.08);
+  --admin-text: rgba(0,0,0,0.88);
+  --admin-text-secondary: rgba(0,0,0,0.7);
+  --admin-text-muted: rgba(0,0,0,0.4);
+  --admin-text-faint: rgba(0,0,0,0.1);
+  --admin-overlay: rgba(0,0,0,0.2);
+  --admin-accent: #b76e79;
+  --admin-accent-light: #c28a93;
+  --admin-accent-bg: rgba(183,110,121,0.1);
+  --admin-accent-shadow: rgba(183,110,121,0.08);
+  --admin-header-bg: rgba(255,255,255,0.85);
+  --admin-profile-bg: rgba(0,0,0,0.04);
+  --admin-logout-text: #dc2626;
+  --admin-logout-hover: rgba(220,38,38,0.08);
+}
+
 /* ═══ CRM Module — Variáveis de tema escuro premium ═══ */
 :root {
   --crm-bg: #0A0A0B;
@@ -613,6 +659,24 @@ body {
   --crm-warm: #F0A500;
   --crm-cold: #4A7BFF;
   --crm-won: #2ECC8A;
+}
+
+/* ═══ Admin Sidebar — Drag & Drop feedback ═══ */
+.admin-shell [draggable="true"] {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.admin-shell [draggable="true"]:active {
+  opacity: 0.6;
+  transform: scale(0.97);
+}
+.admin-shell [draggable="true"].drag-over {
+  border-top: 2px solid var(--admin-accent);
+}
+
+/* ═══ Admin Nav — Hover com variáveis de tema ═══ */
+.admin-nav-item:hover {
+  background: var(--admin-surface-hover);
+  color: var(--admin-text-secondary);
 }
 
 /* Scrollbar CRM — mais escura para o tema dark */
