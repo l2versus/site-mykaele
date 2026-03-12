@@ -588,6 +588,117 @@ function LeadPanel({ lead, onClose, stages, onStageChange, isMovingStage, aiInsi
 
 // ━━━ Quick Replies Popover ━━━
 
+// ━━━ Template Types ━━━
+
+interface CrmTemplate {
+  id: string
+  type: 'whatsapp' | 'email'
+  name: string
+  category: string
+  content: string
+  variables: string[]
+  isActive: boolean
+}
+
+function applyTemplateVariables(content: string, lead: LeadInfo | null, stage?: { name: string }): string {
+  if (!lead) return content
+  return content
+    .replaceAll('{{nome}}', lead.name || '')
+    .replaceAll('{{telefone}}', lead.phone || '')
+    .replaceAll('{{email}}', lead.email || '')
+    .replaceAll('{{estagio}}', stage?.name || lead.stage?.name || '')
+    .replaceAll('{{pipeline}}', '')
+    .replaceAll('{{valor}}', lead.expectedValue != null ? `R$ ${lead.expectedValue.toLocaleString('pt-BR')}` : '')
+}
+
+// ━━━ Template Picker Popover ━━━
+
+function TemplatePicker({ templates, lead, onSelect, onClose }: {
+  templates: CrmTemplate[]
+  lead: LeadInfo | null
+  onSelect: (text: string) => void
+  onClose: () => void
+}) {
+  const [search, setSearch] = useState('')
+  const [previewId, setPreviewId] = useState<string | null>(null)
+
+  const filtered = templates.filter(t => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return t.name.toLowerCase().includes(q) || t.content.toLowerCase().includes(q)
+  })
+
+  const categoryMap: Record<string, string> = {
+    'boas-vindas': 'Boas-vindas', 'follow-up': 'Follow-up', 'cobranca': 'Cobrança',
+    'confirmacao': 'Confirmação', 'pos-atendimento': 'Pós-atendimento',
+    'lembrete': 'Lembrete', 'geral': 'Geral',
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+      transition={{ duration: 0.15 }}
+      className="absolute bottom-full left-0 mb-2 w-80 rounded-xl overflow-hidden shadow-2xl z-20"
+      style={{ background: 'var(--crm-surface-2)', border: '1px solid var(--crm-border)', backdropFilter: 'blur(20px)' }}
+    >
+      <div className="p-2.5 border-b" style={{ borderColor: 'var(--crm-border)' }}>
+        <div className="relative">
+          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" fill="none" stroke="var(--crm-text-muted)" strokeWidth="1.5" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar modelo..."
+            className="w-full pl-8 pr-3 py-1.5 rounded-lg text-[11px] focus:outline-none"
+            style={{ background: 'var(--crm-surface)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
+            autoFocus
+          />
+        </div>
+      </div>
+      <div className="max-h-64 overflow-y-auto p-1.5">
+        {filtered.length === 0 ? (
+          <p className="text-[11px] text-center py-4" style={{ color: 'var(--crm-text-muted)' }}>
+            Nenhum modelo encontrado
+          </p>
+        ) : (
+          filtered.map(t => {
+            const preview = applyTemplateVariables(t.content, lead)
+            const isHovered = previewId === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => { onSelect(preview); onClose() }}
+                onMouseEnter={() => setPreviewId(t.id)}
+                onMouseLeave={() => setPreviewId(null)}
+                className="w-full text-left px-2.5 py-2 rounded-lg transition-all hover:bg-white/5"
+              >
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[11px] font-semibold truncate" style={{ color: 'var(--crm-text)' }}>
+                    {t.name}
+                  </span>
+                  <span className="text-[9px] px-1 py-0.5 rounded shrink-0" style={{ background: 'var(--crm-surface)', color: 'var(--crm-text-muted)' }}>
+                    {categoryMap[t.category] ?? t.category}
+                  </span>
+                </div>
+                <p className="text-[10px] leading-relaxed" style={{ color: 'var(--crm-text-muted)' }}>
+                  {isHovered
+                    ? (preview.length > 120 ? preview.slice(0, 120) + '…' : preview)
+                    : (t.content.length > 80 ? t.content.slice(0, 80) + '…' : t.content)
+                  }
+                </p>
+              </button>
+            )
+          })
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
 function QuickRepliesPopover({ onSelect, onClose }: { onSelect: (text: string) => void; onClose: () => void }) {
   return (
     <motion.div
@@ -630,6 +741,8 @@ export default function InboxPage() {
   const [isSending, setIsSending] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [showQuickReplies, setShowQuickReplies] = useState(false)
+  const [showTemplates, setShowTemplates] = useState(false)
+  const [crmTemplates, setCrmTemplates] = useState<CrmTemplate[]>([])
   const [showLeadPanel, setShowLeadPanel] = useState(true)
   const [stages, setStages] = useState<StageInfo[]>([])
   const [isMovingStage, setIsMovingStage] = useState(false)
@@ -663,6 +776,21 @@ export default function InboxPage() {
       setIsLoading(false)
     }
   }, [token, search])
+
+  // Fetch templates
+  const fetchTemplates = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await fetch(`/api/admin/crm/templates?tenantId=${TENANT_ID}&type=whatsapp`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      setCrmTemplates((data.templates as CrmTemplate[]).filter(t => t.isActive))
+    } catch {
+      // silently fail
+    }
+  }, [token])
 
   // Fetch messages
   const fetchMessages = useCallback(async (conversationId: string, cursor?: string) => {
@@ -728,7 +856,7 @@ export default function InboxPage() {
     }
   }, [token])
 
-  useEffect(() => { fetchConversations(); fetchStages() }, [fetchConversations, fetchStages])
+  useEffect(() => { fetchConversations(); fetchStages(); fetchTemplates() }, [fetchConversations, fetchStages, fetchTemplates])
 
   useEffect(() => {
     if (selectedId) {
@@ -1249,11 +1377,19 @@ export default function InboxPage() {
                       onClose={() => setShowQuickReplies(false)}
                     />
                   )}
+                  {showTemplates && crmTemplates.length > 0 && (
+                    <TemplatePicker
+                      templates={crmTemplates}
+                      lead={selectedConv?.lead ?? null}
+                      onSelect={(text) => setNewMessage(text)}
+                      onClose={() => setShowTemplates(false)}
+                    />
+                  )}
                 </AnimatePresence>
 
                 <div className="flex shrink-0 gap-1">
                   <button
-                    onClick={() => setShowQuickReplies(p => !p)}
+                    onClick={() => { setShowQuickReplies(p => !p); setShowTemplates(false) }}
                     className="p-2.5 rounded-xl transition-all"
                     style={{ background: showQuickReplies ? 'rgba(212,175,55,0.12)' : 'var(--crm-surface-2)', color: showQuickReplies ? 'var(--crm-gold)' : 'var(--crm-text-muted)' }}
                     title="Respostas rápidas"
@@ -1263,6 +1399,21 @@ export default function InboxPage() {
                       <line x1="8" y1="9" x2="16" y2="9" /><line x1="8" y1="13" x2="12" y2="13" />
                     </svg>
                   </button>
+
+                  {crmTemplates.length > 0 && (
+                    <button
+                      onClick={() => { setShowTemplates(p => !p); setShowQuickReplies(false) }}
+                      className="p-2.5 rounded-xl transition-all"
+                      style={{ background: showTemplates ? 'rgba(212,175,55,0.12)' : 'var(--crm-surface-2)', color: showTemplates ? 'var(--crm-gold)' : 'var(--crm-text-muted)' }}
+                      title="Usar modelo"
+                    >
+                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+                      </svg>
+                    </button>
+                  )}
 
                   <motion.button
                     onClick={handleConcierge}

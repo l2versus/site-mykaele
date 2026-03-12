@@ -551,6 +551,7 @@ model CrmTenant {
   notificationSettings    CrmNotificationSetting[]
   aiConfig                CrmAiConfig?
   tasks                   CrmTask[]
+  templates               CrmTemplate[]
 }
 
 model CrmIntegration {
@@ -885,4 +886,27 @@ model CrmTask {
   @@index([tenantId, assignedToUserId, status])
   @@index([tenantId, dueAt])
   @@index([tenantId, leadId])
+}
+
+// ============================================================
+// MÓDULO CRM v8.2 — TEMPLATES DE MENSAGEM E EMAIL
+// ============================================================
+
+model CrmTemplate {
+  id        String   @id @default(cuid())
+  tenantId  String
+  type      String   // "whatsapp" | "email"
+  name      String
+  category  String   @default("geral") // boas-vindas, follow-up, cobranca, confirmacao, pos-atendimento, geral
+  subject   String?  // apenas para email
+  content   String   @db.Text
+  variables String[] // {{nome}}, {{telefone}}, etc
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, type, isActive])
+  @@index([tenantId, category])
 }
