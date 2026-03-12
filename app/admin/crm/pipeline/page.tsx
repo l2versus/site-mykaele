@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
@@ -1048,6 +1049,11 @@ export default function PipelinePage() {
   const [periodFilter, setPeriodFilter] = useState('all')
   const [error, setError] = useState<string | null>(null)
   const [drawerLeadId, setDrawerLeadId] = useState<string | null>(null)
+  const [actionsPortal, setActionsPortal] = useState<HTMLElement | null>(null)
+
+  useEffect(() => {
+    setActionsPortal(document.getElementById('crm-page-actions'))
+  }, [])
 
   const allTags = Array.from(new Set(
     Object.values(leadsByStage).flat().flatMap(l => l.tags)
@@ -1249,41 +1255,44 @@ export default function PipelinePage() {
         }
       `}</style>
 
-      {/* Header */}
-      <div className="flex flex-row items-center justify-between gap-3 mb-5">
-        <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight truncate" style={{ color: 'var(--crm-text)' }}>
-            {pipeline?.name ?? 'Pipeline'}
-          </h1>
-          <p className="text-[11px] mt-0.5 font-medium hidden sm:block" style={{ color: 'var(--crm-text-muted)' }}>
-            Gerencie seus leads e acompanhe conversões
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleImportPatients}
-            disabled={importing}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all hover:brightness-125 active:scale-[0.98] disabled:opacity-50"
-            style={{ background: 'var(--crm-surface)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
-          >
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" className={importing ? 'animate-spin' : ''}>
-              {importing
-                ? <><circle cx="12" cy="12" r="10" opacity="0.3" /><path d="M12 2a10 10 0 0 1 10 10" /></>
-                : <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>
-              }
-            </svg>
-            <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importar Pacientes'}</span>
-            <span className="sm:hidden">{importing ? '...' : 'Importar'}</span>
-          </button>
-          <button onClick={() => setShowNewLead(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all hover:brightness-110 active:scale-[0.98]"
-            style={{ background: 'linear-gradient(135deg, #D4AF37, #C4A030)', color: '#0A0A0B', boxShadow: '0 4px 20px rgba(212,175,55,0.2)' }}
-          >
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-            + Lead
-          </button>
-        </div>
-      </div>
+      {/* Header — botões renderizados no sticky nav via portal */}
+      {actionsPortal && createPortal(
+        <div
+          className="flex items-center justify-between gap-3 px-3 lg:px-5 py-2"
+          style={{ borderTop: '1px solid var(--crm-border)' }}
+        >
+          <div className="min-w-0">
+            <h1 className="text-sm lg:text-base font-bold tracking-tight truncate" style={{ color: 'var(--crm-text)' }}>
+              {pipeline?.name ?? 'Pipeline'}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleImportPatients}
+              disabled={importing}
+              className="flex items-center gap-2 px-2.5 lg:px-3 py-1.5 lg:py-2 rounded-xl text-[11px] lg:text-xs font-medium whitespace-nowrap transition-all hover:brightness-125 active:scale-[0.98] disabled:opacity-50"
+              style={{ background: 'var(--crm-surface)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
+            >
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" className={importing ? 'animate-spin' : ''}>
+                {importing
+                  ? <><circle cx="12" cy="12" r="10" opacity="0.3" /><path d="M12 2a10 10 0 0 1 10 10" /></>
+                  : <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>
+                }
+              </svg>
+              <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importar Pacientes'}</span>
+              <span className="sm:hidden">{importing ? '...' : 'Importar'}</span>
+            </button>
+            <button onClick={() => setShowNewLead(true)}
+              className="flex items-center gap-2 px-3 lg:px-4 py-1.5 lg:py-2 rounded-xl text-[11px] lg:text-xs font-bold whitespace-nowrap transition-all hover:brightness-110 active:scale-[0.98]"
+              style={{ background: 'linear-gradient(135deg, #D4AF37, #C4A030)', color: '#0A0A0B', boxShadow: '0 4px 20px rgba(212,175,55,0.2)' }}
+            >
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              + Lead
+            </button>
+          </div>
+        </div>,
+        actionsPortal
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">

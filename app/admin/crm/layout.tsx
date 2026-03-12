@@ -111,47 +111,53 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="-m-4 lg:-m-6 min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)]" style={{ background: 'var(--crm-bg)' }}>
-      {/* Sub-navegação horizontal premium */}
-      <nav
-        className="sticky top-14 lg:top-16 z-20 border-b px-2 lg:px-5 flex items-center gap-0.5 overflow-x-auto scrollbar-none"
+      {/* Sub-navegação horizontal premium + slot para ações da página */}
+      <div
+        className="sticky top-14 lg:top-16 z-20 border-b"
         style={{
           borderColor: 'var(--crm-border)',
           background: 'color-mix(in srgb, var(--crm-bg) 97%, transparent)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          minHeight: '44px',
         }}
       >
-        {CRM_NAV.map((item) => {
-          const active = pathname.startsWith(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="relative flex items-center gap-1.5 px-2.5 lg:px-3.5 py-2.5 lg:py-3 text-[11px] lg:text-[13px] font-medium whitespace-nowrap transition-all duration-200 rounded-lg my-0.5"
-              style={{
-                color: active ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
-                background: active ? 'var(--crm-gold-subtle)' : 'transparent',
-              }}
-              onMouseEnter={(e) => {
-                if (!active) e.currentTarget.style.color = 'var(--crm-text)'
-              }}
-              onMouseLeave={(e) => {
-                if (!active) e.currentTarget.style.color = 'var(--crm-text-muted)'
-              }}
-            >
-              <span className="opacity-80 hidden sm:inline" style={active ? { opacity: 1 } : undefined}>{item.icon}</span>
-              {item.label}
-              {active && (
-                <span
-                  className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full"
-                  style={{ background: 'var(--crm-gold)' }}
-                />
-              )}
-            </Link>
-          )
-        })}
-      </nav>
+        <nav
+          className="px-2 lg:px-5 flex items-center gap-0.5 overflow-x-auto scrollbar-none"
+          style={{ minHeight: '44px' }}
+        >
+          {CRM_NAV.map((item) => {
+            const active = pathname.startsWith(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="relative flex items-center gap-1.5 px-2.5 lg:px-3.5 py-2.5 lg:py-3 text-[11px] lg:text-[13px] font-medium whitespace-nowrap transition-all duration-200 rounded-lg my-0.5"
+                style={{
+                  color: active ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
+                  background: active ? 'var(--crm-gold-subtle)' : 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (!active) e.currentTarget.style.color = 'var(--crm-text)'
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) e.currentTarget.style.color = 'var(--crm-text-muted)'
+                }}
+              >
+                <span className="opacity-80 hidden sm:inline" style={active ? { opacity: 1 } : undefined}>{item.icon}</span>
+                {item.label}
+                {active && (
+                  <span
+                    className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full"
+                    style={{ background: 'var(--crm-gold)' }}
+                  />
+                )}
+              </Link>
+            )
+          })}
+        </nav>
+        {/* Portal target — páginas CRM renderizam ações aqui via createPortal */}
+        <div id="crm-page-actions" />
+      </div>
 
       {/* Conteúdo da página CRM */}
       <div className="p-4 lg:p-6">

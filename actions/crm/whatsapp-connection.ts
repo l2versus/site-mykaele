@@ -1,6 +1,5 @@
 'use server'
 
-import { z } from 'zod'
 import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -106,6 +105,27 @@ export async function getWhatsAppStatus(): Promise<ActionResult<ConnectionStatus
   }
 }
 
+/** Garante que a instância existe na Evolution API. Reutiliza existente ou cria nova. */
+async function ensureEvolutionInstance(tenantId: string): Promise<string> {
+  const instanceName = `crm-${tenantId.slice(0, 12)}`
+  const webhookUrl = process.env.EVOLUTION_WEBHOOK_URL
+    || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/webhooks/evolution`
+
+  // 1. Verificar se instância já existe na Evolution API
+  try {
+    const instances = await evolutionApi.fetchInstances()
+    const existing = instances.find(i => i.instance.instanceName === instanceName)
+    if (existing) return existing.instance.instanceName
+  } catch (err) {
+    console.error('[whatsapp-connection] fetchInstances falhou:', err instanceof Error ? err.message : err)
+    // Continua para tentar criar
+  }
+
+  // 2. Criar nova instância
+  const created = await evolutionApi.createInstance(instanceName, webhookUrl)
+  return created.instance.instanceName
+}
+
 /** Gera QR Code para conectar o WhatsApp. Cria instância se não existir. */
 export async function connectWhatsApp(): Promise<ActionResult<QrCodeData>> {
   const payload = await getAdminPayload()
@@ -116,45 +136,60 @@ export async function connectWhatsApp(): Promise<ActionResult<QrCodeData>> {
 
   let channel = await getChannelForTenant(tenantId)
 
-  // Se não existe canal, criar instância na Evolution API + canal no banco
-  if (!channel?.instanceId) {
-    const webhookUrl = process.env.EVOLUTION_WEBHOOK_URL
-      || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/webhooks/evolution`
+  // Passo 1: Garantir que a instância existe na Evolution API
+  let resolvedInstanceName: string
+  try {
+    resolvedInstanceName = await ensureEvolutionInstance(tenantId)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[whatsapp-connection] Erro ao garantir instância:', msg)
 
-    const instanceName = `crm-${tenantId.slice(0, 12)}-${Date.now()}`
-
-    try {
-      const created = await evolutionApi.createInstance(instanceName, webhookUrl)
-
-      // Criar ou atualizar canal no banco
-      if (channel) {
-        await prisma.crmChannel.update({
-          where: { id: channel.id },
-          data: { instanceId: created.instance.instanceName },
-        })
-      } else {
-        await prisma.crmChannel.create({
-          data: {
-            tenantId,
-            type: 'whatsapp',
-            name: 'WhatsApp Principal',
-            instanceId: created.instance.instanceName,
-            isActive: true,
-          },
-        })
-      }
-
-      channel = await getChannelForTenant(tenantId)
-    } catch (err) {
-      console.error('[whatsapp-connection] Erro ao criar instância:', err instanceof Error ? err.message : err)
-      return { ok: false, error: 'Falha ao criar instância na Evolution API. Verifique se o serviço está ativo.' }
+    // Mensagens de erro específicas para diagnóstico
+    if (msg.includes('inalcançável') || msg.includes('timeout')) {
+      return { ok: false, error: `Evolution API não respondeu. Verifique se ${process.env.EVOLUTION_API_URL} está acessível a partir do servidor.` }
+    }
+    if (msg.includes('401') || msg.includes('403')) {
+      return { ok: false, error: 'API Key da Evolution API inválida. Verifique EVOLUTION_API_KEY.' }
+    }
+    if (msg.includes('409') || msg.includes('already') || msg.includes('exist')) {
+      // Instância já existe mas fetchInstances não a encontrou — tentar usar o nome padrão
+      resolvedInstanceName = `crm-${tenantId.slice(0, 12)}`
+    } else {
+      return { ok: false, error: `Falha na Evolution API: ${msg.slice(0, 200)}` }
     }
   }
 
-  if (!channel?.instanceId) {
-    return { ok: false, error: 'Falha ao obter instância' }
+  // Passo 2: Sincronizar canal no banco de dados
+  try {
+    if (channel) {
+      if (channel.instanceId !== resolvedInstanceName) {
+        await prisma.crmChannel.update({
+          where: { id: channel.id },
+          data: { instanceId: resolvedInstanceName },
+        })
+      }
+    } else {
+      await prisma.crmChannel.create({
+        data: {
+          tenantId,
+          type: 'whatsapp',
+          name: 'WhatsApp Principal',
+          instanceId: resolvedInstanceName,
+          isActive: true,
+        },
+      })
+    }
+    channel = await getChannelForTenant(tenantId)
+  } catch (err) {
+    console.error('[whatsapp-connection] Erro ao salvar canal:', err instanceof Error ? err.message : err)
+    return { ok: false, error: 'Falha ao salvar configuração no banco de dados.' }
   }
 
+  if (!channel?.instanceId) {
+    return { ok: false, error: 'Falha ao obter instância após criação' }
+  }
+
+  // Passo 3: Gerar QR Code
   try {
     const qr = await evolutionApi.getQrCode(channel.instanceId)
 
@@ -174,8 +209,26 @@ export async function connectWhatsApp(): Promise<ActionResult<QrCodeData>> {
       },
     }
   } catch (err) {
-    console.error('[whatsapp-connection] Erro ao gerar QR:', err instanceof Error ? err.message : err)
-    return { ok: false, error: 'Falha ao gerar QR Code. A instância pode já estar conectada.' }
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[whatsapp-connection] Erro ao gerar QR:', msg)
+
+    // Se getQrCode falha com 404, a instância pode ter sido deletada — tentar recriar
+    if (msg.includes('404')) {
+      try {
+        // Deletar canal antigo e recriar
+        await prisma.crmChannel.deleteMany({ where: { tenantId, type: 'whatsapp' } })
+        return connectWhatsApp() // Recursão segura (1 nível: canal foi deletado)
+      } catch {
+        return { ok: false, error: 'Instância não encontrada na Evolution API. Tente novamente.' }
+      }
+    }
+
+    // Se a instância já está conectada, getQrCode pode retornar erro
+    if (msg.includes('already connected') || msg.includes('open')) {
+      return { ok: false, error: 'O WhatsApp já está conectado nesta instância. Recarregue a página.' }
+    }
+
+    return { ok: false, error: `Falha ao gerar QR Code: ${msg.slice(0, 200)}` }
   }
 }
 

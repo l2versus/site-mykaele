@@ -315,7 +315,7 @@ export default function IntegrationsPage() {
     setWaStatus('connecting')
     setWaError(null)
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 12_000)
+    const timeout = setTimeout(() => controller.abort(), 30_000)
     try {
       const res = await fetch('/api/admin/crm/integrations/whatsapp/connect', {
         method: 'POST',

@@ -35,41 +35,42 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Verificar se já existe canal
+    const instanceName = `crm-${tenantId.slice(0, 12)}`
+    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/webhooks/evolution`
+
+    // Passo 1: Garantir que instância existe na Evolution API
+    let resolvedInstanceName = instanceName
+    try {
+      const existing = await evolutionApi.fetchInstances()
+      const found = existing.find(i => i.instance.instanceName === instanceName)
+      if (found) {
+        resolvedInstanceName = found.instance.instanceName
+      } else {
+        const result = await evolutionApi.createInstance(instanceName, webhookUrl)
+        resolvedInstanceName = result.instance.instanceName
+      }
+    } catch (fetchErr) {
+      // Se fetchInstances falhar, tentar criar diretamente
+      const fetchMsg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
+      console.error('[whatsapp/connect] fetchInstances falhou:', fetchMsg)
+      try {
+        const result = await evolutionApi.createInstance(instanceName, webhookUrl)
+        resolvedInstanceName = result.instance.instanceName
+      } catch (createErr) {
+        const msg = createErr instanceof Error ? createErr.message : String(createErr)
+        if (!msg.includes('already') && !msg.includes('exist') && !msg.includes('409')) {
+          throw createErr
+        }
+        // Instância já existe — usar nome padrão
+      }
+    }
+
+    // Passo 2: Sincronizar canal no banco
     let channel = await prisma.crmChannel.findFirst({
       where: { tenantId, type: 'whatsapp' },
     })
 
-    const instanceName = `crm-${tenantId.slice(0, 12)}`
-    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/webhooks/evolution`
-
     if (!channel) {
-      // Verificar se instância já existe na Evolution API antes de criar
-      let resolvedInstanceName = instanceName
-      try {
-        const existing = await evolutionApi.fetchInstances()
-        const found = existing.find(i => i.instance.instanceName === instanceName)
-        if (found) {
-          resolvedInstanceName = found.instance.instanceName
-        } else {
-          const result = await evolutionApi.createInstance(instanceName, webhookUrl)
-          resolvedInstanceName = result.instance.instanceName
-        }
-      } catch {
-        // Se fetchInstances falhar, tentar criar diretamente
-        try {
-          const result = await evolutionApi.createInstance(instanceName, webhookUrl)
-          resolvedInstanceName = result.instance.instanceName
-        } catch (createErr) {
-          // Se criar falhar mas a instância pode já existir — usa o nome padrão
-          const msg = createErr instanceof Error ? createErr.message : String(createErr)
-          if (!msg.includes('already') && !msg.includes('exist') && !msg.includes('409')) {
-            throw createErr
-          }
-        }
-      }
-
-      // Criar canal no banco com credenciais criptografadas
       channel = await prisma.crmChannel.create({
         data: {
           tenantId,
@@ -82,42 +83,68 @@ export async function POST(req: NextRequest) {
           isActive: true,
         },
       })
+    } else if (channel.instanceId !== resolvedInstanceName) {
+      // Atualizar instanceId se mudou
+      channel = await prisma.crmChannel.update({
+        where: { id: channel.id },
+        data: { instanceId: resolvedInstanceName },
+      })
     }
 
-    // Gerar QR Code
-    const qr = await evolutionApi.getQrCode(channel.instanceId ?? instanceName)
+    // Passo 3: Gerar QR Code
+    let qr: { base64: string; code: string }
+    try {
+      qr = await evolutionApi.getQrCode(resolvedInstanceName)
+    } catch (qrErr) {
+      const qrMsg = qrErr instanceof Error ? qrErr.message : String(qrErr)
+      // Se 404, instância sumiu — deletar canal e pedir retry
+      if (qrMsg.includes('404')) {
+        await prisma.crmChannel.deleteMany({ where: { tenantId, type: 'whatsapp' } })
+        return NextResponse.json(
+          { error: 'Instância não encontrada na Evolution API. Clique em "Tentar novamente".' },
+          { status: 502 },
+        )
+      }
+      throw qrErr
+    }
 
     createAuditLog({
       tenantId,
       userId: payload.userId,
       action: CRM_ACTIONS.INTEGRATION_CONNECTED,
-      details: { provider: 'whatsapp', instanceId: channel.instanceId },
+      details: { provider: 'whatsapp', instanceId: resolvedInstanceName },
     })
 
     return NextResponse.json({
       qrCode: qr.base64,
-      instanceId: channel.instanceId,
+      instanceId: resolvedInstanceName,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[whatsapp/connect] Falha:', message)
 
-    // Erros específicos para debug
+    // Erros específicos para debug — mostrar detalhes úteis
     if (message.includes('EVOLUTION_API_URL')) {
       return NextResponse.json({ error: 'Evolution API URL não configurada no .env' }, { status: 500 })
     }
     if (message.includes('EVOLUTION_API_KEY')) {
       return NextResponse.json({ error: 'Evolution API Key não configurada no .env' }, { status: 500 })
     }
-    if (message.includes('fetch') || message.includes('ECONNREFUSED') || message.includes('timeout') || message.includes('abort') || message.includes('AbortError')) {
+    if (message.includes('401') || message.includes('403')) {
       return NextResponse.json(
-        { error: `Evolution API não respondeu (${process.env.EVOLUTION_API_URL}). Verifique se o serviço está rodando.` },
+        { error: `API Key da Evolution API inválida. Verifique EVOLUTION_API_KEY.` },
+        { status: 502 },
+      )
+    }
+    if (message.includes('inalcançável') || message.includes('timeout') || message.includes('ECONNREFUSED')) {
+      return NextResponse.json(
+        { error: `Evolution API não respondeu (${process.env.EVOLUTION_API_URL}). Verifique se o serviço está acessível a partir do servidor Coolify.` },
         { status: 502 },
       )
     }
 
     return NextResponse.json(
-      { error: `Falha ao conectar: ${message.slice(0, 200)}` },
+      { error: `Falha: ${message.slice(0, 300)}` },
       { status: 502 },
     )
   }

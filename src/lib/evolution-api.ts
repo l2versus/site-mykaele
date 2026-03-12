@@ -14,26 +14,39 @@ interface InstanceStatusResult {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown, timeoutMs = 4_000): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown, timeoutMs = 8_000): Promise<T> {
   const baseUrl = process.env.EVOLUTION_API_URL
   if (!baseUrl) throw new Error('EVOLUTION_API_URL não configurada')
 
   const apiKey = process.env.EVOLUTION_API_KEY
   if (!apiKey) throw new Error('EVOLUTION_API_KEY não configurada')
 
-  const res = await fetch(`${baseUrl}${path}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': apiKey,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(timeoutMs),
-  })
+  // Normalizar URL base (remover barra final se houver)
+  const normalizedBase = baseUrl.replace(/\/+$/, '')
+
+  const url = `${normalizedBase}${path}`
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': apiKey,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.includes('AbortError') || msg.includes('timeout') || msg.includes('abort')) {
+      throw new Error(`Evolution API timeout (${timeoutMs}ms) em ${method} ${path}. URL: ${normalizedBase}`)
+    }
+    throw new Error(`Evolution API inalcançável em ${method} ${path}. URL: ${normalizedBase}. Erro: ${msg}`)
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`Evolution API ${res.status} ${path}: ${text}`)
+    throw new Error(`Evolution API ${res.status} ${method} ${path}: ${text.slice(0, 300)}`)
   }
 
   return res.json()
@@ -72,11 +85,11 @@ export const evolutionApi = {
 
   /** Verifica status da instância */
   getStatus: (instanceId: string) =>
-    request<InstanceStatusResult>('GET', `/instance/connectionState/${instanceId}`),
+    request<InstanceStatusResult>('GET', `/instance/connectionState/${instanceId}`, undefined, 6_000),
 
   /** Gera QR Code para conexão */
   getQrCode: (instanceId: string) =>
-    request<{ base64: string; code: string }>('GET', `/instance/connect/${instanceId}`),
+    request<{ base64: string; code: string }>('GET', `/instance/connect/${instanceId}`, undefined, 12_000),
 
   /** Cria nova instância */
   createInstance: (instanceName: string, webhookUrl: string) =>
