@@ -100,16 +100,7 @@ export const evolutionApi = {
         instanceName,
         integration: 'WHATSAPP-BAILEYS',
         qrcode: true,
-        webhook: {
-          url: webhookUrl,
-          byEvents: true,
-          base64: false,
-          events: [
-            'MESSAGES_UPSERT',
-            'MESSAGES_UPDATE',
-            'CONNECTION_UPDATE',
-          ],
-        },
+        webhook: webhookUrl,
       },
       10_000,
     ),
