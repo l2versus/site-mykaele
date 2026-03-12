@@ -506,7 +506,7 @@ export default function IntegrationsPage() {
         {waStatus === 'connecting' && qrCode && (
           <div className="flex flex-col items-center">
             <div className="p-3 rounded-xl mb-3" style={{ background: '#fff' }}>
-              <img src={`data:image/png;base64,${qrCode}`} alt="QR Code WhatsApp" className="w-52 h-52" />
+              <img src={qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`} alt="QR Code WhatsApp" className="w-52 h-52" />
             </div>
             <p className="text-[11px] text-center mb-2" style={{ color: 'var(--crm-text-muted)' }}>
               Abra o WhatsApp &rarr; Dispositivos conectados &rarr; Escanear QR Code
