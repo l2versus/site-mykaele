@@ -113,5 +113,5 @@ export const evolutionApi = {
   fetchInstances: () =>
     request<Array<{
       instance: { instanceName: string; instanceId: string; owner: string; status: string }
-    }>>('GET', '/instance/fetchInstances'),
+    }>>('GET', '/instance/fetchInstances', undefined, 10_000),
 }

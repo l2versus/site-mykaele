@@ -44,8 +44,30 @@ export async function POST(req: NextRequest) {
     const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/webhooks/evolution`
 
     if (!channel) {
-      // Criar instância na Evolution API
-      const result = await evolutionApi.createInstance(instanceName, webhookUrl)
+      // Verificar se instância já existe na Evolution API antes de criar
+      let resolvedInstanceName = instanceName
+      try {
+        const existing = await evolutionApi.fetchInstances()
+        const found = existing.find(i => i.instance.instanceName === instanceName)
+        if (found) {
+          resolvedInstanceName = found.instance.instanceName
+        } else {
+          const result = await evolutionApi.createInstance(instanceName, webhookUrl)
+          resolvedInstanceName = result.instance.instanceName
+        }
+      } catch {
+        // Se fetchInstances falhar, tentar criar diretamente
+        try {
+          const result = await evolutionApi.createInstance(instanceName, webhookUrl)
+          resolvedInstanceName = result.instance.instanceName
+        } catch (createErr) {
+          // Se criar falhar mas a instância pode já existir — usa o nome padrão
+          const msg = createErr instanceof Error ? createErr.message : String(createErr)
+          if (!msg.includes('already') && !msg.includes('exist') && !msg.includes('409')) {
+            throw createErr
+          }
+        }
+      }
 
       // Criar canal no banco com credenciais criptografadas
       channel = await prisma.crmChannel.create({
@@ -53,10 +75,10 @@ export async function POST(req: NextRequest) {
           tenantId,
           type: 'whatsapp',
           name: 'WhatsApp Principal',
-          instanceId: result.instance.instanceName,
+          instanceId: resolvedInstanceName,
           credentials: process.env.ENCRYPTION_KEY
-            ? encryptCredentials({ instanceName: result.instance.instanceName, instanceId: result.instance.instanceId })
-            : { instanceName: result.instance.instanceName },
+            ? encryptCredentials({ instanceName: resolvedInstanceName })
+            : { instanceName: resolvedInstanceName },
           isActive: true,
         },
       })
