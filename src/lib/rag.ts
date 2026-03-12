@@ -1,19 +1,20 @@
 // src/lib/rag.ts — Pipeline RAG: chunking, embeddings e Concierge IA
+// Usa Google Gemini (grátis: 1500 req/dia embeddings, 15 req/min chat)
 import { prisma } from '@/lib/prisma'
-import OpenAI from 'openai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
-let _openai: OpenAI | null = null
-function getOpenAI(): OpenAI {
-  if (!_openai) {
-    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+let _genAI: GoogleGenerativeAI | null = null
+function getGenAI(): GoogleGenerativeAI {
+  if (!_genAI) {
+    _genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
   }
-  return _openai
+  return _genAI
 }
 
 const CHUNK_SIZE = 1500
 const CHUNK_OVERLAP = 200
-const EMBEDDING_MODEL = 'text-embedding-3-small'
-const CHAT_MODEL = 'gpt-4o-mini'
+const EMBEDDING_MODEL = 'text-embedding-004'
+const CHAT_MODEL = 'gemini-2.0-flash'
 
 /**
  * Divide texto em chunks com overlap para preservar contexto.
@@ -52,14 +53,13 @@ export function chunkText(text: string, chunkSize = CHUNK_SIZE, overlap = CHUNK_
 }
 
 /**
- * Gera embedding via OpenAI text-embedding-3-small (1536 dim).
+ * Gera embedding via Google Gemini text-embedding-004 (768 dim).
+ * Grátis: 1500 requisições/dia.
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await getOpenAI().embeddings.create({
-    model: EMBEDDING_MODEL,
-    input: text.slice(0, 8000),
-  })
-  return response.data[0].embedding
+  const model = getGenAI().getGenerativeModel({ model: EMBEDDING_MODEL })
+  const result = await model.embedContent(text.slice(0, 8000))
+  return result.embedding.values
 }
 
 /**
@@ -165,6 +165,7 @@ export async function findSimilarChunks(
 
 /**
  * Gera resposta do Concierge RAG com contexto da base de conhecimento.
+ * Usa Gemini 2.0 Flash (grátis: 15 req/min).
  */
 export async function generateConciergeReply(params: {
   tenantId: string
@@ -194,15 +195,18 @@ ${context || 'Nenhum contexto específico encontrado na base de conhecimento.'}
 
 NOME DA PACIENTE: ${leadName}`
 
-  const response = await getOpenAI().chat.completions.create({
+  const model = getGenAI().getGenerativeModel({
     model: CHAT_MODEL,
-    temperature: 0.7,
-    max_tokens: 500,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Histórico recente da conversa:\n${conversationHistory}\n\nPergunta/mensagem da paciente: ${userQuestion}\n\nGere uma sugestão de resposta para a recepcionista enviar:` },
-    ],
+    systemInstruction: systemPrompt,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 500,
+    },
   })
 
-  return response.choices[0]?.message?.content ?? 'Não foi possível gerar uma sugestão.'
+  const result = await model.generateContent(
+    `Histórico recente da conversa:\n${conversationHistory}\n\nPergunta/mensagem da paciente: ${userQuestion}\n\nGere uma sugestão de resposta para a recepcionista enviar:`
+  )
+
+  return result.response.text() || 'Não foi possível gerar uma sugestão.'
 }

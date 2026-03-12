@@ -591,6 +591,7 @@ model CrmKnowledgeBase {
   tenantId   String
   title      String
   content    String   @db.Text
+  embedding  Unsupported("vector(768)")?
   chunkIndex Int      @default(0)
   sourceFile String?
   isActive   Boolean  @default(true)
