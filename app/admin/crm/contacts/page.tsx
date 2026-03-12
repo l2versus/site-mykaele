@@ -33,7 +33,7 @@ interface StageInfo {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  HOT: '#FF6B4A', WARM: '#F0A500', COLD: '#4A7BFF', WON: '#2ECC8A', LOST: '#8B8A94',
+  HOT: '#FF6B4A', WARM: '#F0A500', COLD: '#4A7BFF', WON: '#2ECC8A', LOST: 'var(--crm-text-muted)',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -120,7 +120,7 @@ function SortHeader({
     <button
       onClick={() => onSort(field)}
       className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium hover:text-white/80 transition-colors"
-      style={{ color: active ? '#D4AF37' : '#8B8A94' }}
+      style={{ color: active ? '#D4AF37' : 'var(--crm-text-muted)' }}
     >
       {label}
       {active && (
@@ -143,7 +143,7 @@ function LeadDrawer({ lead, stages, onClose, onUpdate }: {
   const [notes, setNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const addToast = useToastStore(s => s.addToast)
-  const statusColor = STATUS_COLORS[lead.status] ?? '#8B8A94'
+  const statusColor = STATUS_COLORS[lead.status] ?? 'var(--crm-text-muted)'
 
   const handleSaveTags = async () => {
     setIsSaving(true)
@@ -192,8 +192,8 @@ function LeadDrawer({ lead, stages, onClose, onUpdate }: {
             WebkitBackdropFilter: 'blur(20px)',
           }}
         >
-          <h3 className="text-sm font-semibold" style={{ color: '#F0EDE8' }}>Detalhes do Contato</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5" style={{ color: '#8B8A94' }}>
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--crm-text)' }}>Detalhes do Contato</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5" style={{ color: 'var(--crm-text-muted)' }}>
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -209,23 +209,23 @@ function LeadDrawer({ lead, stages, onClose, onUpdate }: {
               {lead.name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="text-base font-semibold" style={{ color: '#F0EDE8' }}>{lead.name}</p>
-              <p className="text-xs" style={{ color: '#8B8A94' }}>{maskPhone(lead.phone)}</p>
-              {lead.email && <p className="text-xs" style={{ color: '#8B8A94' }}>{lead.email}</p>}
+              <p className="text-base font-semibold" style={{ color: 'var(--crm-text)' }}>{lead.name}</p>
+              <p className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>{maskPhone(lead.phone)}</p>
+              {lead.email && <p className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>{lead.email}</p>}
             </div>
           </div>
 
           {/* Status & Stage */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl p-3" style={{ background: '#1A1A1F' }}>
-              <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: '#8B8A94' }}>Status</span>
+            <div className="rounded-xl p-3" style={{ background: 'var(--crm-surface-2)' }}>
+              <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: 'var(--crm-text-muted)' }}>Status</span>
               <span className="text-sm font-bold" style={{ color: statusColor }}>
                 {STATUS_LABELS[lead.status]}
               </span>
             </div>
-            <div className="rounded-xl p-3" style={{ background: '#1A1A1F' }}>
-              <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: '#8B8A94' }}>Etapa</span>
-              <span className="text-sm font-medium" style={{ color: lead.stageColor ?? '#F0EDE8' }}>
+            <div className="rounded-xl p-3" style={{ background: 'var(--crm-surface-2)' }}>
+              <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: 'var(--crm-text-muted)' }}>Etapa</span>
+              <span className="text-sm font-medium" style={{ color: lead.stageColor ?? 'var(--crm-text)' }}>
                 {lead.stageName}
               </span>
             </div>
@@ -233,22 +233,22 @@ function LeadDrawer({ lead, stages, onClose, onUpdate }: {
 
           {/* Metrics */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl p-3" style={{ background: '#1A1A1F' }}>
-              <span className="text-[10px] block mb-1" style={{ color: '#8B8A94' }}>Score IA</span>
+            <div className="rounded-xl p-3" style={{ background: 'var(--crm-surface-2)' }}>
+              <span className="text-[10px] block mb-1" style={{ color: 'var(--crm-text-muted)' }}>Score IA</span>
               <span className="text-lg font-bold" style={{
                 color: lead.aiScore != null ? (lead.aiScore >= 70 ? '#2ECC8A' : lead.aiScore >= 40 ? '#F0A500' : '#FF6B4A') : '#5A5A64'
               }}>
                 {lead.aiScore ?? '—'}
               </span>
             </div>
-            <div className="rounded-xl p-3" style={{ background: '#1A1A1F' }}>
-              <span className="text-[10px] block mb-1" style={{ color: '#8B8A94' }}>Valor</span>
+            <div className="rounded-xl p-3" style={{ background: 'var(--crm-surface-2)' }}>
+              <span className="text-[10px] block mb-1" style={{ color: 'var(--crm-text-muted)' }}>Valor</span>
               <span className="text-sm font-bold" style={{ color: '#D4AF37' }}>
                 {lead.expectedValue ? currencyFmt.format(lead.expectedValue) : '—'}
               </span>
             </div>
-            <div className="rounded-xl p-3" style={{ background: '#1A1A1F' }}>
-              <span className="text-[10px] block mb-1" style={{ color: '#8B8A94' }}>Churn</span>
+            <div className="rounded-xl p-3" style={{ background: 'var(--crm-surface-2)' }}>
+              <span className="text-[10px] block mb-1" style={{ color: 'var(--crm-text-muted)' }}>Churn</span>
               <span className="text-lg font-bold" style={{
                 color: lead.churnRisk != null ? (lead.churnRisk >= 70 ? '#FF6B4A' : lead.churnRisk >= 40 ? '#F0A500' : '#2ECC8A') : '#5A5A64'
               }}>
@@ -258,21 +258,21 @@ function LeadDrawer({ lead, stages, onClose, onUpdate }: {
           </div>
 
           {/* Info */}
-          <div className="space-y-2 rounded-xl p-3" style={{ background: '#1A1A1F' }}>
+          <div className="space-y-2 rounded-xl p-3" style={{ background: 'var(--crm-surface-2)' }}>
             <div className="flex justify-between">
-              <span className="text-xs" style={{ color: '#8B8A94' }}>Fonte</span>
-              <span className="text-xs" style={{ color: '#F0EDE8' }}>{lead.source ?? '—'}</span>
+              <span className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>Fonte</span>
+              <span className="text-xs" style={{ color: 'var(--crm-text)' }}>{lead.source ?? '—'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-xs" style={{ color: '#8B8A94' }}>Criado em</span>
-              <span className="text-xs" style={{ color: '#F0EDE8' }}>{formatDate(lead.createdAt)}</span>
+              <span className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>Criado em</span>
+              <span className="text-xs" style={{ color: 'var(--crm-text)' }}>{formatDate(lead.createdAt)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-xs" style={{ color: '#8B8A94' }}>Última interação</span>
-              <span className="text-xs" style={{ color: '#F0EDE8' }}>{timeAgo(lead.lastInteractionAt)}</span>
+              <span className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>Última interação</span>
+              <span className="text-xs" style={{ color: 'var(--crm-text)' }}>{timeAgo(lead.lastInteractionAt)}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-xs" style={{ color: '#8B8A94' }}>Paciente</span>
+              <span className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>Paciente</span>
               {lead.patientId ? (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded"
                   style={{ background: 'rgba(46,204,138,0.12)', color: '#2ECC8A' }}
@@ -285,7 +285,7 @@ function LeadDrawer({ lead, stages, onClose, onUpdate }: {
 
           {/* Tags (editable) */}
           <div>
-            <label className="text-[10px] uppercase tracking-wider font-medium block mb-2" style={{ color: '#8B8A94' }}>
+            <label className="text-[10px] uppercase tracking-wider font-medium block mb-2" style={{ color: 'var(--crm-text-muted)' }}>
               Tags
             </label>
             <div className="flex gap-2">
@@ -294,13 +294,13 @@ function LeadDrawer({ lead, stages, onClose, onUpdate }: {
                 onChange={e => setEditTags(e.target.value)}
                 placeholder="botox, vip, retorno..."
                 className="flex-1 px-3 py-2 rounded-lg text-xs focus:outline-none"
-                style={{ background: '#0A0A0B', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+                style={{ background: 'var(--crm-bg)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
               />
               <button
                 onClick={handleSaveTags}
                 disabled={isSaving}
                 className="px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                style={{ background: '#D4AF37', color: '#0A0A0B' }}
+                style={{ background: '#D4AF37', color: 'var(--crm-bg)' }}
               >
                 {isSaving ? '...' : 'Salvar'}
               </button>
@@ -318,7 +318,7 @@ function LeadDrawer({ lead, stages, onClose, onUpdate }: {
 
           {/* Notes */}
           <div>
-            <label className="text-[10px] uppercase tracking-wider font-medium block mb-2" style={{ color: '#8B8A94' }}>
+            <label className="text-[10px] uppercase tracking-wider font-medium block mb-2" style={{ color: 'var(--crm-text-muted)' }}>
               Anotações
             </label>
             <textarea
@@ -327,13 +327,13 @@ function LeadDrawer({ lead, stages, onClose, onUpdate }: {
               placeholder="Adicionar anotação sobre este contato..."
               rows={3}
               className="w-full px-3 py-2 rounded-lg text-xs resize-none focus:outline-none"
-              style={{ background: '#0A0A0B', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+              style={{ background: 'var(--crm-bg)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
             />
           </div>
 
           {/* Move Stage */}
           <div>
-            <label className="text-[10px] uppercase tracking-wider font-medium block mb-2" style={{ color: '#8B8A94' }}>
+            <label className="text-[10px] uppercase tracking-wider font-medium block mb-2" style={{ color: 'var(--crm-text-muted)' }}>
               Mover para etapa
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -378,7 +378,7 @@ function MoveStageButton({ lead, stage, onUpdate }: {
       onClick={handleMove}
       disabled={isMoving}
       className="text-[10px] px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
-      style={{ background: '#1A1A1F', color: stage.color ?? '#F0EDE8', border: '1px solid #2A2A32' }}
+      style={{ background: 'var(--crm-surface-2)', color: stage.color ?? 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
     >
       {isMoving ? '...' : stage.name}
     </button>
@@ -409,26 +409,26 @@ function BulkActionsBar({ count, onClear, onExport, onTag, stages, onMoveAll }: 
       }}
     >
       <span className="text-sm font-medium" style={{ color: '#D4AF37' }}>{count} selecionado{count > 1 ? 's' : ''}</span>
-      <div className="w-px h-5" style={{ background: '#2A2A32' }} />
+      <div className="w-px h-5" style={{ background: 'var(--crm-border)' }} />
 
       {/* Move */}
       <div className="relative">
         <button
           onClick={() => setShowMoveMenu(p => !p)}
           className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-          style={{ background: '#2A2A32', color: '#F0EDE8' }}
+          style={{ background: 'var(--crm-border)', color: 'var(--crm-text)' }}
         >
           Mover
         </button>
         {showMoveMenu && (
           <div className="absolute bottom-full mb-2 left-0 rounded-xl overflow-hidden shadow-xl"
-            style={{ background: '#111114', border: '1px solid #2A2A32', minWidth: '140px' }}
+            style={{ background: 'var(--crm-surface)', border: '1px solid var(--crm-border)', minWidth: '140px' }}
           >
             {stages.map(s => (
               <button key={s.id}
                 onClick={() => { onMoveAll(s.id); setShowMoveMenu(false) }}
                 className="w-full text-left px-3 py-2 text-xs hover:bg-white/5 transition-colors"
-                style={{ color: s.color ?? '#F0EDE8' }}
+                style={{ color: s.color ?? 'var(--crm-text)' }}
               >
                 {s.name}
               </button>
@@ -448,9 +448,9 @@ function BulkActionsBar({ count, onClear, onExport, onTag, stages, onMoveAll }: 
               placeholder="Tag..."
               autoFocus
               className="w-24 px-2 py-1 rounded text-xs focus:outline-none"
-              style={{ background: '#0A0A0B', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+              style={{ background: 'var(--crm-bg)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
             />
-            <button onClick={() => setShowTagInput(false)} className="text-xs" style={{ color: '#8B8A94' }}>
+            <button onClick={() => setShowTagInput(false)} className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>
               <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
@@ -460,7 +460,7 @@ function BulkActionsBar({ count, onClear, onExport, onTag, stages, onMoveAll }: 
           <button
             onClick={() => setShowTagInput(true)}
             className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-            style={{ background: '#2A2A32', color: '#F0EDE8' }}
+            style={{ background: 'var(--crm-border)', color: 'var(--crm-text)' }}
           >
             Tag
           </button>
@@ -471,13 +471,13 @@ function BulkActionsBar({ count, onClear, onExport, onTag, stages, onMoveAll }: 
       <button
         onClick={onExport}
         className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-        style={{ background: '#2A2A32', color: '#F0EDE8' }}
+        style={{ background: 'var(--crm-border)', color: 'var(--crm-text)' }}
       >
         Exportar
       </button>
 
       {/* Clear */}
-      <button onClick={onClear} className="p-1.5 rounded-lg hover:bg-white/5" style={{ color: '#8B8A94' }}>
+      <button onClick={onClear} className="p-1.5 rounded-lg hover:bg-white/5" style={{ color: 'var(--crm-text-muted)' }}>
         <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
           <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
         </svg>
@@ -740,7 +740,7 @@ export default function ContactsPage() {
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-sm" style={{ color: '#FF6B4A' }}>{error}</p>
         <button onClick={fetchContacts} className="mt-4 px-4 py-2 rounded-lg text-sm font-medium"
-          style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+          style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
         >Tentar novamente</button>
       </div>
     )
@@ -863,7 +863,7 @@ export default function ContactsPage() {
 
       {/* Results info */}
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs" style={{ color: '#8B8A94' }}>
+        <p className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>
           {filteredContacts.length} {filteredContacts.length === 1 ? 'resultado' : 'resultados'}
           {totalPages > 1 && ` · Página ${page} de ${totalPages}`}
         </p>
@@ -898,7 +898,7 @@ export default function ContactsPage() {
 
           <AnimatePresence>
             {paginatedContacts.map((contact, i) => {
-              const statusColor = STATUS_COLORS[contact.status] ?? '#8B8A94'
+              const statusColor = STATUS_COLORS[contact.status] ?? 'var(--crm-text-muted)'
               const churnColor = contact.churnRisk != null
                 ? contact.churnRisk >= 70 ? '#FF6B4A' : contact.churnRisk >= 40 ? '#F0A500' : '#2ECC8A'
                 : '#5A5A64'
@@ -913,7 +913,7 @@ export default function ContactsPage() {
                   onClick={() => setDrawerLead(contact)}
                   className="grid grid-cols-1 lg:grid-cols-[40px_1fr_120px_90px_90px_80px_70px_70px_90px] gap-2 px-4 py-3 items-center transition-colors cursor-pointer"
                   style={{
-                    borderBottom: '1px solid #1A1A1F',
+                    borderBottom: '1px solid var(--crm-surface-2)',
                     background: isSelected ? 'rgba(212,175,55,0.04)' : 'transparent',
                   }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isSelected ? 'rgba(212,175,55,0.06)' : 'rgba(255,255,255,0.02)' }}
@@ -937,8 +937,8 @@ export default function ContactsPage() {
                       {contact.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: '#F0EDE8' }}>{contact.name}</p>
-                      <p className="text-[11px] truncate" style={{ color: '#8B8A94' }}>
+                      <p className="text-sm font-medium truncate" style={{ color: 'var(--crm-text)' }}>{contact.name}</p>
+                      <p className="text-[11px] truncate" style={{ color: 'var(--crm-text-muted)' }}>
                         {maskPhone(contact.phone)}
                         {contact.email && ` · ${contact.email}`}
                       </p>
@@ -959,7 +959,7 @@ export default function ContactsPage() {
 
                   {/* Stage */}
                   <div className="hidden lg:block">
-                    <span className="text-xs" style={{ color: contact.stageColor ?? '#F0EDE8' }}>{contact.stageName}</span>
+                    <span className="text-xs" style={{ color: contact.stageColor ?? 'var(--crm-text)' }}>{contact.stageName}</span>
                   </div>
 
                   {/* Status */}
@@ -982,13 +982,13 @@ export default function ContactsPage() {
                   <div className="hidden lg:block">
                     {contact.aiScore != null ? (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: '#1A1A1F' }}>
+                        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--crm-surface-2)' }}>
                           <div className="h-full rounded-full" style={{
                             width: `${contact.aiScore}%`,
                             background: contact.aiScore >= 70 ? '#2ECC8A' : contact.aiScore >= 40 ? '#F0A500' : '#4A7BFF',
                           }} />
                         </div>
-                        <span className="text-[10px] font-bold w-7 text-right" style={{ color: '#F0EDE8' }}>
+                        <span className="text-[10px] font-bold w-7 text-right" style={{ color: 'var(--crm-text)' }}>
                           {contact.aiScore}
                         </span>
                       </div>
@@ -1023,7 +1023,7 @@ export default function ContactsPage() {
 
                   {/* Last interaction */}
                   <div className="hidden lg:block">
-                    <span className="text-[11px]" style={{ color: '#8B8A94' }}>
+                    <span className="text-[11px]" style={{ color: 'var(--crm-text-muted)' }}>
                       {timeAgo(contact.lastInteractionAt)}
                     </span>
                   </div>
@@ -1041,7 +1041,7 @@ export default function ContactsPage() {
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
             className="px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-30"
-            style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+            style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
           >
             Anterior
           </button>
@@ -1062,9 +1062,9 @@ export default function ContactsPage() {
                 onClick={() => setPage(pageNum)}
                 className="w-8 h-8 rounded-lg text-xs font-medium transition-colors"
                 style={{
-                  background: pageNum === page ? '#D4AF37' : '#1A1A1F',
-                  color: pageNum === page ? '#0A0A0B' : '#F0EDE8',
-                  border: pageNum === page ? 'none' : '1px solid #2A2A32',
+                  background: pageNum === page ? '#D4AF37' : 'var(--crm-surface-2)',
+                  color: pageNum === page ? 'var(--crm-bg)' : 'var(--crm-text)',
+                  border: pageNum === page ? 'none' : '1px solid var(--crm-border)',
                 }}
               >
                 {pageNum}
@@ -1075,7 +1075,7 @@ export default function ContactsPage() {
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
             className="px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-30"
-            style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+            style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
           >
             Próxima
           </button>

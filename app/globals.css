@@ -645,8 +645,9 @@ body {
   --admin-logout-hover: rgba(220,38,38,0.08);
 }
 
-/* ═══ CRM Module — Variáveis de tema escuro premium ═══ */
-:root {
+/* ═══ CRM Module — Variáveis de tema escuro/claro ═══ */
+[data-theme="dark"] .admin-shell,
+.admin-shell {
   --crm-bg: #0A0A0B;
   --crm-surface: #111114;
   --crm-surface-2: #1A1A1F;
@@ -659,6 +660,21 @@ body {
   --crm-warm: #F0A500;
   --crm-cold: #4A7BFF;
   --crm-won: #2ECC8A;
+}
+
+[data-theme="light"] .admin-shell {
+  --crm-bg: #F8F7F5;
+  --crm-surface: #FFFFFF;
+  --crm-surface-2: #F0EEE9;
+  --crm-border: rgba(0,0,0,0.10);
+  --crm-gold: #B8962E;
+  --crm-gold-subtle: rgba(184,150,46,0.08);
+  --crm-text: #1A1A1F;
+  --crm-text-muted: #6B6A74;
+  --crm-hot: #E5553A;
+  --crm-warm: #D49000;
+  --crm-cold: #3A6AE5;
+  --crm-won: #1EAA6E;
 }
 
 /* ═══ Admin Sidebar — Drag & Drop feedback ═══ */

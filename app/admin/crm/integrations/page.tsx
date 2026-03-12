@@ -143,7 +143,7 @@ function StatusBadge({ status, label }: { status: IntegrationStatus; label: stri
     connected: { bg: 'rgba(46,204,138,0.12)', color: '#2ECC8A', dot: '#2ECC8A' },
     available: { bg: 'rgba(212,175,55,0.12)', color: '#D4AF37' },
     coming_soon: { bg: 'rgba(74,123,255,0.12)', color: '#4A7BFF' },
-    optional: { bg: '#1A1A1F', color: '#8B8A94' },
+    optional: { bg: 'var(--crm-surface-2)', color: 'var(--crm-text-muted)' },
   }
   const s = styles[status]
 
@@ -166,7 +166,7 @@ function StatPill({ count, label, color }: { count: number; label: string; color
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-sm font-semibold" style={{ color }}>{count}</span>
-      <span className="text-xs" style={{ color: '#8B8A94' }}>{label}</span>
+      <span className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>{label}</span>
     </div>
   )
 }
@@ -204,13 +204,13 @@ function IntegrationCardDisplay({ card, index }: { card: IntegrationCard; index:
             {card.icon}
           </div>
           <div>
-            <h3 className="text-sm font-semibold" style={{ color: '#F0EDE8' }}>{card.name}</h3>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--crm-text)' }}>{card.name}</h3>
           </div>
         </div>
         <StatusBadge status={card.status} label={card.statusLabel} />
       </div>
 
-      <p className="text-[11px] leading-relaxed" style={{ color: '#8B8A94' }}>
+      <p className="text-[11px] leading-relaxed" style={{ color: 'var(--crm-text-muted)' }}>
         {card.description}
       </p>
 
@@ -241,7 +241,7 @@ function SectionHeader({ title, icon, delay }: { title: string; icon: React.Reac
       >
         {icon}
       </div>
-      <h2 className="text-sm font-semibold tracking-wide" style={{ color: '#F0EDE8' }}>
+      <h2 className="text-sm font-semibold tracking-wide" style={{ color: 'var(--crm-text)' }}>
         {title}
       </h2>
       <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, var(--crm-border), transparent)' }} />
@@ -362,7 +362,7 @@ export default function IntegrationsPage() {
     connected: { label: 'Conectado', bg: 'rgba(46,204,138,0.15)', color: '#2ECC8A', dot: true },
     connecting: { label: 'Conectando...', bg: 'rgba(212,175,55,0.15)', color: '#D4AF37' },
     error: { label: 'Erro', bg: 'rgba(255,107,74,0.15)', color: '#FF6B4A' },
-    disconnected: { label: 'Desconectado', bg: '#1A1A1F', color: '#8B8A94' },
+    disconnected: { label: 'Desconectado', bg: 'var(--crm-surface-2)', color: 'var(--crm-text-muted)' },
   }
   const currentWaBadge = waStatusConfig[waStatus]
 
@@ -455,7 +455,7 @@ export default function IntegrationsPage() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5 mb-1">
-              <h3 className="text-base font-bold" style={{ color: '#F0EDE8' }}>WhatsApp Business</h3>
+              <h3 className="text-base font-bold" style={{ color: 'var(--crm-text)' }}>WhatsApp Business</h3>
               <span
                 className="text-[10px] px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1.5"
                 style={{ background: currentWaBadge.bg, color: currentWaBadge.color }}
@@ -466,7 +466,7 @@ export default function IntegrationsPage() {
                 {currentWaBadge.label}
               </span>
             </div>
-            <p className="text-xs leading-relaxed" style={{ color: '#8B8A94' }}>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--crm-text-muted)' }}>
               Conecte via Evolution API v2 para envio e recebimento de mensagens em tempo real.
               Suporta texto, imagens, áudio, vídeo e documentos.
             </p>
@@ -485,7 +485,7 @@ export default function IntegrationsPage() {
               className="rounded-lg px-3 py-2 text-center"
               style={{ background: 'var(--crm-surface-2)', border: '1px solid var(--crm-border)' }}
             >
-              <span className="text-xs" style={{ color: '#8B8A94' }}>
+              <span className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>
                 <span className="mr-1.5">{feat.icon}</span>{feat.label}
               </span>
             </div>
@@ -508,7 +508,7 @@ export default function IntegrationsPage() {
             <div className="p-3 rounded-xl mb-3" style={{ background: '#fff' }}>
               <img src={`data:image/png;base64,${qrCode}`} alt="QR Code WhatsApp" className="w-52 h-52" />
             </div>
-            <p className="text-[11px] text-center mb-2" style={{ color: '#8B8A94' }}>
+            <p className="text-[11px] text-center mb-2" style={{ color: 'var(--crm-text-muted)' }}>
               Abra o WhatsApp &rarr; Dispositivos conectados &rarr; Escanear QR Code
             </p>
             <div className="flex items-center gap-2">
@@ -533,7 +533,7 @@ export default function IntegrationsPage() {
             <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: '#2ECC8A' }} />
             <span className="text-sm font-semibold" style={{ color: '#2ECC8A' }}>WhatsApp conectado e funcionando</span>
             {instanceId && (
-              <span className="text-[10px] ml-auto font-mono" style={{ color: '#8B8A94' }}>
+              <span className="text-[10px] ml-auto font-mono" style={{ color: 'var(--crm-text-muted)' }}>
                 ID: {instanceId.slice(0, 16)}
               </span>
             )}
@@ -637,8 +637,8 @@ export default function IntegrationsPage() {
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-semibold" style={{ color: '#F0EDE8' }}>Webhook URL</h3>
-            <p className="text-[10px]" style={{ color: '#8B8A94' }}>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--crm-text)' }}>Webhook URL</h3>
+            <p className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>
               Configure este endpoint na Evolution API para receber mensagens
             </p>
           </div>
@@ -648,9 +648,9 @@ export default function IntegrationsPage() {
           <code
             className="flex-1 text-[11px] font-mono px-4 py-2.5 rounded-xl truncate select-all"
             style={{
-              background: '#0A0A0B',
+              background: 'var(--crm-bg)',
               color: '#D4AF37',
-              border: '1px solid #2A2A32',
+              border: '1px solid var(--crm-border)',
             }}
           >
             {webhookUrl}
@@ -660,7 +660,7 @@ export default function IntegrationsPage() {
             className="shrink-0 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:brightness-110 active:scale-[0.97]"
             style={{
               background: copied ? 'rgba(46,204,138,0.12)' : 'var(--crm-surface-2)',
-              color: copied ? '#2ECC8A' : '#8B8A94',
+              color: copied ? '#2ECC8A' : 'var(--crm-text-muted)',
               border: `1px solid ${copied ? 'rgba(46,204,138,0.25)' : 'var(--crm-border)'}`,
             }}
           >

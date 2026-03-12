@@ -351,12 +351,12 @@ function EmptyState({ onAddFirst }: { onAddFirst: () => void }) {
         className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
         style={{
           background: 'linear-gradient(135deg, #D4AF37, #B8962E)',
-          color: '#0A0A0B',
+          color: 'var(--crm-bg)',
         }}
         onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
         onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
       >
-        <PlusIcon size={15} color="#0A0A0B" />
+        <PlusIcon size={15} color="var(--crm-bg)" />
         Adicionar primeira fonte
       </button>
     </div>
@@ -753,7 +753,7 @@ function AddEditModal({ isOpen, onClose, editingSource, onSave }: ModalProps) {
                 className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{
                   background: 'linear-gradient(135deg, #D4AF37, #B8962E)',
-                  color: '#0A0A0B',
+                  color: 'var(--crm-bg)',
                 }}
                 onMouseEnter={(e) => { if (name.trim()) e.currentTarget.style.opacity = '0.9' }}
                 onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
@@ -1221,13 +1221,13 @@ export default function KnowledgeBasePage() {
           className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex-shrink-0"
           style={{
             background: 'linear-gradient(135deg, #D4AF37, #B8962E)',
-            color: '#0A0A0B',
+            color: 'var(--crm-bg)',
             boxShadow: '0 2px 12px rgba(212,175,55,0.3)',
           }}
           onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(212,175,55,0.4)' }}
           onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(212,175,55,0.3)' }}
         >
-          <PlusIcon size={15} color="#0A0A0B" />
+          <PlusIcon size={15} color="var(--crm-bg)" />
           Adicionar Fonte
         </button>
       </div>
@@ -1539,9 +1539,9 @@ export default function KnowledgeBasePage() {
                         <span className="flex items-center gap-1.5 text-[10px] font-medium">
                           <span
                             className="w-1.5 h-1.5 rounded-full"
-                            style={{ background: source.isActive ? '#2ECC8A' : '#8B8A94' }}
+                            style={{ background: source.isActive ? '#2ECC8A' : 'var(--crm-text-muted)' }}
                           />
-                          <span style={{ color: source.isActive ? '#2ECC8A' : '#8B8A94' }}>
+                          <span style={{ color: source.isActive ? '#2ECC8A' : 'var(--crm-text-muted)' }}>
                             {source.isActive ? 'Ativo' : 'Inativo'}
                           </span>
                         </span>

@@ -97,7 +97,7 @@ interface LeadDetail {
 // ━━━ Constants ━━━
 
 const STATUS_COLORS: Record<string, string> = {
-  HOT: '#FF6B4A', WARM: '#F0A500', COLD: '#4A7BFF', WON: '#2ECC8A', LOST: '#8B8A94',
+  HOT: '#FF6B4A', WARM: '#F0A500', COLD: '#4A7BFF', WON: '#2ECC8A', LOST: 'var(--crm-text-muted)',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -242,7 +242,7 @@ function KanbanSkeleton() {
 // ━━━ Avatar ━━━
 
 function LeadAvatar({ name, status, size = 32 }: { name: string; status: string; size?: number }) {
-  const color = STATUS_COLORS[status] ?? '#8B8A94'
+  const color = STATUS_COLORS[status] ?? 'var(--crm-text-muted)'
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
   return (
     <div
@@ -396,7 +396,7 @@ function NewLeadModal({ stages, onClose, onSave }: {
                 >Cancelar</button>
                 <button type="submit" disabled={saving || !name.trim() || !phone.trim()}
                   className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40 hover:brightness-110 active:scale-[0.98]"
-                  style={{ background: 'linear-gradient(135deg, #D4AF37, #C4A030)', color: '#0A0A0B', boxShadow: '0 4px 16px rgba(212,175,55,0.2)' }}
+                  style={{ background: 'linear-gradient(135deg, #D4AF37, #C4A030)', color: 'var(--crm-bg)', boxShadow: '0 4px 16px rgba(212,175,55,0.2)' }}
                 >{saving ? 'Salvando...' : 'Criar Lead'}</button>
               </div>
             </form>
@@ -412,7 +412,7 @@ function NewLeadModal({ stages, onClose, onSave }: {
 function LeadCardComponent({ lead, index, isDraggingAny, onClickLead }: {
   lead: LeadCard; index: number; isDraggingAny: boolean; onClickLead: (id: string) => void
 }) {
-  const statusColor = STATUS_COLORS[lead.status] ?? '#8B8A94'
+  const statusColor = STATUS_COLORS[lead.status] ?? 'var(--crm-text-muted)'
   const isHot = isRecentlyActive(lead)
   const scoreColor = lead.aiScore != null ? getScoreColor(lead.aiScore) : null
 
@@ -543,7 +543,7 @@ function LeadCardComponent({ lead, index, isDraggingAny, onClickLead }: {
 function StageColumn({ stage, leads, index, isDraggingAny, onClickLead }: {
   stage: StageData; leads: LeadCard[]; index: number; isDraggingAny: boolean; onClickLead: (id: string) => void
 }) {
-  const stageColor = stage.color ?? '#8B8A94'
+  const stageColor = stage.color ?? 'var(--crm-text-muted)'
   const stageIcon = STAGE_ICONS[stage.name] ?? '◉'
   return (
     <motion.div
@@ -752,7 +752,7 @@ function LeadDrawer({ leadId, stages, onClose, onLeadUpdated }: {
     }
   }
 
-  const statusColor = lead ? STATUS_COLORS[lead.status] ?? '#8B8A94' : '#8B8A94'
+  const statusColor = lead ? STATUS_COLORS[lead.status] ?? 'var(--crm-text-muted)' : 'var(--crm-text-muted)'
   const messages = lead?.conversations[0]?.messages?.slice().reverse() ?? []
 
   const TABS = [
@@ -799,7 +799,7 @@ function LeadDrawer({ leadId, stages, onClose, onLeadUpdated }: {
               {/* Quick info bar */}
               <div className="flex items-center gap-4 mt-3 pt-3" style={{ borderTop: '1px solid var(--crm-border)' }}>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full" style={{ background: lead.stage.color ?? '#8B8A94' }} />
+                  <span className="w-2 h-2 rounded-full" style={{ background: lead.stage.color ?? 'var(--crm-text-muted)' }} />
                   <span className="text-[11px] font-medium" style={{ color: 'var(--crm-text)' }}>{lead.stage.name}</span>
                 </div>
                 {lead.aiScore != null && (
@@ -883,7 +883,7 @@ function LeadDrawer({ leadId, stages, onClose, onLeadUpdated }: {
                       {stages.filter(s => s.id !== lead.stageId).map(s => (
                         <button key={s.id} onClick={() => handleMoveStage(s.id)} disabled={movingStage}
                           className="text-[11px] px-3 py-1.5 rounded-lg font-medium transition-all hover:brightness-125 disabled:opacity-40"
-                          style={{ background: (s.color ?? '#8B8A94') + '08', color: s.color ?? '#8B8A94', border: `1px solid ${(s.color ?? '#8B8A94')}15` }}
+                          style={{ background: (s.color ?? 'var(--crm-text-muted)') + '08', color: s.color ?? 'var(--crm-text-muted)', border: `1px solid ${(s.color ?? 'var(--crm-text-muted)')}15` }}
                         >{s.name}</button>
                       ))}
                     </div>
@@ -967,7 +967,7 @@ function LeadDrawer({ leadId, stages, onClose, onLeadUpdated }: {
                       <div className="max-w-[80%] rounded-2xl px-3.5 py-2.5 text-[13px]"
                         style={{
                           background: msg.fromMe ? 'linear-gradient(135deg, #D4AF37, #C4A030)' : 'var(--crm-surface)',
-                          color: msg.fromMe ? '#0A0A0B' : 'var(--crm-text)',
+                          color: msg.fromMe ? 'var(--crm-bg)' : 'var(--crm-text)',
                           border: msg.fromMe ? 'none' : '1px solid var(--crm-border)',
                           borderBottomRightRadius: msg.fromMe ? '6px' : '16px',
                           borderBottomLeftRadius: msg.fromMe ? '16px' : '6px',
@@ -1250,20 +1250,20 @@ export default function PipelinePage() {
       `}</style>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--crm-text)' }}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight" style={{ color: 'var(--crm-text)' }}>
             {pipeline?.name ?? 'Pipeline'}
           </h1>
-          <p className="text-[11px] mt-1 font-medium" style={{ color: 'var(--crm-text-muted)' }}>
+          <p className="text-[11px] mt-0.5 font-medium" style={{ color: 'var(--crm-text-muted)' }}>
             Gerencie seus leads e acompanhe conversões
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
           <button
             onClick={handleImportPatients}
             disabled={importing}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all hover:brightness-125 active:scale-[0.98] disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all hover:brightness-125 active:scale-[0.98] disabled:opacity-50 flex-1 sm:flex-none"
             style={{ background: 'var(--crm-surface)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
           >
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" className={importing ? 'animate-spin' : ''}>
@@ -1275,8 +1275,8 @@ export default function PipelinePage() {
             {importing ? 'Importando...' : 'Importar Pacientes'}
           </button>
           <button onClick={() => setShowNewLead(true)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all hover:brightness-110 active:scale-[0.98]"
-            style={{ background: 'linear-gradient(135deg, #D4AF37, #C4A030)', color: '#0A0A0B', boxShadow: '0 4px 20px rgba(212,175,55,0.2)' }}
+            className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all hover:brightness-110 active:scale-[0.98] flex-1 sm:flex-none"
+            style={{ background: 'linear-gradient(135deg, #D4AF37, #C4A030)', color: 'var(--crm-bg)', boxShadow: '0 4px 20px rgba(212,175,55,0.2)' }}
           >
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
             Novo Lead

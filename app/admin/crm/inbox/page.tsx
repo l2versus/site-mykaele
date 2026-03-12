@@ -107,9 +107,9 @@ function formatDateGroup(dateStr: string): string {
 
 function getStatusColor(status: string): string {
   const map: Record<string, string> = {
-    HOT: '#FF6B4A', WARM: '#F0A500', COLD: '#4A7BFF', WON: '#2ECC8A', LOST: '#8B8A94',
+    HOT: '#FF6B4A', WARM: '#F0A500', COLD: '#4A7BFF', WON: '#2ECC8A', LOST: 'var(--crm-text-muted)',
   }
-  return map[status] ?? '#8B8A94'
+  return map[status] ?? 'var(--crm-text-muted)'
 }
 
 function getStatusLabel(status: string): string {
@@ -222,7 +222,7 @@ function MessageBubble({ message }: { message: MessageItem }) {
           background: message.fromMe
             ? 'linear-gradient(135deg, #D4AF37, #B8962E)'
             : 'var(--crm-surface-2)',
-          color: message.fromMe ? '#0A0A0B' : 'var(--crm-text)',
+          color: message.fromMe ? 'var(--crm-bg)' : 'var(--crm-text)',
           borderBottomRightRadius: message.fromMe ? '4px' : '16px',
           borderBottomLeftRadius: message.fromMe ? '16px' : '4px',
           boxShadow: message.fromMe
@@ -387,7 +387,7 @@ function LeadPanel({ lead, onClose, stages, onStageChange, isMovingStage, aiInsi
                           onMouseEnter={e => { if (!isActive) (e.target as HTMLElement).style.background = 'rgba(255,255,255,0.04)' }}
                           onMouseLeave={e => { if (!isActive) (e.target as HTMLElement).style.background = 'transparent' }}
                         >
-                          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: stage.color ?? '#8B8A94' }} />
+                          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: stage.color ?? 'var(--crm-text-muted)' }} />
                           <span className="truncate font-medium">{stage.name}</span>
                           {stage.type === 'WON' && <span className="text-[9px] ml-auto shrink-0" style={{ color: 'var(--crm-won)' }}>Ganho</span>}
                           {stage.type === 'LOST' && <span className="text-[9px] ml-auto shrink-0" style={{ color: 'var(--crm-text-muted)' }}>Perdido</span>}
@@ -1146,7 +1146,7 @@ export default function InboxPage() {
                     <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>{selectedConv?.lead.phone}</span>
                     {selectedConv?.lead.stage && (
                       <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
-                        style={{ background: `${selectedConv.lead.stage.color ?? '#8B8A94'}18`, color: selectedConv.lead.stage.color ?? 'var(--crm-text-muted)' }}
+                        style={{ background: `${selectedConv.lead.stage.color ?? 'var(--crm-text-muted)'}18`, color: selectedConv.lead.stage.color ?? 'var(--crm-text-muted)' }}
                       >
                         {selectedConv.lead.stage.name}
                       </span>

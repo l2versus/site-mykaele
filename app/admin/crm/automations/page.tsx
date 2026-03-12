@@ -144,28 +144,28 @@ function AutomationModal({ onClose, onSave, existing }: {
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
       >
-        <h2 className="text-lg font-semibold mb-5" style={{ color: '#F0EDE8' }}>
+        <h2 className="text-lg font-semibold mb-5" style={{ color: 'var(--crm-text)' }}>
           {existing ? 'Editar Automação' : 'Nova Automação'}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#8B8A94' }}>Nome *</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--crm-text-muted)' }}>Nome *</label>
             <input
               value={name} onChange={e => setName(e.target.value)} required
               placeholder="Ex: Boas-vindas automática"
               className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+              style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
             />
           </div>
 
           {/* Trigger */}
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#8B8A94' }}>Quando (Gatilho) *</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--crm-text-muted)' }}>Quando (Gatilho) *</label>
             <select
               value={trigger} onChange={e => setTrigger(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+              style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
             >
               {Object.entries(TRIGGER_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -175,11 +175,11 @@ function AutomationModal({ onClose, onSave, existing }: {
 
           {/* Action */}
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#8B8A94' }}>Então (Ação) *</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--crm-text-muted)' }}>Então (Ação) *</label>
             <select
               value={action} onChange={e => setAction(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+              style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
             >
               {Object.entries(ACTION_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -190,16 +190,16 @@ function AutomationModal({ onClose, onSave, existing }: {
           {/* Message (when action is SEND_MESSAGE) */}
           {action === 'SEND_MESSAGE' && (
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#8B8A94' }}>Mensagem</label>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--crm-text-muted)' }}>Mensagem</label>
               <textarea
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 placeholder="Olá {{nome}}, tudo bem? Somos da Clínica..."
                 rows={3}
                 className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none resize-none"
-                style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+                style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
               />
-              <p className="text-[9px] mt-1" style={{ color: '#8B8A94' }}>
+              <p className="text-[9px] mt-1" style={{ color: 'var(--crm-text-muted)' }}>
                 Variáveis: {'{{nome}}'}, {'{{telefone}}'}, {'{{email}}'}
               </p>
             </div>
@@ -208,7 +208,7 @@ function AutomationModal({ onClose, onSave, existing }: {
           {/* Conditions */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-medium" style={{ color: '#8B8A94' }}>Condições (opcional)</label>
+              <label className="text-xs font-medium" style={{ color: 'var(--crm-text-muted)' }}>Condições (opcional)</label>
               <button type="button" onClick={addCondition}
                 className="text-[10px] px-2 py-1 rounded-lg transition-colors"
                 style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37' }}
@@ -223,23 +223,23 @@ function AutomationModal({ onClose, onSave, existing }: {
               <div key={idx} className="flex items-center gap-2 mb-2">
                 <select value={cond.field} onChange={e => updateCondition(idx, { field: e.target.value })}
                   className="flex-1 px-2 py-1.5 rounded text-xs focus:outline-none"
-                  style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+                  style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
                 >
                   {Object.entries(CONDITION_FIELDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
                 <select value={cond.op} onChange={e => updateCondition(idx, { op: e.target.value })}
                   className="w-28 px-2 py-1.5 rounded text-xs focus:outline-none"
-                  style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+                  style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
                 >
                   {Object.entries(CONDITION_OPS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
                 <input value={cond.value} onChange={e => updateCondition(idx, { value: e.target.value })}
                   placeholder="valor"
                   className="w-24 px-2 py-1.5 rounded text-xs focus:outline-none"
-                  style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+                  style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
                 />
                 <button type="button" onClick={() => removeCondition(idx)}
-                  className="p-1 rounded hover:bg-white/5" style={{ color: '#8B8A94' }}
+                  className="p-1 rounded hover:bg-white/5" style={{ color: 'var(--crm-text-muted)' }}
                 >
                   <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -250,18 +250,18 @@ function AutomationModal({ onClose, onSave, existing }: {
           </div>
 
           {/* Summary */}
-          <div className="rounded-lg p-3" style={{ background: '#0A0A0B', border: '1px solid #2A2A32' }}>
-            <p className="text-[10px] uppercase tracking-wider font-medium mb-1.5" style={{ color: '#8B8A94' }}>Resumo da regra</p>
-            <p className="text-xs" style={{ color: '#F0EDE8' }}>
-              <span style={{ color: '#D4AF37' }}>Quando</span> {TRIGGER_LABELS[trigger]?.toLowerCase() ?? trigger}
+          <div className="rounded-lg p-3" style={{ background: 'var(--crm-bg)', border: '1px solid var(--crm-border)' }}>
+            <p className="text-[10px] uppercase tracking-wider font-medium mb-1.5" style={{ color: 'var(--crm-text-muted)' }}>Resumo da regra</p>
+            <p className="text-xs" style={{ color: 'var(--crm-text)' }}>
+              <span style={{ color: 'var(--crm-gold)' }}>Quando</span> {TRIGGER_LABELS[trigger]?.toLowerCase() ?? trigger}
               {conditions.length > 0 && (
                 <>
-                  <span style={{ color: '#D4AF37' }}> se</span> {conditions.map((c, i) =>
+                  <span style={{ color: 'var(--crm-gold)' }}> se</span> {conditions.map((c, i) =>
                     `${CONDITION_FIELDS[c.field] ?? c.field} ${CONDITION_OPS[c.op] ?? c.op} "${c.value}"${i < conditions.length - 1 ? ' e ' : ''}`
                   ).join('')}
                 </>
               )}
-              <span style={{ color: '#D4AF37' }}> então</span> {ACTION_LABELS[action]?.toLowerCase() ?? action}
+              <span style={{ color: 'var(--crm-gold)' }}> então</span> {ACTION_LABELS[action]?.toLowerCase() ?? action}
               {action === 'SEND_MESSAGE' && message && `: "${message.slice(0, 50)}${message.length > 50 ? '...' : ''}"`}
             </p>
           </div>
@@ -269,11 +269,11 @@ function AutomationModal({ onClose, onSave, existing }: {
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose}
               className="flex-1 py-2.5 rounded-lg text-sm font-medium"
-              style={{ background: '#1A1A1F', color: '#8B8A94', border: '1px solid #2A2A32' }}
+              style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text-muted)', border: '1px solid var(--crm-border)' }}
             >Cancelar</button>
             <button type="submit" disabled={saving || !name.trim()}
               className="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
-              style={{ background: '#D4AF37', color: '#0A0A0B' }}
+              style={{ background: 'var(--crm-gold)', color: 'var(--crm-bg)' }}
             >{saving ? 'Salvando...' : existing ? 'Salvar' : 'Criar'}</button>
           </div>
         </form>
@@ -298,17 +298,17 @@ function ExecutionLog() {
         <span className="text-[10px] ml-2" style={{ color: 'var(--crm-text-muted)' }}>Últimas execuções</span>
       </div>
       {logs.map(log => (
-        <div key={log.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderBottom: '1px solid #1A1A1F' }}>
+        <div key={log.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderBottom: '1px solid var(--crm-surface-2)' }}>
           <span className={`w-1.5 h-1.5 rounded-full shrink-0`}
-            style={{ background: log.status === 'success' ? '#2ECC8A' : log.status === 'error' ? '#FF6B4A' : '#8B8A94' }}
+            style={{ background: log.status === 'success' ? '#2ECC8A' : log.status === 'error' ? '#FF6B4A' : 'var(--crm-text-muted)' }}
           />
-          <span className="text-xs flex-1" style={{ color: '#F0EDE8' }}>{log.automation}</span>
-          <span className="text-[10px]" style={{ color: '#8B8A94' }}>{TRIGGER_LABELS[log.trigger] ?? log.trigger}</span>
-          <span className="text-[10px]" style={{ color: '#8B8A94' }}>{formatDate(log.at)}</span>
+          <span className="text-xs flex-1" style={{ color: 'var(--crm-text)' }}>{log.automation}</span>
+          <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>{TRIGGER_LABELS[log.trigger] ?? log.trigger}</span>
+          <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>{formatDate(log.at)}</span>
           <span className="text-[9px] px-1.5 py-0.5 rounded font-medium"
             style={{
-              background: log.status === 'success' ? '#2ECC8A18' : log.status === 'error' ? '#FF6B4A18' : '#8B8A9418',
-              color: log.status === 'success' ? '#2ECC8A' : log.status === 'error' ? '#FF6B4A' : '#8B8A94',
+              background: log.status === 'success' ? '#2ECC8A18' : log.status === 'error' ? '#FF6B4A18' : 'var(--crm-text-muted)18',
+              color: log.status === 'success' ? '#2ECC8A' : log.status === 'error' ? '#FF6B4A' : 'var(--crm-text-muted)',
             }}
           >
             {log.status === 'success' ? 'OK' : log.status === 'error' ? 'Erro' : 'Pulou'}
@@ -467,7 +467,7 @@ export default function AutomationsPage() {
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-sm" style={{ color: '#FF6B4A' }}>{error}</p>
         <button onClick={fetchAutomations} className="mt-4 px-4 py-2 rounded-lg text-sm font-medium"
-          style={{ background: '#1A1A1F', color: '#F0EDE8', border: '1px solid #2A2A32' }}
+          style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
         >Tentar novamente</button>
       </div>
     )
@@ -540,10 +540,10 @@ export default function AutomationsPage() {
                 >
                   {/* Icon */}
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: automation.isActive ? 'rgba(212,175,55,0.1)' : '#1A1A1F' }}
+                    style={{ background: automation.isActive ? 'rgba(212,175,55,0.1)' : 'var(--crm-surface-2)' }}
                   >
                     <svg width="18" height="18" fill="none"
-                      stroke={automation.isActive ? '#D4AF37' : '#8B8A94'}
+                      stroke={automation.isActive ? '#D4AF37' : 'var(--crm-text-muted)'}
                       strokeWidth="1.5" viewBox="0 0 24 24"
                     >
                       <path d={iconPath} />
@@ -553,7 +553,7 @@ export default function AutomationsPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium truncate" style={{ color: '#F0EDE8' }}>
+                      <span className="text-sm font-medium truncate" style={{ color: 'var(--crm-text)' }}>
                         {automation.name}
                       </span>
                       {automation.isActive && (
@@ -561,13 +561,13 @@ export default function AutomationsPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: '#1A1A1F', color: '#D4AF37' }}>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'var(--crm-surface-2)', color: '#D4AF37' }}>
                         {TRIGGER_LABELS[automation.trigger] ?? automation.trigger}
                       </span>
                       {flowAction && (
                         <>
                           <span className="text-[10px]" style={{ color: '#5A5A64' }}>→</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: '#1A1A1F', color: '#8B8A94' }}>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text-muted)' }}>
                             {ACTION_LABELS[flowAction] ?? flowAction}
                           </span>
                         </>
@@ -614,7 +614,7 @@ export default function AutomationsPage() {
                     <button
                       onClick={() => setEditingAutomation(automation)}
                       className="p-1.5 rounded-lg transition-colors hover:bg-white/5"
-                      style={{ color: '#8B8A94' }}
+                      style={{ color: 'var(--crm-text-muted)' }}
                       title="Editar"
                     >
                       <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -625,7 +625,7 @@ export default function AutomationsPage() {
                       onClick={() => handleDelete(automation.id)}
                       disabled={deleting === automation.id}
                       className="p-1.5 rounded-lg transition-colors disabled:opacity-50 hover:bg-white/5"
-                      style={{ color: '#8B8A94' }}
+                      style={{ color: 'var(--crm-text-muted)' }}
                       title="Excluir"
                     >
                       <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -636,12 +636,12 @@ export default function AutomationsPage() {
                       onClick={() => handleToggle(automation)}
                       disabled={toggling === automation.id}
                       className="shrink-0 w-11 h-6 rounded-full relative transition-colors disabled:opacity-50"
-                      style={{ background: automation.isActive ? '#D4AF37' : '#2A2A32' }}
+                      style={{ background: automation.isActive ? '#D4AF37' : 'var(--crm-border)' }}
                     >
                       <span
                         className="absolute top-0.5 w-5 h-5 rounded-full transition-all"
                         style={{
-                          background: '#F0EDE8',
+                          background: 'var(--crm-text)',
                           left: automation.isActive ? 'calc(100% - 22px)' : '2px',
                           boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                         }}

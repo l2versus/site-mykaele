@@ -68,7 +68,7 @@ interface KnowledgeSource {
 
 // ━━━ Constants ━━━
 
-const STAGE_COLORS = ['#4A7BFF', '#F0A500', '#FF6B4A', '#D4AF37', '#2ECC8A', '#8B8A94']
+const STAGE_COLORS = ['#4A7BFF', '#F0A500', '#FF6B4A', '#D4AF37', '#2ECC8A', 'var(--crm-text-muted)']
 
 const TIMEZONES = [
   'America/Fortaleza',
@@ -729,7 +729,7 @@ function PipelineTab() {
   const TYPE_LABELS: Record<string, { label: string; color: string }> = {
     OPEN: { label: 'Aberto', color: '#4A7BFF' },
     WON: { label: 'Ganho', color: '#2ECC8A' },
-    LOST: { label: 'Perdido', color: '#8B8A94' },
+    LOST: { label: 'Perdido', color: 'var(--crm-text-muted)' },
   }
 
   // Skeleton de carregamento
@@ -1153,7 +1153,7 @@ function WhatsAppTab() {
                     : 'rgba(139,138,148,0.1)',
                 }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={isConnected ? '#2ECC8A' : '#8B8A94'}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={isConnected ? '#2ECC8A' : 'var(--crm-text-muted)'}>
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" />
                 </svg>
               </div>
@@ -1171,8 +1171,8 @@ function WhatsAppTab() {
             {/* Status Badge */}
             {loading ? (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: 'rgba(139,138,148,0.1)' }}>
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#8B8A94' }} />
-                <span className="text-xs font-medium" style={{ color: '#8B8A94' }}>Verificando...</span>
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--crm-text-muted)' }} />
+                <span className="text-xs font-medium" style={{ color: 'var(--crm-text-muted)' }}>Verificando...</span>
               </div>
             ) : isConnected ? (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: 'rgba(46,204,138,0.1)' }}>
@@ -1837,8 +1837,8 @@ function AiTab() {
       enabled: true,
     },
   ])
-  const [provider, setProvider] = useState('openai')
-  const [model, setModel] = useState('gpt-4o-mini')
+  const [provider, setProvider] = useState('gemini')
+  const [model, setModel] = useState('gemini-2.0-flash')
   const [apiKey, setApiKey] = useState('')
   const [apiKeySet, setApiKeySet] = useState(false)
   const [baseUrl, setBaseUrl] = useState('')
@@ -1851,14 +1851,21 @@ function AiTab() {
   const hasFetched = useRef(false)
 
   const PROVIDERS = [
-    { value: 'openai', label: 'OpenAI', hint: 'GPT-4o, GPT-4o-mini' },
+    { value: 'gemini', label: 'Google Gemini (Grátis)', hint: 'Gemini 2.0 Flash — 1500 req/dia grátis' },
     { value: 'groq', label: 'Groq (Grátis)', hint: 'Llama 3, Mixtral — rápido e grátis' },
-    { value: 'together', label: 'Together AI', hint: 'Llama 3.1, Mixtral — free tier' },
+    { value: 'openai', label: 'OpenAI', hint: 'GPT-4o, GPT-4o-mini' },
     { value: 'openrouter', label: 'OpenRouter', hint: 'Múltiplos modelos, free tier' },
+    { value: 'together', label: 'Together AI', hint: 'Llama 3.1, Mixtral — free tier' },
     { value: 'custom', label: 'Custom (OpenAI-compatível)', hint: 'Qualquer API compatível' },
   ]
 
   const MODEL_OPTIONS: Record<string, { value: string; label: string }[]> = {
+    gemini: [
+      { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (grátis, recomendado)' },
+      { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite (grátis, mais rápido)' },
+      { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (grátis)' },
+      { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (grátis, mais inteligente)' },
+    ],
     openai: [
       { value: 'gpt-4o-mini', label: 'GPT-4o Mini (barato)' },
       { value: 'gpt-4o', label: 'GPT-4o' },
@@ -1886,6 +1893,7 @@ function AiTab() {
   }
 
   const BASE_URLS: Record<string, string> = {
+    gemini: 'https://generativelanguage.googleapis.com/v1beta',
     openai: 'https://api.openai.com/v1',
     groq: 'https://api.groq.com/openai/v1',
     together: 'https://api.together.xyz/v1',
@@ -2011,9 +2019,20 @@ function AiTab() {
 
     setTestStatus('testing')
     try {
-      const url = (baseUrl || BASE_URLS[provider]) + '/models'
+      let url: string
+      let headers: Record<string, string>
+
+      if (provider === 'gemini') {
+        // Gemini usa query param para auth
+        url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+        headers = {}
+      } else {
+        url = (baseUrl || BASE_URLS[provider]) + '/models'
+        headers = { Authorization: `Bearer ${apiKey}` }
+      }
+
       const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${apiKey}` },
+        headers,
         signal: AbortSignal.timeout(8000),
       })
       if (res.ok) {
@@ -2082,7 +2101,7 @@ function AiTab() {
                   type="password"
                   value={apiKey}
                   onChange={e => setApiKey(e.target.value)}
-                  placeholder={provider === 'groq' ? 'gsk_...' : provider === 'openai' ? 'sk-...' : 'Sua API key'}
+                  placeholder={provider === 'gemini' ? 'AIzaSy...' : provider === 'groq' ? 'gsk_...' : provider === 'openai' ? 'sk-...' : 'Sua API key'}
                   className="flex-1 rounded-lg px-3 py-2.5 text-sm outline-none transition-all font-mono"
                   style={{
                     background: 'var(--crm-surface-2)',
@@ -2105,6 +2124,11 @@ function AiTab() {
                   {testStatus === 'testing' ? 'Testando...' : testStatus === 'success' ? 'OK' : testStatus === 'error' ? 'Falhou' : 'Testar'}
                 </button>
               </div>
+              {provider === 'gemini' && (
+                <p className="text-[10px] mt-1.5" style={{ color: 'var(--crm-text-muted)' }}>
+                  Crie sua key grátis em <span style={{ color: 'var(--crm-gold)' }}>aistudio.google.com/apikey</span> — 1500 req/dia sem cartão
+                </p>
+              )}
               {provider === 'groq' && (
                 <p className="text-[10px] mt-1.5" style={{ color: 'var(--crm-text-muted)' }}>
                   Crie sua key grátis em <span style={{ color: 'var(--crm-gold)' }}>console.groq.com</span> — sem cartão de crédito

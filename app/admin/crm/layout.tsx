@@ -113,12 +113,13 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
     <div className="-m-4 lg:-m-6 min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)]" style={{ background: 'var(--crm-bg)' }}>
       {/* Sub-navegação horizontal premium */}
       <nav
-        className="sticky top-14 lg:top-16 z-20 border-b px-3 lg:px-5 flex items-center gap-0.5 overflow-x-auto scrollbar-none"
+        className="sticky top-14 lg:top-16 z-20 border-b px-2 lg:px-5 flex items-center gap-0.5 overflow-x-auto scrollbar-none"
         style={{
           borderColor: 'var(--crm-border)',
-          background: 'rgba(10,10,11,0.92)',
+          background: 'color-mix(in srgb, var(--crm-bg) 97%, transparent)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
+          minHeight: '44px',
         }}
       >
         {CRM_NAV.map((item) => {
@@ -127,7 +128,7 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
-              className="relative flex items-center gap-2 px-3.5 py-3 text-[13px] font-medium whitespace-nowrap transition-all duration-200 rounded-lg my-1"
+              className="relative flex items-center gap-1.5 px-2.5 lg:px-3.5 py-2.5 lg:py-3 text-[11px] lg:text-[13px] font-medium whitespace-nowrap transition-all duration-200 rounded-lg my-0.5"
               style={{
                 color: active ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
                 background: active ? 'var(--crm-gold-subtle)' : 'transparent',
@@ -139,11 +140,11 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
                 if (!active) e.currentTarget.style.color = 'var(--crm-text-muted)'
               }}
             >
-              <span className="opacity-80" style={active ? { opacity: 1 } : undefined}>{item.icon}</span>
+              <span className="opacity-80 hidden sm:inline" style={active ? { opacity: 1 } : undefined}>{item.icon}</span>
               {item.label}
               {active && (
                 <span
-                  className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full"
+                  className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full"
                   style={{ background: 'var(--crm-gold)' }}
                 />
               )}
@@ -158,24 +159,6 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
       </div>
 
       <CrmToasts />
-
-      {/* CSS Variables para CRM */}
-      <style jsx global>{`
-        :root {
-          --crm-bg: #0A0A0B;
-          --crm-surface: #111114;
-          --crm-surface-2: #1A1A1F;
-          --crm-border: #2A2A32;
-          --crm-gold: #D4AF37;
-          --crm-gold-subtle: rgba(212,175,55,0.08);
-          --crm-text: #F0EDE8;
-          --crm-text-muted: #8B8A94;
-          --crm-hot: #FF6B4A;
-          --crm-warm: #F0A500;
-          --crm-cold: #4A7BFF;
-          --crm-won: #2ECC8A;
-        }
-      `}</style>
     </div>
   )
 }

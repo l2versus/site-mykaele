@@ -77,7 +77,7 @@ function QueueCard({ name, label, counts }: { name: string; label: string; count
     { key: 'active', label: 'Ativo', value: counts.active, color: '#4A7BFF' },
     { key: 'completed', label: 'Concluído', value: counts.completed, color: '#2ECC8A' },
     { key: 'failed', label: 'Falhou', value: counts.failed, color: '#FF6B4A' },
-    { key: 'delayed', label: 'Agendado', value: counts.delayed, color: '#8B8A94' },
+    { key: 'delayed', label: 'Agendado', value: counts.delayed, color: 'var(--crm-text-muted)' },
   ]
 
   return (
@@ -110,7 +110,7 @@ function LogStatusBadge({ status }: { status: string }) {
   const config: Record<string, { bg: string; color: string; label: string }> = {
     SUCCESS: { bg: 'rgba(46,204,138,0.12)', color: '#2ECC8A', label: 'OK' },
     FAILED: { bg: 'rgba(255,107,74,0.12)', color: '#FF6B4A', label: 'Erro' },
-    SKIPPED: { bg: 'rgba(139,138,148,0.12)', color: '#8B8A94', label: 'Pulou' },
+    SKIPPED: { bg: 'rgba(139,138,148,0.12)', color: 'var(--crm-text-muted)', label: 'Pulou' },
   }
   const c = config[status] ?? config.SKIPPED
   return (
@@ -260,17 +260,17 @@ export default function DlqPage() {
               </svg>
             </div>
             <div>
-              <p className="text-sm font-medium" style={{ color: '#F0EDE8' }}>
+              <p className="text-sm font-medium" style={{ color: 'var(--crm-text)' }}>
                 {fetchError ? 'Erro ao conectar com a API' : 'Redis não conectado'}
               </p>
-              <p className="text-xs mt-1" style={{ color: '#8B8A94' }}>
+              <p className="text-xs mt-1" style={{ color: 'var(--crm-text-muted)' }}>
                 {fetchError
                   ? 'Verifique se o servidor está rodando.'
                   : 'Configure REDIS_URL no .env para ativar filas, workers e automações.'}
               </p>
               {!fetchError && (
                 <code className="block text-[11px] font-mono mt-2 px-3 py-1.5 rounded"
-                  style={{ background: '#0A0A0B', color: '#D4AF37', border: '1px solid #2A2A32' }}
+                  style={{ background: 'var(--crm-bg)', color: '#D4AF37', border: '1px solid var(--crm-border)' }}
                 >
                   REDIS_URL=redis://localhost:6379
                 </code>
@@ -381,7 +381,7 @@ export default function DlqPage() {
                       <polyline points="22 4 12 14.01 9 11.01" />
                     </svg>
                     <p className="text-sm mt-3" style={{ color: '#2ECC8A' }}>Nenhum job com erro</p>
-                    <p className="text-xs mt-1" style={{ color: '#8B8A94' }}>Todas as filas estão saudáveis</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--crm-text-muted)' }}>Todas as filas estão saudáveis</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -401,12 +401,12 @@ export default function DlqPage() {
                               >
                                 {job.originalQueue}
                               </span>
-                              <span className="text-[10px]" style={{ color: '#8B8A94' }}>
+                              <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>
                                 {formatDate(job.failedAt)}
                               </span>
                               {job.attemptsMade > 0 && (
                                 <span className="text-[9px] px-1.5 py-0.5 rounded"
-                                  style={{ background: 'rgba(139,138,148,0.1)', color: '#8B8A94' }}
+                                  style={{ background: 'rgba(139,138,148,0.1)', color: 'var(--crm-text-muted)' }}
                                 >
                                   {job.attemptsMade} tentativas
                                 </span>
