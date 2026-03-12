@@ -548,7 +548,7 @@ function StageColumn({ stage, leads, index, isDraggingAny, onClickLead }: {
   const stageIcon = STAGE_ICONS[stage.name] ?? '◉'
   return (
     <motion.div
-      className="shrink-0 w-[300px] md:w-[320px] rounded-xl flex flex-col max-h-[calc(100vh-22rem)] min-h-[320px]"
+      className="shrink-0 w-[260px] sm:w-[300px] md:w-[320px] rounded-xl flex flex-col max-h-[calc(100vh-22rem)] min-h-[320px] snap-start"
       style={{ background: 'var(--crm-surface)', border: '1px solid var(--crm-border)' }}
       variants={columnVariants} initial="hidden" animate="visible" custom={index}
     >
@@ -1266,7 +1266,7 @@ export default function PipelinePage() {
               {pipeline?.name ?? 'Pipeline'}
             </h1>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={handleImportPatients}
               disabled={importing}
@@ -1303,7 +1303,7 @@ export default function PipelinePage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2 mb-5">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-5">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-30" width="14" height="14" fill="none" stroke="var(--crm-text-muted)" strokeWidth="1.5" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -1348,7 +1348,7 @@ export default function PipelinePage() {
 
       {/* Kanban Board */}
       <DragDropContext onDragStart={() => setIsDragging(true)} onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 lg:-mx-6 lg:px-6 scrollbar-none">
+        <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-4 px-4 lg:-mx-6 lg:px-6 scrollbar-none snap-x snap-mandatory sm:snap-none">
           {[...stages].sort((a, b) => a.order - b.order).map((stage, index) => (
             <StageColumn key={stage.id} stage={stage} leads={getFilteredLeads(stage.id)} index={index}
               isDraggingAny={isDragging} onClickLead={setDrawerLeadId} />
