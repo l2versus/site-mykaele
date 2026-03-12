@@ -553,6 +553,8 @@ model CrmTenant {
   tasks                   CrmTask[]
   templates               CrmTemplate[]
   broadcasts              CrmBroadcast[]
+  npsConfig               CrmNpsConfig?
+  npsResponses            CrmNpsResponse[]
 }
 
 model CrmIntegration {
@@ -955,4 +957,43 @@ model CrmBroadcastRecipient {
 
   @@index([broadcastId, status])
   @@index([broadcastId])
+}
+
+// ============================================================
+// MÓDULO CRM v8.4 — NPS (NET PROMOTER SCORE)
+// ============================================================
+
+model CrmNpsConfig {
+  id                  String  @id @default(cuid())
+  tenantId            String  @unique
+  isActive            Boolean @default(false)
+  triggerType         String  @default("manual") // manual, conversation_closed, stage_changed
+  triggerStageId      String? // se triggerType = stage_changed
+  templateMessage     String  @db.Text @default("Olá {{nome}}! De 0 a 10, o quanto você recomendaria nosso serviço? Responda apenas com o número.")
+  thankYouPromoter    String  @db.Text @default("Muito obrigado pela avaliação! Ficamos felizes com sua satisfação. Considere nos avaliar no Google!")
+  thankYouNeutral     String  @db.Text @default("Obrigado pelo feedback! Vamos trabalhar para melhorar ainda mais.")
+  thankYouDetractor   String  @db.Text @default("Lamentamos que sua experiência não tenha sido ideal. Como podemos melhorar?")
+  cooldownDays        Int     @default(30) // não enviar NPS pro mesmo lead em X dias
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model CrmNpsResponse {
+  id             String   @id @default(cuid())
+  tenantId       String
+  leadId         String
+  leadName       String
+  score          Int      // 0-10
+  category       String   // promoter, neutral, detractor
+  feedback       String?  @db.Text // resposta aberta após o score
+  triggeredBy    String?  // automacao, manual, conversation_closed, stage_changed
+  sentAt         DateTime @default(now())
+  respondedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, category])
+  @@index([tenantId, leadId])
 }
