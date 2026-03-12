@@ -552,6 +552,7 @@ model CrmTenant {
   aiConfig                CrmAiConfig?
   tasks                   CrmTask[]
   templates               CrmTemplate[]
+  broadcasts              CrmBroadcast[]
 }
 
 model CrmIntegration {
@@ -909,4 +910,49 @@ model CrmTemplate {
 
   @@index([tenantId, type, isActive])
   @@index([tenantId, category])
+}
+
+// ============================================================
+// MÓDULO CRM v8.3 — TRANSMISSÃO EM MASSA (BROADCAST)
+// ============================================================
+
+model CrmBroadcast {
+  id              String    @id @default(cuid())
+  tenantId        String
+  name            String
+  templateId      String?
+  message         String    @db.Text
+  filters         Json?     // {status: "HOT", tags: ["vip"], stageId: "...", minScore: 50}
+  totalRecipients Int       @default(0)
+  sent            Int       @default(0)
+  delivered       Int       @default(0)
+  read            Int       @default(0)
+  failed          Int       @default(0)
+  status          String    @default("DRAFT") // DRAFT, SENDING, COMPLETED, CANCELLED, FAILED
+  createdBy       String
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+
+  tenant     CrmTenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recipients CrmBroadcastRecipient[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt(sort: Desc)])
+}
+
+model CrmBroadcastRecipient {
+  id           String    @id @default(cuid())
+  broadcastId  String
+  leadId       String
+  leadName     String
+  phone        String
+  status       String    @default("PENDING") // PENDING, SENT, FAILED
+  sentAt       DateTime?
+  errorMessage String?
+
+  broadcast CrmBroadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+
+  @@index([broadcastId, status])
+  @@index([broadcastId])
 }
