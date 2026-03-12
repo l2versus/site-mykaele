@@ -11,6 +11,57 @@ interface Package { id: string; totalSessions: number; usedSessions: number; sta
 const STEPS = ['Servico', 'Tipo', 'Local', 'Data', 'Horario', 'Creditos', 'Confirmacao']
 const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
+function ServiceCard({ service: s, selected, onSelect, fmtCur: fmt }: {
+  service: Service; selected: boolean; onSelect: () => void; fmtCur: (v: number) => string
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <button
+      onClick={onSelect}
+      className={`group w-full text-left relative overflow-hidden rounded-2xl transition-all duration-300 ${
+        selected ? 'ring-1 ring-[#b76e79]/30' : ''
+      }`}
+    >
+      <div className={`absolute inset-0 transition-all duration-300 ${selected ? 'bg-gradient-to-br from-[#b76e79]/10 to-white/[0.02]' : 'bg-gradient-to-br from-white/[0.04] to-white/[0.01] group-hover:from-white/[0.06] group-hover:to-white/[0.02]'}`} />
+      <div className="relative border border-white/[0.06] group-hover:border-white/[0.10] rounded-2xl p-5 transition-all">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="font-medium text-white/90 text-sm tracking-tight">{s.name}</div>
+            {s.description && (
+              <div className="mt-1">
+                <div
+                  className={`text-white/25 text-[11px] leading-relaxed ${expanded ? '' : 'line-clamp-3 sm:line-clamp-none'}`}
+                >
+                  {s.description}
+                </div>
+                {s.description.length > 100 && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); setExpanded(p => !p) }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); setExpanded(p => !p) } }}
+                    className="text-[#d4a0a7]/70 text-[10px] mt-0.5 inline-block sm:hidden hover:text-[#d4a0a7]"
+                  >
+                    {expanded ? 'Ver menos' : 'Ver mais'}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-end shrink-0 gap-1">
+            <span className="text-[#d4a0a7] font-semibold text-sm whitespace-nowrap">{fmt(s.price)}</span>
+            <span className="text-white/20 text-[10px] flex items-center gap-1 whitespace-nowrap">
+              <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              {s.duration}min
+            </span>
+          </div>
+        </div>
+      </div>
+    </button>
+  )
+}
+
 export default function AgendarPage() {
   const { fetchWithAuth } = useClient()
   const [step, setStep] = useState(0)
@@ -208,23 +259,13 @@ export default function AgendarPage() {
         <div className="space-y-2.5">
           <p className="text-white/25 text-xs">Qual servico deseja?</p>
           {services.map((s) => (
-            <button key={s.id} onClick={() => { setServiceId(s.id); setStep(1) }}
-              className={`group w-full text-left relative overflow-hidden rounded-2xl transition-all duration-300 ${
-                serviceId === s.id ? 'ring-1 ring-[#b76e79]/30' : ''
-              }`}>
-              <div className={`absolute inset-0 transition-all duration-300 ${serviceId === s.id ? 'bg-gradient-to-br from-[#b76e79]/10 to-white/[0.02]' : 'bg-gradient-to-br from-white/[0.04] to-white/[0.01] group-hover:from-white/[0.06] group-hover:to-white/[0.02]'}`} />
-              <div className="relative border border-white/[0.06] group-hover:border-white/[0.10] rounded-2xl p-5 transition-all">
-                <div className="font-medium text-white/90 text-sm tracking-tight">{s.name}</div>
-                {s.description && <div className="text-white/25 text-[11px] mt-1 leading-relaxed">{s.description}</div>}
-                <div className="flex items-center gap-3 mt-3">
-                  <span className="text-[#d4a0a7] font-semibold text-sm">{fmtCur(s.price)}</span>
-                  <span className="text-white/20 text-[10px] flex items-center gap-1">
-                    <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    {s.duration}min
-                  </span>
-                </div>
-              </div>
-            </button>
+            <ServiceCard
+              key={s.id}
+              service={s}
+              selected={serviceId === s.id}
+              onSelect={() => { setServiceId(s.id); setStep(1) }}
+              fmtCur={fmtCur}
+            />
           ))}
         </div>
       )}
