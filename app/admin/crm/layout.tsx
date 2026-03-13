@@ -5,6 +5,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 import { CrmToasts } from '@/components/crm/CrmToast'
+import { usePresence } from '@/hooks/use-presence'
+
+const TENANT_ID = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID ?? 'clinica-mykaele-procopio'
 
 const CRM_NAV = [
   {
@@ -199,6 +202,7 @@ const CRM_NAV = [
 
 export default function CrmLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  const { onlineUsers } = usePresence(TENANT_ID, pathname)
 
   return (
     <div className="-m-4 lg:-m-6 min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)]" style={{ background: 'var(--crm-bg)' }}>
@@ -243,6 +247,27 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
               </Link>
             )
           })}
+          {/* Online users indicator */}
+          {onlineUsers.length > 0 && (
+            <div className="ml-auto flex items-center gap-1.5 px-3 shrink-0">
+              <div className="flex -space-x-1.5">
+                {onlineUsers.slice(0, 4).map(u => (
+                  <div
+                    key={u.userId}
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ring-2 ring-(--crm-bg) relative"
+                    style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)' }}
+                    title={`${u.userName} — online`}
+                  >
+                    {u.userName.charAt(0).toUpperCase()}
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: '#2ECC8A', border: '1.5px solid var(--crm-bg)' }} />
+                  </div>
+                ))}
+              </div>
+              <span className="text-[10px] font-medium hidden lg:inline" style={{ color: 'var(--crm-text-muted)' }}>
+                {onlineUsers.length} online
+              </span>
+            </div>
+          )}
         </nav>
         {/* Portal target — páginas CRM renderizam ações aqui via createPortal */}
         <div id="crm-page-actions" />
