@@ -280,7 +280,7 @@ function DaySeparator({ label }: { label: string }) {
 
 // ━━━ Lead Panel (3rd column) ━━━
 
-function LeadPanel({ lead, onClose, stages, onStageChange, isMovingStage, aiInsight, isLoadingInsight, convSummary, isLoadingSummary }: {
+function LeadPanel({ lead, onClose, stages, onStageChange, isMovingStage, aiInsight, isLoadingInsight, convSummary, isLoadingSummary, scoreBreakdown }: {
   lead: LeadInfo
   onClose: () => void
   stages: StageInfo[]
@@ -290,9 +290,11 @@ function LeadPanel({ lead, onClose, stages, onStageChange, isMovingStage, aiInsi
   isLoadingInsight: boolean
   convSummary: { summary: string; sentiment: string; sentimentLabel: string; topics: string[]; nextAction: string; buyingSignal: string } | null
   isLoadingSummary: boolean
+  scoreBreakdown: { score: number; label: string; factors: Array<{ name: string; weight: number; score: number; label: string; detail: string }> } | null
 }) {
   const statusColor = getStatusColor(lead.status)
   const [stageOpen, setStageOpen] = useState(false)
+  const [scoreExpanded, setScoreExpanded] = useState(false)
 
   return (
     <div className="w-72 shrink-0 border-l flex flex-col overflow-y-auto crm-scroll"
@@ -411,14 +413,36 @@ function LeadPanel({ lead, onClose, stages, onStageChange, isMovingStage, aiInsi
 
       {/* Metrics */}
       <div className="p-4 border-b grid grid-cols-2 gap-2.5" style={{ borderColor: 'var(--crm-border)' }}>
-        <div className="rounded-xl p-2.5" style={{ background: 'var(--crm-surface-2)' }}>
-          <span className="text-[9px] uppercase tracking-wider block mb-1" style={{ color: 'var(--crm-text-muted)' }}>AI Score</span>
-          <span className="text-base font-bold" style={{
-            color: lead.aiScore != null ? (lead.aiScore >= 70 ? 'var(--crm-won)' : lead.aiScore >= 40 ? 'var(--crm-warm)' : 'var(--crm-hot)') : '#5A5A64'
+        <button
+          onClick={() => scoreBreakdown && setScoreExpanded(e => !e)}
+          className="rounded-xl p-2.5 text-left transition-all"
+          style={{
+            background: scoreExpanded ? 'rgba(212,175,55,0.06)' : 'var(--crm-surface-2)',
+            border: scoreExpanded ? '1px solid rgba(212,175,55,0.15)' : '1px solid transparent',
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--crm-text-muted)' }}>AI Score</span>
+            {scoreBreakdown && (
+              <svg
+                width="8" height="8" fill="none" stroke="var(--crm-text-muted)" strokeWidth="2" viewBox="0 0 24 24"
+                style={{ transform: scoreExpanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            )}
+          </div>
+          <span className="text-base font-bold block mt-1" style={{
+            color: (scoreBreakdown?.score ?? lead.aiScore) != null
+              ? ((scoreBreakdown?.score ?? lead.aiScore ?? 0) >= 70 ? 'var(--crm-won)' : (scoreBreakdown?.score ?? lead.aiScore ?? 0) >= 40 ? 'var(--crm-warm)' : 'var(--crm-hot)')
+              : '#5A5A64'
           }}>
-            {lead.aiScore != null ? lead.aiScore : '—'}
+            {scoreBreakdown?.score ?? lead.aiScore ?? '—'}
+            {scoreBreakdown?.label && (
+              <span className="text-[9px] font-medium ml-1.5 opacity-70">{scoreBreakdown.label}</span>
+            )}
           </span>
-        </div>
+        </button>
         <div className="rounded-xl p-2.5" style={{ background: 'var(--crm-surface-2)' }}>
           <span className="text-[9px] uppercase tracking-wider block mb-1" style={{ color: 'var(--crm-text-muted)' }}>Valor</span>
           <span className="text-sm font-bold" style={{ color: 'var(--crm-gold)' }}>
@@ -440,6 +464,56 @@ function LeadPanel({ lead, onClose, stages, onStageChange, isMovingStage, aiInsi
           </span>
         </div>
       </div>
+
+      {/* Score Breakdown */}
+      <AnimatePresence>
+        {scoreExpanded && scoreBreakdown && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="border-b overflow-hidden"
+            style={{ borderColor: 'var(--crm-border)' }}
+          >
+            <div className="px-4 pb-4 space-y-2">
+              {scoreBreakdown.factors.map(factor => (
+                <div key={factor.name} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium" style={{ color: 'var(--crm-text)' }}>
+                      {factor.name}
+                      <span className="ml-1 opacity-50 text-[9px]">{Math.round(factor.weight * 100)}%</span>
+                    </span>
+                    <span className="text-[10px] font-bold tabular-nums" style={{
+                      color: factor.score >= 70 ? 'var(--crm-won)' : factor.score >= 40 ? 'var(--crm-warm)' : 'var(--crm-hot)',
+                    }}>
+                      {factor.score}
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--crm-surface-2)' }}>
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${factor.score}%` }}
+                      transition={{ duration: 0.5, delay: 0.1 }}
+                      className="h-full rounded-full"
+                      style={{
+                        background: factor.score >= 70
+                          ? 'linear-gradient(90deg, #2ECC8A, #26A870)'
+                          : factor.score >= 40
+                            ? 'linear-gradient(90deg, #F0A500, #D49200)'
+                            : 'linear-gradient(90deg, #FF6B4A, #E0553A)',
+                      }}
+                    />
+                  </div>
+                  <p className="text-[9px] leading-relaxed" style={{ color: 'var(--crm-text-muted)' }}>
+                    {factor.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Golden Window */}
       {(lead.bestContactDays || lead.bestContactHours) && (
@@ -848,6 +922,10 @@ export default function InboxPage() {
     topics: string[]; nextAction: string; buyingSignal: string
   } | null>(null)
   const [isLoadingSummary, setIsLoadingSummary] = useState(false)
+  const [scoreBreakdown, setScoreBreakdown] = useState<{
+    score: number; label: string
+    factors: Array<{ name: string; weight: number; score: number; label: string; detail: string }>
+  } | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -996,6 +1074,22 @@ export default function InboxPage() {
     }
   }, [token])
 
+  // Score breakdown — AI Score com explainability
+  const fetchScoreBreakdown = useCallback(async (leadId: string) => {
+    if (!token) return
+    setScoreBreakdown(null)
+    try {
+      const res = await fetch(`/api/admin/crm/ai/score?leadId=${leadId}&tenantId=${TENANT_ID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.score !== undefined) setScoreBreakdown(data)
+    } catch {
+      // Silencioso
+    }
+  }, [token])
+
   useEffect(() => { fetchConversations(); fetchStages(); fetchTemplates() }, [fetchConversations, fetchStages, fetchTemplates])
 
   useEffect(() => {
@@ -1005,9 +1099,12 @@ export default function InboxPage() {
       setNextCursor(null)
       fetchMessages(selectedId)
 
-      // Buscar insight do lead selecionado
+      // Buscar insight e score do lead selecionado
       const conv = conversations.find(c => c.id === selectedId)
-      if (conv?.lead?.id) fetchAiInsight(conv.lead.id)
+      if (conv?.lead?.id) {
+        fetchAiInsight(conv.lead.id)
+        fetchScoreBreakdown(conv.lead.id)
+      }
 
       // Gerar smart replies para a conversa
       setSmartReplies([])
@@ -1740,6 +1837,7 @@ export default function InboxPage() {
             isLoadingInsight={isLoadingInsight}
             convSummary={convSummary}
             isLoadingSummary={isLoadingSummary}
+            scoreBreakdown={scoreBreakdown}
           />
         </div>
       )}
