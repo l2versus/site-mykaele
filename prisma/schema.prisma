@@ -560,6 +560,8 @@ model CrmTenant {
   marketingSpend          CrmMarketingSpend[]
   activityLogs            CrmActivityLog[]
   goals                   CrmGoal[]
+  botFlows                CrmBotFlow[]
+  botSessions             CrmBotSession[]
 }
 
 model CrmIntegration {
@@ -686,6 +688,7 @@ model Lead {
   conversations Conversation[]
   activities    LeadActivity[]
   tasks         CrmTask[]
+  botSessions   CrmBotSession[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -1138,4 +1141,51 @@ model CrmGoal {
 
   @@unique([tenantId, type, month, year])
   @@index([tenantId, year, month])
+}
+
+// ============================================================
+// MÓDULO CRM v8.4 — BOT BUILDER VISUAL (Fluxos de Atendimento)
+// Canvas visual React Flow — nós e arestas salvos em JSON.
+// Sessões rastreiam a posição de cada lead no fluxo ativo.
+// ============================================================
+
+model CrmBotFlow {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String
+  description   String?
+  triggerType   String   // "any_new_conversation" | "keyword" | "schedule"
+  triggerConfig Json?    // {keywords: ["oi","olá"], schedule: "08:00-18:00"}
+  nodes         Json     // ReactFlow Node[] serializado
+  edges         Json     // ReactFlow Edge[] serializado
+  isActive      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant   CrmTenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessions CrmBotSession[]
+
+  @@index([tenantId, isActive])
+  @@index([tenantId, triggerType, isActive])
+}
+
+model CrmBotSession {
+  id            String    @id @default(cuid())
+  tenantId      String
+  flowId        String
+  leadId        String
+  currentNodeId String
+  status        String    @default("active") // "active" | "completed" | "timeout" | "transferred"
+  data          Json?     // Dados coletados durante o fluxo (respostas, variáveis)
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  lastActivityAt DateTime @default(now())
+
+  tenant CrmTenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  flow   CrmBotFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  lead   Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([flowId, leadId, status]) // Um lead só pode ter uma sessão ativa por fluxo
+  @@index([tenantId, status])
+  @@index([leadId, status])
 }

@@ -3,6 +3,7 @@
 // Garante que NENHUMA mensagem WhatsApp seja perdida.
 import { prisma } from '@/lib/prisma'
 import { tryAutoReply } from '@/lib/auto-reply'
+import { tryBotReply } from '@/lib/bot-engine'
 import { fireAutomations } from '@/lib/automation-engine'
 
 interface WebhookPayload {
@@ -212,19 +213,39 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
     })
   })
 
-  // Fire-and-forget: auto-reply após a transaction (não bloqueia o webhook)
+  // Fire-and-forget: bot → auto-reply → automações (não bloqueia o webhook)
   const ctx = autoReplyCtx[0]
   if (ctx && !key.fromMe) {
-    void tryAutoReply({
-      tenantId,
-      leadId: ctx.leadId,
-      leadName: ctx.leadName,
-      channelId: ctx.channelId,
-      remoteJid: key.remoteJid,
-      fromMe: key.fromMe,
-    })
+    // 1. Tentar bot primeiro — se bot tratar, pula auto-reply
+    void (async () => {
+      try {
+        const botHandled = await tryBotReply({
+          tenantId,
+          leadId: ctx.leadId,
+          leadName: ctx.leadName,
+          channelId: ctx.channelId,
+          remoteJid: key.remoteJid,
+          messageContent: content,
+          isNewLead,
+        })
 
-    // Disparar automações por gatilho (non-blocking)
+        // 2. Se bot não tratou, fallback para auto-reply
+        if (!botHandled) {
+          await tryAutoReply({
+            tenantId,
+            leadId: ctx.leadId,
+            leadName: ctx.leadName,
+            channelId: ctx.channelId,
+            remoteJid: key.remoteJid,
+            fromMe: key.fromMe,
+          })
+        }
+      } catch (err) {
+        console.error('[webhook] Erro no fluxo bot/auto-reply:', err instanceof Error ? err.message : err)
+      }
+    })()
+
+    // 3. Disparar automações por gatilho (non-blocking, independente do bot)
     void fireAutomations('NEW_MESSAGE_RECEIVED', {
       tenantId,
       leadId: ctx.leadId,
