@@ -280,7 +280,7 @@ function DaySeparator({ label }: { label: string }) {
 
 // ━━━ Lead Panel (3rd column) ━━━
 
-function LeadPanel({ lead, onClose, stages, onStageChange, isMovingStage, aiInsight, isLoadingInsight }: {
+function LeadPanel({ lead, onClose, stages, onStageChange, isMovingStage, aiInsight, isLoadingInsight, convSummary, isLoadingSummary }: {
   lead: LeadInfo
   onClose: () => void
   stages: StageInfo[]
@@ -288,6 +288,8 @@ function LeadPanel({ lead, onClose, stages, onStageChange, isMovingStage, aiInsi
   isMovingStage: boolean
   aiInsight: { insight: string; sentiment: string; engagementLevel: string; detectedIntents: string[] } | null
   isLoadingInsight: boolean
+  convSummary: { summary: string; sentiment: string; sentimentLabel: string; topics: string[]; nextAction: string; buyingSignal: string } | null
+  isLoadingSummary: boolean
 }) {
   const statusColor = getStatusColor(lead.status)
   const [stageOpen, setStageOpen] = useState(false)
@@ -545,6 +547,97 @@ function LeadPanel({ lead, onClose, stages, onStageChange, isMovingStage, aiInsi
         )}
       </div>
 
+      {/* Conversation Summary */}
+      <div className="p-4 border-b" style={{ borderColor: 'var(--crm-border)' }}>
+        {isLoadingSummary ? (
+          <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(74,123,255,0.03)', border: '1px solid rgba(74,123,255,0.08)' }}>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded animate-pulse" style={{ background: 'rgba(74,123,255,0.2)' }} />
+              <div className="w-24 h-2.5 rounded animate-pulse" style={{ background: 'var(--crm-surface-2)' }} />
+            </div>
+            <div className="w-full h-2 rounded animate-pulse" style={{ background: 'var(--crm-surface-2)' }} />
+            <div className="w-2/3 h-2 rounded animate-pulse" style={{ background: 'var(--crm-surface-2)' }} />
+          </div>
+        ) : convSummary ? (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl p-3 space-y-2.5"
+            style={{
+              background: 'rgba(74,123,255,0.03)',
+              border: '1px solid rgba(74,123,255,0.1)',
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: 'var(--crm-cold)' }}>
+                <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                Resumo da Conversa
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{
+                background: convSummary.sentiment === 'positive' ? 'rgba(46,204,138,0.1)'
+                  : convSummary.sentiment === 'negative' ? 'rgba(255,107,74,0.1)'
+                  : convSummary.sentiment === 'urgent' ? 'rgba(255,107,74,0.15)'
+                  : 'rgba(139,138,148,0.1)',
+                color: convSummary.sentiment === 'positive' ? '#2ECC8A'
+                  : convSummary.sentiment === 'negative' || convSummary.sentiment === 'urgent' ? '#FF6B4A'
+                  : 'var(--crm-text-muted)',
+              }}>
+                {convSummary.sentimentLabel}
+              </span>
+            </div>
+
+            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--crm-text)' }}>
+              {convSummary.summary}
+            </p>
+
+            {convSummary.topics.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {convSummary.topics.map(topic => (
+                  <span key={topic} className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                    style={{ background: 'rgba(74,123,255,0.08)', color: 'var(--crm-cold)' }}
+                  >{topic}</span>
+                ))}
+              </div>
+            )}
+
+            {convSummary.nextAction && (
+              <div className="flex items-start gap-1.5 pt-1 border-t" style={{ borderColor: 'rgba(74,123,255,0.08)' }}>
+                <svg width="10" height="10" fill="none" stroke="var(--crm-gold)" strokeWidth="2" viewBox="0 0 24 24" className="mt-0.5 shrink-0">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+                <span className="text-[10px] leading-relaxed" style={{ color: 'var(--crm-text-muted)' }}>
+                  {convSummary.nextAction}
+                </span>
+              </div>
+            )}
+
+            {convSummary.buyingSignal && convSummary.buyingSignal !== 'none' && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-medium" style={{ color: 'var(--crm-text-muted)' }}>Sinal de compra:</span>
+                <span className="text-[9px] font-bold" style={{
+                  color: convSummary.buyingSignal === 'hot' ? 'var(--crm-hot)'
+                    : convSummary.buyingSignal === 'warm' ? 'var(--crm-warm)'
+                    : 'var(--crm-cold)',
+                }}>
+                  {convSummary.buyingSignal === 'hot' ? 'Forte' : convSummary.buyingSignal === 'warm' ? 'Moderado' : 'Fraco'}
+                </span>
+              </div>
+            )}
+          </motion.div>
+        ) : (
+          <div className="rounded-xl p-3 flex items-center gap-2" style={{ background: 'rgba(139,138,148,0.04)', border: '1px solid var(--crm-border)' }}>
+            <svg width="12" height="12" fill="none" stroke="var(--crm-text-muted)" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>Sem resumo disponível</span>
+          </div>
+        )}
+      </div>
+
       {/* Tags */}
       {lead.tags.length > 0 && (
         <div className="p-4 border-b" style={{ borderColor: 'var(--crm-border)' }}>
@@ -750,6 +843,11 @@ export default function InboxPage() {
   const [isLoadingInsight, setIsLoadingInsight] = useState(false)
   const [smartReplies, setSmartReplies] = useState<string[]>([])
   const [isLoadingSmartReplies, setIsLoadingSmartReplies] = useState(false)
+  const [convSummary, setConvSummary] = useState<{
+    summary: string; sentiment: string; sentimentLabel: string
+    topics: string[]; nextAction: string; buyingSignal: string
+  } | null>(null)
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -879,6 +977,25 @@ export default function InboxPage() {
     }
   }, [token])
 
+  // Conversation summary — resumo automático via Gemini
+  const fetchConvSummary = useCallback(async (convId: string) => {
+    if (!token) return
+    setIsLoadingSummary(true)
+    setConvSummary(null)
+    try {
+      const res = await fetch(`/api/admin/crm/conversations/summary?conversationId=${convId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.summary) setConvSummary(data)
+    } catch {
+      // Silencioso
+    } finally {
+      setIsLoadingSummary(false)
+    }
+  }, [token])
+
   useEffect(() => { fetchConversations(); fetchStages(); fetchTemplates() }, [fetchConversations, fetchStages, fetchTemplates])
 
   useEffect(() => {
@@ -895,9 +1012,12 @@ export default function InboxPage() {
       // Gerar smart replies para a conversa
       setSmartReplies([])
       fetchSmartReplies(selectedId)
+
+      // Gerar resumo da conversa
+      fetchConvSummary(selectedId)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, fetchMessages, fetchAiInsight, fetchSmartReplies])
+  }, [selectedId, fetchMessages, fetchAiInsight, fetchSmartReplies, fetchConvSummary])
 
   // SSE: real-time updates — cirúrgico, sem refetch total
   useCrmStream(TENANT_ID, useCallback((event) => {
@@ -1618,6 +1738,8 @@ export default function InboxPage() {
             isMovingStage={isMovingStage}
             aiInsight={aiInsight}
             isLoadingInsight={isLoadingInsight}
+            convSummary={convSummary}
+            isLoadingSummary={isLoadingSummary}
           />
         </div>
       )}
