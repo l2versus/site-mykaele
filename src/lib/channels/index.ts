@@ -5,6 +5,7 @@ import type { ChannelProvider, ChannelType } from './types'
 import { whatsappProvider } from './whatsapp'
 import { instagramProvider } from './instagram'
 import { facebookProvider } from './facebook'
+import { telegramProvider } from './telegram'
 
 /** Mapa de provedores registrados */
 const providers = new Map<ChannelType, ChannelProvider>()
@@ -13,6 +14,7 @@ const providers = new Map<ChannelType, ChannelProvider>()
 providers.set('whatsapp', whatsappProvider)
 providers.set('instagram', instagramProvider)
 providers.set('facebook', facebookProvider)
+providers.set('telegram', telegramProvider)
 
 /**
  * Retorna o provedor de canal pelo tipo.
