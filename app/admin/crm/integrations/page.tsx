@@ -1000,7 +1000,7 @@ function IntegrationConfigModal({
                   onChange={e => setN8nUrl(e.target.value)}
                   placeholder="https://n8n.suaempresa.com"
                   className="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none transition-all focus:ring-1"
-                  style={{ background: 'var(--crm-bg)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)', focusRingColor: card.accentColor }}
+                  style={{ background: 'var(--crm-bg)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
                 />
                 <p className="text-[10px] mt-1" style={{ color: 'var(--crm-text-muted)' }}>Ex: http://187.77.226.144:5678</p>
               </div>

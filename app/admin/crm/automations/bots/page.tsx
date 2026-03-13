@@ -230,9 +230,9 @@ function EndNode({ data, selected }: NodeProps) {
           {(data as Record<string, unknown>).transfer ? 'Transferir' : 'Fim'}
         </span>
       </div>
-      {(data as Record<string, unknown>).message && (
+      {typeof (data as Record<string, unknown>).message === 'string' && (
         <p className="text-xs mt-1 line-clamp-2" style={{ color: 'var(--crm-text)' }}>
-          {(data as Record<string, unknown>).message as string}
+          {String((data as Record<string, unknown>).message)}
         </p>
       )}
     </div>

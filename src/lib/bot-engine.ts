@@ -6,6 +6,7 @@
 //
 // Node types: TRIGGER, MESSAGE, QUESTION, CONDITION, ACTION, DELAY, END
 
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { evolutionApi } from '@/lib/evolution-api'
 
@@ -203,7 +204,7 @@ async function advanceToNode(
         where: { id: session.id },
         data: {
           currentNodeId: node.id,
-          data: session.data as Record<string, unknown>,
+          data: session.data as unknown as Prisma.InputJsonValue,
           lastActivityAt: new Date(),
         },
       })
@@ -281,7 +282,7 @@ async function advanceToNode(
         where: { id: session.id },
         data: {
           currentNodeId: node.id,
-          data: session.data as Record<string, unknown>,
+          data: session.data as unknown as Prisma.InputJsonValue,
           lastActivityAt: new Date(),
         },
       })
@@ -482,9 +483,9 @@ export async function tryBotReply(params: {
         // Continua abaixo para verificar novos gatilhos
       } else {
         // Processar resposta no fluxo atual
-        const nodes = activeSession.flow.nodes as FlowNode[]
-        const edges = activeSession.flow.edges as FlowEdge[]
-        const sessionData = (activeSession.data as SessionData) ?? { answers: {}, variables: {} }
+        const nodes = activeSession.flow.nodes as unknown as FlowNode[]
+        const edges = activeSession.flow.edges as unknown as FlowEdge[]
+        const sessionData = (activeSession.data as unknown as SessionData) ?? { answers: {}, variables: {} }
 
         ctx.flowId = activeSession.flowId
 
@@ -548,8 +549,8 @@ export async function tryBotReply(params: {
       // para gatilho "any_new_conversation", só ativar se é conversa nova
       if (flow.triggerType === 'any_new_conversation' && !isNewLead) continue
 
-      const nodes = flow.nodes as FlowNode[]
-      const edges = flow.edges as FlowEdge[]
+      const nodes = flow.nodes as unknown as FlowNode[]
+      const edges = flow.edges as unknown as FlowEdge[]
       const triggerNode = findTriggerNode(nodes)
       if (!triggerNode) continue
 
