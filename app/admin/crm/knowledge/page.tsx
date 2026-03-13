@@ -400,7 +400,7 @@ interface ModalProps {
   isOpen: boolean
   onClose: () => void
   editingSource: KnowledgeSource | null
-  onSave: (source: Partial<KnowledgeSource>) => void
+  onSave: (source: Partial<KnowledgeSource>, file?: File) => void
 }
 
 function AddEditModal({ isOpen, onClose, editingSource, onSave }: ModalProps) {
@@ -413,23 +413,43 @@ function AddEditModal({ isOpen, onClose, editingSource, onSave }: ModalProps) {
   const [tags, setTags] = useState<string[]>(editingSource?.tags ?? [])
   const [isDragging, setIsDragging] = useState(false)
   const [fileName, setFileName] = useState(editingSource?.sourceFile ?? '')
+  const [fileObj, setFileObj] = useState<File | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null)
 
   const isEditing = editingSource !== null
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!name.trim()) return
-    onSave({
-      id: editingSource?.id,
-      name: name.trim(),
-      type,
-      content: type === 'URL' ? '' : content,
-      sourceUrl: type === 'URL' ? url : null,
-      sourceFile: type === 'FILE' ? fileName : null,
-      language,
-      tags,
-    })
+    if (type === 'FILE' && !fileObj && !editingSource) return
+    if (type === 'URL' && !url.trim()) return
+
+    setUploadProgress(type === 'FILE' ? 'Enviando arquivo...' : type === 'URL' ? 'Extraindo conteudo...' : 'Processando...')
+
+    // Para tipo FILE, ler conteúdo de TXT/CSV no client (PDF vai via FormData ao server)
+    let fileContent = content
+    if (type === 'FILE' && fileObj) {
+      const ext = fileObj.name.split('.').pop()?.toLowerCase() ?? ''
+      if (ext === 'txt' || ext === 'csv') {
+        fileContent = await fileObj.text()
+      }
+    }
+
+    onSave(
+      {
+        id: editingSource?.id,
+        name: name.trim(),
+        type,
+        content: type === 'URL' ? url : fileContent,
+        sourceUrl: type === 'URL' ? url : null,
+        sourceFile: type === 'FILE' ? fileName : null,
+        language,
+        tags,
+      },
+      type === 'FILE' ? fileObj ?? undefined : undefined
+    )
+    setUploadProgress(null)
     onClose()
-  }, [name, type, content, url, fileName, language, tags, editingSource, onSave, onClose])
+  }, [name, type, content, url, fileName, language, tags, editingSource, onSave, onClose, fileObj])
 
   const handleTagAdd = useCallback(() => {
     const trimmed = tagInput.trim().toLowerCase()
@@ -458,6 +478,7 @@ function AddEditModal({ isOpen, onClose, editingSource, onSave }: ModalProps) {
     const files = e.dataTransfer.files
     if (files.length > 0) {
       setFileName(files[0].name)
+      setFileObj(files[0])
     }
   }, [])
 
@@ -465,6 +486,7 @@ function AddEditModal({ isOpen, onClose, editingSource, onSave }: ModalProps) {
     const files = e.target.files
     if (files && files.length > 0) {
       setFileName(files[0].name)
+      setFileObj(files[0])
     }
   }, [])
 
@@ -605,7 +627,7 @@ function AddEditModal({ isOpen, onClose, editingSource, onSave }: ModalProps) {
                     <input
                       id="file-input"
                       type="file"
-                      accept=".pdf,.txt,.docx"
+                      accept=".pdf,.txt,.csv,.docx"
                       className="hidden"
                       onChange={handleFileSelect}
                     />
@@ -621,7 +643,7 @@ function AddEditModal({ isOpen, onClose, editingSource, onSave }: ModalProps) {
                             Arraste um arquivo ou clique para selecionar
                           </p>
                           <p className="text-[11px]" style={{ color: 'var(--crm-text-muted)', opacity: 0.6 }}>
-                            PDF, TXT ou DOCX ate 10MB
+                            PDF, TXT, CSV ou DOCX ate 10MB
                           </p>
                         </>
                       )}
@@ -749,7 +771,7 @@ function AddEditModal({ isOpen, onClose, editingSource, onSave }: ModalProps) {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={!name.trim()}
+                disabled={!name.trim() || !!uploadProgress || (type === 'FILE' && !fileObj && !editingSource)}
                 className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{
                   background: 'linear-gradient(135deg, #D4AF37, #B8962E)',
@@ -758,7 +780,14 @@ function AddEditModal({ isOpen, onClose, editingSource, onSave }: ModalProps) {
                 onMouseEnter={(e) => { if (name.trim()) e.currentTarget.style.opacity = '0.9' }}
                 onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
               >
-                Processar e Salvar
+                {uploadProgress ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    {uploadProgress}
+                  </>
+                ) : (
+                  'Processar e Salvar'
+                )}
               </button>
             </div>
           </motion.div>
@@ -1088,10 +1117,11 @@ export default function KnowledgeBasePage() {
     setModalOpen(true)
   }, [])
 
-  const handleSave = useCallback(async (partial: Partial<KnowledgeSource>) => {
+  const handleSave = useCallback(async (partial: Partial<KnowledgeSource>, file?: File) => {
     if (!token) return
     try {
       if (partial.id) {
+        // PATCH — atualizar fonte existente
         const res = await fetch(`/api/admin/crm/knowledge`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -1103,8 +1133,25 @@ export default function KnowledgeBasePage() {
           }),
         })
         if (!res.ok) throw new Error('Falha ao atualizar')
-        addToast('Fonte atualizada')
+        addToast('Fonte atualizada! Embeddings sendo regenerados...')
+      } else if (file && file.name.match(/\.pdf$/i)) {
+        // FILE (PDF) — upload via FormData ao endpoint /upload
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('name', partial.name ?? 'Sem nome')
+        formData.append('tenantId', TENANT_ID)
+        const res = await fetch('/api/admin/crm/knowledge/upload', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || 'Falha ao enviar arquivo')
+        }
+        addToast('Arquivo processado! Embeddings gerados com sucesso.')
       } else {
+        // TEXT, URL ou FILE (txt/csv) — POST com conteudo inline
         const res = await fetch(`/api/admin/crm/knowledge?tenantId=${TENANT_ID}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -1112,11 +1159,12 @@ export default function KnowledgeBasePage() {
             name: partial.name,
             content: partial.content,
             sourceFile: partial.sourceFile,
+            sourceUrl: partial.sourceUrl,
             tenantId: TENANT_ID,
           }),
         })
         if (!res.ok) throw new Error('Falha ao criar')
-        addToast('Fonte criada')
+        addToast('Fonte criada! Embeddings gerados automaticamente.')
       }
       fetchSources()
     } catch (err) {
@@ -1170,14 +1218,55 @@ export default function KnowledgeBasePage() {
     setSelectedIds(new Set())
   }, [selectedIds])
 
-  const handleBulkReprocess = useCallback(() => {
+  const handleBulkReprocess = useCallback(async () => {
+    if (!token) return
+    // Atualizar UI otimisticamente
     setSources((prev) =>
       prev.map((s) =>
         selectedIds.has(s.id) ? { ...s, embeddingStatus: 'processing' as const } : s
       )
     )
+    const ids = Array.from(selectedIds)
     setSelectedIds(new Set())
-  }, [selectedIds])
+
+    let successCount = 0
+    for (const id of ids) {
+      try {
+        const res = await fetch('/api/admin/crm/knowledge/reprocess', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ id }),
+        })
+        if (res.ok) successCount++
+      } catch {
+        // continua para o proximo
+      }
+    }
+    addToast(`${successCount} fonte(s) reprocessada(s)`)
+    fetchSources()
+  }, [selectedIds, token, addToast, fetchSources])
+
+  const handleReprocessSingle = useCallback(async (id: string) => {
+    if (!token) return
+    setSources((prev) =>
+      prev.map((s) => s.id === id ? { ...s, embeddingStatus: 'processing' as const } : s)
+    )
+    try {
+      const res = await fetch('/api/admin/crm/knowledge/reprocess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id }),
+      })
+      if (res.ok) {
+        addToast('Embeddings regenerados com sucesso')
+      } else {
+        addToast('Falha ao reprocessar', 'error')
+      }
+    } catch {
+      addToast('Erro de conexao', 'error')
+    }
+    fetchSources()
+  }, [token, addToast, fetchSources])
 
   const handleOpenDrawer = useCallback((source: KnowledgeSource) => {
     setDrawerSource(source)
@@ -1374,7 +1463,7 @@ export default function KnowledgeBasePage() {
             <div
               className="grid items-center px-4 py-3 border-b text-[11px] font-semibold uppercase tracking-wider"
               style={{
-                gridTemplateColumns: '40px 1fr 72px 80px 120px 80px 120px 100px 80px 72px',
+                gridTemplateColumns: '40px 1fr 72px 80px 120px 80px 120px 100px 80px 100px',
                 borderColor: 'var(--crm-border)',
                 color: 'var(--crm-text-muted)',
                 background: 'var(--crm-surface-2)',
@@ -1425,7 +1514,7 @@ export default function KnowledgeBasePage() {
                       variants={listItem}
                       className="grid items-center px-4 py-3 border-b transition-colors duration-150"
                       style={{
-                        gridTemplateColumns: '40px 1fr 72px 80px 120px 80px 120px 100px 80px 72px',
+                        gridTemplateColumns: '40px 1fr 72px 80px 120px 80px 120px 100px 80px 100px',
                         borderColor: 'var(--crm-border)',
                         background: isSelected ? 'rgba(212,175,55,0.04)' : 'transparent',
                       }}
@@ -1534,21 +1623,38 @@ export default function KnowledgeBasePage() {
                         {formatDate(source.updatedAt)}
                       </div>
 
-                      {/* Status */}
+                      {/* Status (embedding) */}
                       <div className="flex items-center justify-center">
                         <span className="flex items-center gap-1.5 text-[10px] font-medium">
                           <span
-                            className="w-1.5 h-1.5 rounded-full"
-                            style={{ background: source.isActive ? '#2ECC8A' : 'var(--crm-text-muted)' }}
+                            className={`w-1.5 h-1.5 rounded-full ${source.embeddingStatus === 'processing' ? 'animate-pulse' : ''}`}
+                            style={{ background: EMBEDDING_LABELS[source.embeddingStatus]?.color ?? 'var(--crm-text-muted)' }}
                           />
-                          <span style={{ color: source.isActive ? '#2ECC8A' : 'var(--crm-text-muted)' }}>
-                            {source.isActive ? 'Ativo' : 'Inativo'}
+                          <span style={{ color: EMBEDDING_LABELS[source.embeddingStatus]?.color ?? 'var(--crm-text-muted)' }}>
+                            {EMBEDDING_LABELS[source.embeddingStatus]?.label ?? (source.isActive ? 'Ativo' : 'Inativo')}
                           </span>
                         </span>
                       </div>
 
                       {/* Actions */}
                       <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleReprocessSingle(source.id) }}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                          style={{ color: source.embeddingStatus === 'processing' ? 'var(--crm-gold)' : 'var(--crm-text-muted)' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--crm-gold-subtle)'
+                            e.currentTarget.style.color = 'var(--crm-gold)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent'
+                            e.currentTarget.style.color = source.embeddingStatus === 'processing' ? 'var(--crm-gold)' : 'var(--crm-text-muted)'
+                          }}
+                          title="Reprocessar embeddings"
+                          disabled={source.embeddingStatus === 'processing'}
+                        >
+                          <RefreshIcon size={12} color="currentColor" />
+                        </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleOpenEdit(source) }}
                           className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
