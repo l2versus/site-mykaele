@@ -557,6 +557,7 @@ model CrmTenant {
   npsResponses            CrmNpsResponse[]
   proposals               CrmProposal[]
   teamMembers             CrmTeamMember[]
+  marketingSpend          CrmMarketingSpend[]
 }
 
 model CrmIntegration {
@@ -1072,4 +1073,25 @@ model CrmProposalItem {
   proposal CrmProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
 
   @@index([proposalId])
+}
+
+// ============================================================
+// MÓDULO RELATÓRIOS — Investimento em Marketing (ROI)
+// ============================================================
+
+model CrmMarketingSpend {
+  id        String   @id @default(cuid())
+  tenantId  String
+  month     Int
+  year      Int
+  amount    Float
+  source    String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, month, year, source])
+  @@index([tenantId, year, month])
 }
