@@ -21,6 +21,7 @@ const PUBLIC_PATHS = [
   '/api/webhooks/instagram',
   '/api/webhooks/facebook',
   '/api/webhooks/telegram',
+  '/api/webhooks/email',
 ]
 
 // Prefixos de rotas públicas
