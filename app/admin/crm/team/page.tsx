@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 
 /* ── types ─────────────────────────────────────── */
 
@@ -14,11 +15,33 @@ interface TeamMember {
   role: string
   avatar: string | null
   isActive: boolean
+  commissionPercent: number | null
   invitedBy: string | null
   joinedAt: string | null
   createdAt: string
   assignedLeads: number
   assignedConversations: number
+}
+
+interface MemberStat {
+  memberId: string
+  name: string
+  wonCount: number
+  wonValue: number
+  commissionPercent: number | null
+  commission: number | null
+}
+
+interface DailyMsg { day: string; count: number }
+
+interface TeamStats {
+  wonLeadsMonth: number
+  wonValueMonth: number
+  lostLeadsMonth: number
+  messagesSentWeek: number
+  pendingTasks: number
+  dailyMessages: DailyMsg[]
+  memberStats: MemberStat[]
 }
 
 /* ── constants ─────────────────────────────────── */
@@ -27,7 +50,7 @@ const TENANT_ID = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID || 'clinica-mykaele-
 
 const ROLE_MAP: Record<string, { label: string; color: string; description: string }> = {
   owner: { label: 'Proprietario', color: 'var(--crm-gold)', description: 'Acesso total ao sistema' },
-  admin: { label: 'Administrador', color: 'var(--crm-hot)', description: 'Gerencia equipe, configs e todos os leads' },
+  admin: { label: 'Administrador', color: 'var(--crm-hot)', description: 'Gerencia equipe e configs' },
   manager: { label: 'Gerente', color: 'var(--crm-warm)', description: 'Visualiza relatorios e gerencia agentes' },
   agent: { label: 'Agente', color: 'var(--crm-cold)', description: 'Atende leads e conversas atribuidas' },
 }
@@ -42,8 +65,16 @@ function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
+const currencyFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
+
+function formatDay(dayStr: string) {
+  const d = new Date(dayStr + 'T12:00:00')
+  const wk = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
+  return wk[d.getDay()]
+}
+
 async function apiFetch(path: string, opts?: RequestInit) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null
   const res = await fetch(path, {
     ...opts,
     headers: {
@@ -61,10 +92,12 @@ async function apiFetch(path: string, opts?: RequestInit) {
 
 export default function TeamPage() {
   const [members, setMembers] = useState<TeamMember[]>([])
+  const [stats, setStats] = useState<TeamStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [showInactive, setShowInactive] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null)
+  const [expandedMember, setExpandedMember] = useState<string | null>(null)
   const [actionPortal, setActionPortal] = useState<HTMLElement | null>(null)
 
   useEffect(() => {
@@ -79,19 +112,26 @@ export default function TeamPage() {
     setLoading(false)
   }, [showInactive])
 
-  useEffect(() => { loadMembers() }, [loadMembers])
+  const loadStats = useCallback(async () => {
+    const data = await apiFetch(`/api/admin/crm/team/stats?tenantId=${TENANT_ID}`)
+    if (!data.error) setStats(data)
+  }, [])
+
+  useEffect(() => { loadMembers(); loadStats() }, [loadMembers, loadStats])
 
   const handleRemove = async (member: TeamMember) => {
     if (member.role === 'owner') return alert('Nao e possivel remover o proprietario')
     if (!confirm(`Remover ${member.name} da equipe? Leads e conversas atribuidos serao desvinculados.`)) return
     await apiFetch(`/api/admin/crm/team/${member.id}`, { method: 'DELETE' })
     loadMembers()
+    loadStats()
   }
 
   const handleSaved = () => {
     setShowAdd(false)
     setEditingMember(null)
     loadMembers()
+    loadStats()
   }
 
   /* Stats */
@@ -106,8 +146,11 @@ export default function TeamPage() {
     members: members.filter(m => m.role === role),
   })).filter(g => g.members.length > 0)
 
+  /* Max daily messages for bar chart scale */
+  const maxDailyMsg = stats ? Math.max(...stats.dailyMessages.map(d => d.count), 1) : 1
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-5xl mx-auto">
       {/* Portal: header actions */}
       {actionPortal && createPortal(
         <div className="flex items-center gap-2 px-4 py-2">
@@ -123,26 +166,88 @@ export default function TeamPage() {
         actionPortal
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* ── Global Stats ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {[
-          { label: 'Membros Ativos', value: activeCount, color: 'var(--crm-won)' },
-          { label: 'Leads Atribuidos', value: totalLeads, color: 'var(--crm-gold)' },
-          { label: 'Conversas Ativas', value: totalConvs, color: 'var(--crm-cold)' },
-          { label: 'Funcoes', value: new Set(members.filter(m => m.isActive).map(m => m.role)).size, color: 'var(--crm-text-muted)' },
+          { label: 'Membros Ativos', value: String(activeCount), color: 'var(--crm-won)' },
+          { label: 'Leads Atribuidos', value: String(totalLeads), color: 'var(--crm-gold)' },
+          { label: 'Conversas Ativas', value: String(totalConvs), color: 'var(--crm-cold)' },
+          { label: 'Ganhos no Mes', value: stats ? currencyFmt.format(stats.wonValueMonth) : '—', color: 'var(--crm-won)' },
+          { label: 'Tarefas Pendentes', value: stats ? String(stats.pendingTasks) : '—', color: 'var(--crm-warm)' },
         ].map(stat => (
           <div
             key={stat.label}
             className="rounded-xl p-4 border"
             style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)' }}
           >
-            <p className="text-xs font-medium mb-1" style={{ color: 'var(--crm-text-muted)' }}>{stat.label}</p>
-            <p className="text-xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
+            <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--crm-text-muted)' }}>{stat.label}</p>
+            <p className="text-lg font-bold" style={{ color: stat.color }}>{stat.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Show inactive toggle */}
+      {/* ── Messages Chart (Week) ── */}
+      {stats && stats.dailyMessages.length > 0 && (
+        <div className="rounded-xl border p-4" style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-xs font-semibold" style={{ color: 'var(--crm-text)' }}>Mensagens Enviadas</h3>
+              <p className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>Ultimos 7 dias · {stats.messagesSentWeek} total</p>
+            </div>
+          </div>
+          <div className="flex items-end gap-2 h-24">
+            {stats.dailyMessages.map(d => {
+              const pct = d.count / maxDailyMsg
+              return (
+                <div key={d.day} className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-[9px] font-semibold" style={{ color: 'var(--crm-text-muted)' }}>{d.count}</span>
+                  <div
+                    className="w-full rounded-t-md transition-all"
+                    style={{
+                      height: `${Math.max(pct * 64, 4)}px`,
+                      background: d.count > 0 ? 'var(--crm-gold)' : 'var(--crm-border)',
+                      opacity: d.count > 0 ? 1 : 0.3,
+                    }}
+                  />
+                  <span className="text-[9px]" style={{ color: 'var(--crm-text-muted)' }}>{formatDay(d.day)}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Ranking (Won this month) ── */}
+      {stats && stats.memberStats.filter(m => m.wonCount > 0).length > 0 && (
+        <div className="rounded-xl border p-4" style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)' }}>
+          <h3 className="text-xs font-semibold mb-3" style={{ color: 'var(--crm-text)' }}>Ranking — Leads Ganhos no Mes</h3>
+          <div className="space-y-2">
+            {stats.memberStats
+              .filter(m => m.wonCount > 0)
+              .sort((a, b) => b.wonValue - a.wonValue)
+              .map((m, i) => (
+                <div key={m.memberId} className="flex items-center gap-3 py-2 px-3 rounded-lg"
+                  style={{ background: i === 0 ? 'var(--crm-gold-subtle)' : 'transparent' }}>
+                  <span className="text-sm font-bold w-6 text-center"
+                    style={{ color: i === 0 ? 'var(--crm-gold)' : 'var(--crm-text-muted)' }}>
+                    {i === 0 ? '🏆' : `${i + 1}`}
+                  </span>
+                  <span className="text-xs font-medium flex-1" style={{ color: 'var(--crm-text)' }}>{m.name}</span>
+                  <span className="text-xs font-medium" style={{ color: 'var(--crm-text-muted)' }}>{m.wonCount} ganhos</span>
+                  <span className="text-xs font-bold" style={{ color: 'var(--crm-won)' }}>{currencyFmt.format(m.wonValue)}</span>
+                  {m.commission !== null && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-md font-medium"
+                      style={{ background: 'var(--crm-gold-subtle)', color: 'var(--crm-gold)' }}>
+                      {currencyFmt.format(m.commission)} ({m.commissionPercent}%)
+                    </span>
+                  )}
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Show inactive toggle ── */}
       <div className="flex items-center gap-3">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
@@ -155,7 +260,7 @@ export default function TeamPage() {
         </label>
       </div>
 
-      {/* Members grouped by role */}
+      {/* ── Members grouped by role ── */}
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
@@ -190,14 +295,20 @@ export default function TeamPage() {
                 <span className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>{group.info.description}</span>
               </div>
               <div className="space-y-2">
-                {group.members.map(member => (
-                  <MemberCard
-                    key={member.id}
-                    member={member}
-                    onEdit={() => setEditingMember(member)}
-                    onRemove={() => handleRemove(member)}
-                  />
-                ))}
+                {group.members.map(member => {
+                  const memberStat = stats?.memberStats.find(s => s.memberId === member.id)
+                  return (
+                    <MemberCard
+                      key={member.id}
+                      member={member}
+                      memberStat={memberStat ?? null}
+                      isExpanded={expandedMember === member.id}
+                      onToggleExpand={() => setExpandedMember(expandedMember === member.id ? null : member.id)}
+                      onEdit={() => setEditingMember(member)}
+                      onRemove={() => handleRemove(member)}
+                    />
+                  )
+                })}
               </div>
             </div>
           ))}
@@ -258,27 +369,35 @@ export default function TeamPage() {
       </div>
 
       {/* Modals */}
-      {(showAdd || editingMember) && (
-        <MemberFormModal
-          member={editingMember}
-          onClose={() => { setShowAdd(false); setEditingMember(null) }}
-          onSaved={handleSaved}
-        />
-      )}
+      <AnimatePresence>
+        {(showAdd || editingMember) && (
+          <MemberFormModal
+            member={editingMember}
+            onClose={() => { setShowAdd(false); setEditingMember(null) }}
+            onSaved={handleSaved}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
 
 /* ══════════════════════════════════════════════════════
-   MEMBER CARD
+   MEMBER CARD (enhanced with metrics)
    ══════════════════════════════════════════════════════ */
 
 function MemberCard({
   member,
+  memberStat,
+  isExpanded,
+  onToggleExpand,
   onEdit,
   onRemove,
 }: {
   member: TeamMember
+  memberStat: MemberStat | null
+  isExpanded: boolean
+  onToggleExpand: () => void
   onEdit: () => void
   onRemove: () => void
 }) {
@@ -286,14 +405,15 @@ function MemberCard({
 
   return (
     <div
-      className="rounded-xl border p-4 transition-all"
+      className="rounded-xl border transition-all"
       style={{
         background: 'var(--crm-surface)',
-        borderColor: 'var(--crm-border)',
+        borderColor: isExpanded ? 'var(--crm-gold)30' : 'var(--crm-border)',
         opacity: member.isActive ? 1 : 0.5,
       }}
     >
-      <div className="flex items-center gap-3">
+      {/* Main row */}
+      <div className="p-4 flex items-center gap-3 cursor-pointer" onClick={onToggleExpand}>
         {/* Avatar */}
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
@@ -306,34 +426,42 @@ function MemberCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-medium truncate" style={{ color: 'var(--crm-text)' }}>{member.name}</h3>
+            <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold"
+              style={{ background: `${roleInfo.color}14`, color: roleInfo.color }}>{roleInfo.label}</span>
             {!member.isActive && (
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold" style={{ background: 'var(--crm-hot)18', color: 'var(--crm-hot)' }}>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold" style={{ background: 'rgba(255,107,74,0.1)', color: 'var(--crm-hot)' }}>
                 Inativo
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3 text-xs mt-0.5" style={{ color: 'var(--crm-text-muted)' }}>
+          <div className="flex items-center gap-3 text-[11px] mt-0.5" style={{ color: 'var(--crm-text-muted)' }}>
             <span>{member.email}</span>
-            {member.phone && <span>{member.phone}</span>}
+            {member.phone && <span className="hidden sm:inline">{member.phone}</span>}
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="hidden sm:flex items-center gap-4 shrink-0">
+        {/* Quick Stats */}
+        <div className="hidden sm:flex items-center gap-5 shrink-0">
           <div className="text-center">
             <p className="text-sm font-bold" style={{ color: 'var(--crm-text)' }}>{member.assignedLeads}</p>
-            <p className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>Leads</p>
+            <p className="text-[9px]" style={{ color: 'var(--crm-text-muted)' }}>Leads</p>
           </div>
           <div className="text-center">
             <p className="text-sm font-bold" style={{ color: 'var(--crm-text)' }}>{member.assignedConversations}</p>
-            <p className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>Conversas</p>
+            <p className="text-[9px]" style={{ color: 'var(--crm-text-muted)' }}>Conversas</p>
           </div>
+          {memberStat && memberStat.wonCount > 0 && (
+            <div className="text-center">
+              <p className="text-sm font-bold" style={{ color: 'var(--crm-won)' }}>{currencyFmt.format(memberStat.wonValue)}</p>
+              <p className="text-[9px]" style={{ color: 'var(--crm-text-muted)' }}>{memberStat.wonCount} ganhos</p>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-1 shrink-0">
           <button
-            onClick={onEdit}
+            onClick={(e) => { e.stopPropagation(); onEdit() }}
             className="p-2 rounded-lg transition-colors hover:bg-white/5"
             title="Editar"
           >
@@ -344,7 +472,7 @@ function MemberCard({
           </button>
           {member.role !== 'owner' && member.isActive && (
             <button
-              onClick={onRemove}
+              onClick={(e) => { e.stopPropagation(); onRemove() }}
               className="p-2 rounded-lg transition-colors hover:bg-white/5"
               title="Remover"
             >
@@ -354,18 +482,71 @@ function MemberCard({
               </svg>
             </button>
           )}
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
+            className="transition-transform"
+            style={{ color: 'var(--crm-text-muted)', transform: isExpanded ? 'rotate(180deg)' : 'none' }}>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
         </div>
       </div>
 
-      {/* Mobile stats */}
-      <div className="flex sm:hidden items-center gap-4 mt-3 pt-3 border-t" style={{ borderColor: 'var(--crm-border)' }}>
-        <span className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>
-          {member.assignedLeads} leads · {member.assignedConversations} conversas
-        </span>
-        {member.joinedAt && (
-          <span className="text-xs" style={{ color: 'var(--crm-text-muted)' }}>Desde {formatDate(member.joinedAt)}</span>
+      {/* Expanded metrics panel */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 pt-0 border-t" style={{ borderColor: 'var(--crm-border)' }}>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                <MetricBox label="Leads Atribuidos" value={String(member.assignedLeads)} color="var(--crm-gold)" />
+                <MetricBox label="Conversas Ativas" value={String(member.assignedConversations)} color="var(--crm-cold)" />
+                <MetricBox label="Ganhos no Mes" value={memberStat ? String(memberStat.wonCount) : '0'} color="var(--crm-won)" />
+                <MetricBox
+                  label="Valor Ganho"
+                  value={memberStat ? currencyFmt.format(memberStat.wonValue) : 'R$ 0'}
+                  color="var(--crm-won)"
+                />
+              </div>
+
+              {/* Commission info */}
+              {member.commissionPercent != null && memberStat && (
+                <div className="mt-3 rounded-lg p-3" style={{ background: 'var(--crm-gold-subtle)', border: '1px solid rgba(212,175,55,0.1)' }}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium" style={{ color: 'var(--crm-gold)' }}>
+                      Comissao ({member.commissionPercent}%)
+                    </span>
+                    <span className="text-sm font-bold" style={{ color: 'var(--crm-gold)' }}>
+                      {memberStat.commission !== null ? currencyFmt.format(memberStat.commission) : '—'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--crm-text-muted)' }}>
+                    {currencyFmt.format(memberStat.wonValue)} x {member.commissionPercent}%
+                  </p>
+                </div>
+              )}
+
+              {/* Extra info */}
+              <div className="flex items-center gap-4 mt-3 text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>
+                {member.joinedAt && <span>Desde {formatDate(member.joinedAt)}</span>}
+                {member.phone && <span className="sm:hidden">{member.phone}</span>}
+                <span>Criado em {formatDate(member.createdAt)}</span>
+              </div>
+            </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function MetricBox({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <div className="rounded-lg p-2.5" style={{ background: 'var(--crm-bg)', border: '1px solid var(--crm-border)' }}>
+      <p className="text-[9px] font-medium" style={{ color: 'var(--crm-text-muted)' }}>{label}</p>
+      <p className="text-sm font-bold mt-0.5" style={{ color }}>{value}</p>
     </div>
   )
 }
@@ -390,6 +571,7 @@ function MemberFormModal({
   const [phone, setPhone] = useState(member?.phone || '')
   const [role, setRole] = useState(member?.role || 'agent')
   const [isActive, setIsActive] = useState(member?.isActive ?? true)
+  const [commissionPercent, setCommissionPercent] = useState(member?.commissionPercent?.toString() ?? '')
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
@@ -402,7 +584,10 @@ function MemberFormModal({
     const data = isEdit
       ? await apiFetch(`/api/admin/crm/team/${member.id}`, {
           method: 'PUT',
-          body: JSON.stringify({ name, phone: phone || null, role, isActive }),
+          body: JSON.stringify({
+            name, phone: phone || null, role, isActive,
+            commissionPercent: commissionPercent ? Number(commissionPercent) : null,
+          }),
         })
       : await apiFetch('/api/admin/crm/team', {
           method: 'POST',
@@ -422,11 +607,16 @@ function MemberFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 sm:pt-20 px-4" onClick={onClose}>
+    <motion.div
+      className="fixed inset-0 z-50 flex items-start justify-center pt-12 sm:pt-20 px-4"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div
+      <motion.div
         className="relative w-full max-w-md rounded-2xl border shadow-2xl"
         style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)' }}
+        initial={{ scale: 0.95, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 16 }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -446,12 +636,8 @@ function MemberFormModal({
           <div>
             <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--crm-text-muted)' }}>Nome</label>
             <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Nome completo"
-              className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-1"
-              style={inputStyle}
+              type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Nome completo"
+              className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-1" style={inputStyle}
             />
           </div>
 
@@ -459,13 +645,9 @@ function MemberFormModal({
           <div>
             <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--crm-text-muted)' }}>Email</label>
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="email@clinica.com"
+              type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@clinica.com"
               disabled={isEdit}
-              className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-1 disabled:opacity-50"
-              style={inputStyle}
+              className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-1 disabled:opacity-50" style={inputStyle}
             />
             {isEdit && <p className="text-[10px] mt-1" style={{ color: 'var(--crm-text-muted)' }}>Email nao pode ser alterado</p>}
           </div>
@@ -474,12 +656,8 @@ function MemberFormModal({
           <div>
             <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--crm-text-muted)' }}>Telefone (opcional)</label>
             <input
-              type="text"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="(11) 99999-9999"
-              className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-1"
-              style={inputStyle}
+              type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(11) 99999-9999"
+              className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-1" style={inputStyle}
             />
           </div>
 
@@ -493,9 +671,7 @@ function MemberFormModal({
                 const disabled = r === 'owner' && member?.role !== 'owner'
                 return (
                   <button
-                    key={r}
-                    onClick={() => !disabled && setRole(r)}
-                    disabled={disabled}
+                    key={r} onClick={() => !disabled && setRole(r)} disabled={disabled}
                     className="p-3 rounded-lg border text-left transition-all disabled:opacity-30"
                     style={{
                       background: active ? `${info.color}12` : 'var(--crm-bg)',
@@ -510,14 +686,32 @@ function MemberFormModal({
             </div>
           </div>
 
+          {/* Commission (edit only) */}
+          {isEdit && (
+            <div>
+              <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--crm-text-muted)' }}>
+                Comissao (% sobre leads ganhos)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number" min="0" max="100" step="0.5"
+                  value={commissionPercent} onChange={e => setCommissionPercent(e.target.value)}
+                  placeholder="Ex: 10"
+                  className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-1" style={inputStyle}
+                />
+                <span className="text-sm font-medium shrink-0" style={{ color: 'var(--crm-text-muted)' }}>%</span>
+              </div>
+              <p className="text-[10px] mt-1" style={{ color: 'var(--crm-text-muted)' }}>
+                Calculado automaticamente sobre o valor dos leads ganhos
+              </p>
+            </div>
+          )}
+
           {/* Active toggle (edit only) */}
           {isEdit && member?.role !== 'owner' && (
             <label className="flex items-center gap-2 cursor-pointer">
               <input
-                type="checkbox"
-                checked={isActive}
-                onChange={e => setIsActive(e.target.checked)}
-                className="rounded"
+                type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} className="rounded"
               />
               <span className="text-sm" style={{ color: 'var(--crm-text)' }}>Membro ativo</span>
             </label>
@@ -530,19 +724,14 @@ function MemberFormModal({
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-sm border transition-colors hover:bg-white/5"
             style={{ borderColor: 'var(--crm-border)', color: 'var(--crm-text-muted)' }}
-          >
-            Cancelar
-          </button>
+          >Cancelar</button>
           <button
-            onClick={handleSave}
-            disabled={saving}
+            onClick={handleSave} disabled={saving}
             className="px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
             style={{ background: 'var(--crm-gold)', color: '#000' }}
-          >
-            {saving ? 'Salvando...' : isEdit ? 'Salvar' : 'Adicionar'}
-          </button>
+          >{saving ? 'Salvando...' : isEdit ? 'Salvar' : 'Adicionar'}</button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

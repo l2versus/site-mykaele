@@ -21,7 +21,7 @@ export async function PUT(
 
     const { id } = await params
     const body = await req.json()
-    const { name, phone, role, isActive } = body
+    const { name, phone, role, isActive, commissionPercent } = body
 
     const existing = await prisma.crmTeamMember.findUnique({ where: { id } })
     if (!existing) return NextResponse.json({ error: 'Membro não encontrado' }, { status: 404 })
@@ -42,6 +42,7 @@ export async function PUT(
         ...(phone !== undefined && { phone: phone || null }),
         ...(role && { role }),
         ...(isActive !== undefined && { isActive }),
+        ...(commissionPercent !== undefined && { commissionPercent: commissionPercent === null ? null : Number(commissionPercent) }),
       },
     })
 

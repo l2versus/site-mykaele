@@ -1025,11 +1025,12 @@ model CrmTeamMember {
   phone     String?
   role      String   @default("agent") // owner, admin, manager, agent
   avatar    String?
-  isActive  Boolean  @default(true)
-  invitedBy String?
-  joinedAt  DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive          Boolean  @default(true)
+  commissionPercent Float?   // % sobre leads ganhos
+  invitedBy         String?
+  joinedAt          DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
