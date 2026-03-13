@@ -13,6 +13,7 @@ const ENV_VAR_MAP: Record<string, string[]> = {
   'callmebot': ['CALLMEBOT_API_KEY'],
   'telegram': ['TELEGRAM_BOT_TOKEN'],
   'instagram': ['INSTAGRAM_APP_ID'],
+  'facebook': ['FACEBOOK_APP_ID'],
   'google-oauth': ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
   'cloudinary': ['CLOUDINARY_API_KEY'],
   'redis': ['REDIS_URL'],

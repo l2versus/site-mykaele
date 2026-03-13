@@ -88,6 +88,45 @@ const TelegramIcon = ({ size = 20 }: { size?: number }) => (
   </svg>
 )
 
+const InstagramIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#E4405F">
+    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+  </svg>
+)
+
+const FacebookIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#0084FF">
+    <path d="M12 0C5.373 0 0 4.975 0 11.111c0 3.497 1.745 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.627 0 12-4.974 12-11.111C24 4.975 18.627 0 12 0zm1.193 14.963l-3.056-3.259-5.963 3.259L10.732 8.1l3.131 3.259L19.752 8.1l-6.559 6.863z" />
+  </svg>
+)
+
+const SmsIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} fill="none" stroke="#10B981" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    <path d="M8 10h.01M12 10h.01M16 10h.01" />
+  </svg>
+)
+
+const VoipIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} fill="none" stroke="#F59E0B" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+  </svg>
+)
+
+const WebchatIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} fill="none" stroke="#6366F1" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 0 1 9-9" />
+  </svg>
+)
+
+const AnalyticsIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} fill="none" stroke="#EC4899" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+  </svg>
+)
+
 const CallMeBotIcon = ({ size = 20 }: { size?: number }) => (
   <svg width={size} height={size} fill="none" stroke="#10B981" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
@@ -97,6 +136,7 @@ const CallMeBotIcon = ({ size = 20 }: { size?: number }) => (
 // --- All integration definitions (default statuses, will be overridden by env check) ---
 
 const BASE_INTEGRATIONS: IntegrationCard[] = [
+  // === CANAIS DE COMUNICAÇÃO ===
   {
     id: 'whatsapp',
     name: 'WhatsApp',
@@ -110,9 +150,42 @@ const BASE_INTEGRATIONS: IntegrationCard[] = [
     envKey: 'whatsapp-evolution',
   },
   {
+    id: 'instagram',
+    name: 'Instagram DM',
+    description: 'Mensagens diretas do Instagram Business via Meta Graph API. Receba e responda DMs diretamente do CRM.',
+    category: 'channels',
+    status: 'optional',
+    statusLabel: 'Não configurado',
+    icon: <InstagramIcon />,
+    accentColor: '#E4405F',
+    envKey: 'instagram',
+  },
+  {
+    id: 'facebook',
+    name: 'Facebook Messenger',
+    description: 'Mensagens do Facebook Messenger via Meta Graph API. Atenda clientes da sua página do Facebook.',
+    category: 'channels',
+    status: 'optional',
+    statusLabel: 'Não configurado',
+    icon: <FacebookIcon />,
+    accentColor: '#0084FF',
+    envKey: 'facebook',
+  },
+  {
+    id: 'telegram',
+    name: 'Telegram Bot',
+    description: 'Atendimento via Telegram Bot. Configure com token do BotFather e receba mensagens no CRM.',
+    category: 'channels',
+    status: 'optional',
+    statusLabel: 'Não configurado',
+    icon: <TelegramIcon />,
+    accentColor: '#229ED9',
+    envKey: 'telegram',
+  },
+  {
     id: 'email',
     name: 'E-mail (Resend)',
-    description: 'Envio de e-mails transacionais e notificações para pacientes',
+    description: 'Inbox bidirecional de email. Envie e receba emails de clientes com rastreamento de entrega e leitura.',
     category: 'channels',
     status: 'optional',
     statusLabel: 'Não configurado',
@@ -123,7 +196,7 @@ const BASE_INTEGRATIONS: IntegrationCard[] = [
   {
     id: 'callmebot',
     name: 'CallMeBot',
-    description: 'Notificações WhatsApp via CallMeBot para alertas internos',
+    description: 'Notificações WhatsApp via CallMeBot para alertas internos da equipe.',
     category: 'channels',
     status: 'optional',
     statusLabel: 'Não configurado',
@@ -131,21 +204,12 @@ const BASE_INTEGRATIONS: IntegrationCard[] = [
     accentColor: '#10B981',
     envKey: 'callmebot',
   },
-  {
-    id: 'telegram',
-    name: 'Telegram',
-    description: 'Notificações via Telegram Bot para alertas e atualizações',
-    category: 'channels',
-    status: 'optional',
-    statusLabel: 'Não configurado',
-    icon: <TelegramIcon />,
-    accentColor: '#229ED9',
-    envKey: 'telegram',
-  },
+
+  // === SERVIÇOS CONECTADOS ===
   {
     id: 'mercadopago',
     name: 'Mercado Pago',
-    description: 'Processamento de pagamentos, cobranças e links de pagamento',
+    description: 'Processamento de pagamentos, cobranças e links de pagamento.',
     category: 'services',
     status: 'optional',
     statusLabel: 'Não configurado',
@@ -156,7 +220,7 @@ const BASE_INTEGRATIONS: IntegrationCard[] = [
   {
     id: 'gemini',
     name: 'Google Gemini (IA)',
-    description: 'Embeddings, RAG e análise inteligente via Gemini API (gratuito)',
+    description: 'Embeddings, RAG e análise inteligente via Gemini API (gratuito).',
     category: 'services',
     status: 'optional',
     statusLabel: 'Não configurado',
@@ -167,7 +231,7 @@ const BASE_INTEGRATIONS: IntegrationCard[] = [
   {
     id: 'openai',
     name: 'OpenAI (IA)',
-    description: 'Embeddings, pontuação inteligente e Concierge RAG',
+    description: 'Embeddings, pontuação inteligente e Concierge RAG.',
     category: 'services',
     status: 'optional',
     statusLabel: 'Opcional',
@@ -178,7 +242,7 @@ const BASE_INTEGRATIONS: IntegrationCard[] = [
   {
     id: 'n8n',
     name: 'n8n (Automação)',
-    description: 'Conecte fluxos de automação externos e webhooks customizados',
+    description: 'Conecte fluxos de automação externos e webhooks customizados.',
     category: 'services',
     status: 'optional',
     statusLabel: 'Não configurado',
@@ -190,7 +254,7 @@ const BASE_INTEGRATIONS: IntegrationCard[] = [
   {
     id: 'google-calendar',
     name: 'Google Calendar',
-    description: 'Sincronização bidirecional de agendamentos com Google Agenda',
+    description: 'Sincronização bidirecional de agendamentos com Google Agenda.',
     category: 'services',
     status: 'optional',
     statusLabel: 'Não configurado',
@@ -198,6 +262,48 @@ const BASE_INTEGRATIONS: IntegrationCard[] = [
     accentColor: '#4A7BFF',
     envKey: 'google-calendar',
     configurable: true,
+  },
+
+  // === EM BREVE ===
+  {
+    id: 'sms',
+    name: 'SMS (Twilio)',
+    description: 'Envio de SMS para confirmações de agendamento e lembretes.',
+    category: 'coming_soon',
+    status: 'coming_soon',
+    statusLabel: 'Em breve',
+    icon: <SmsIcon />,
+    accentColor: '#10B981',
+  },
+  {
+    id: 'voip',
+    name: 'VoIP / Telefonia',
+    description: 'Ligações telefônicas integradas com registro automático de chamadas.',
+    category: 'coming_soon',
+    status: 'coming_soon',
+    statusLabel: 'Em breve',
+    icon: <VoipIcon />,
+    accentColor: '#F59E0B',
+  },
+  {
+    id: 'webchat',
+    name: 'Webchat (Widget)',
+    description: 'Widget de chat ao vivo para o site da clínica com atendimento em tempo real.',
+    category: 'coming_soon',
+    status: 'coming_soon',
+    statusLabel: 'Em breve',
+    icon: <WebchatIcon />,
+    accentColor: '#6366F1',
+  },
+  {
+    id: 'analytics',
+    name: 'Google Analytics',
+    description: 'Rastreamento de conversões e atribuição de leads por fonte de tráfego.',
+    category: 'coming_soon',
+    status: 'coming_soon',
+    statusLabel: 'Em breve',
+    icon: <AnalyticsIcon />,
+    accentColor: '#EC4899',
   },
 ]
 
@@ -324,6 +430,51 @@ function SectionHeader({ title, icon, delay }: { title: string; icon: React.Reac
   )
 }
 
+// --- Webhook row (for multi-channel webhook display) ---
+
+function WebhookRow({ label, url, color }: { label: string; url: string; color: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard fallback not available
+    }
+  }
+
+  return (
+    <div
+      className="flex items-center gap-3 px-3 py-2 rounded-lg"
+      style={{ background: 'var(--crm-bg)' }}
+    >
+      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+      <span className="text-[11px] font-medium shrink-0 w-28" style={{ color: 'var(--crm-text-muted)' }}>
+        {label}
+      </span>
+      <code
+        className="flex-1 text-[10px] font-mono truncate select-all"
+        style={{ color: 'var(--crm-gold)' }}
+      >
+        {url}
+      </code>
+      <button
+        onClick={handleCopy}
+        className="shrink-0 px-2.5 py-1 rounded-md text-[10px] font-medium transition-all hover:brightness-110"
+        style={{
+          background: copied ? 'rgba(46,204,138,0.12)' : 'var(--crm-surface-2)',
+          color: copied ? '#2ECC8A' : 'var(--crm-text-muted)',
+          border: `1px solid ${copied ? 'rgba(46,204,138,0.25)' : 'var(--crm-border)'}`,
+        }}
+      >
+        {copied ? '✓' : 'Copiar'}
+      </button>
+    </div>
+  )
+}
+
 // =============================================
 // MAIN PAGE
 // =============================================
@@ -333,16 +484,15 @@ export default function IntegrationsPage() {
   const [waError, setWaError] = useState<string | null>(null)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [instanceId, setInstanceId] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
   const [integrations, setIntegrations] = useState<IntegrationCard[]>(BASE_INTEGRATIONS)
   const [configModal, setConfigModal] = useState<string | null>(null) // provider id
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const addToast = useToastStore(s => s.addToast)
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null
-  const webhookUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/api/webhooks/evolution`
-    : '/api/webhooks/evolution'
+  const baseUrl = typeof window !== 'undefined'
+    ? window.location.origin
+    : ''
 
   // --- Fetch env var status and update integrations ---
   const refreshIntegrationStatus = useCallback(() => {
@@ -444,16 +594,6 @@ export default function IntegrationsPage() {
       setWaError(isTimeout ? 'Evolution API não respondeu (timeout). Verifique se o serviço está rodando.' : 'Sem conexão com o servidor')
     } finally {
       clearTimeout(timeout)
-    }
-  }
-
-  const handleCopyWebhook = async () => {
-    try {
-      await navigator.clipboard.writeText(webhookUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // clipboard fallback not available
     }
   }
 
@@ -731,7 +871,7 @@ export default function IntegrationsPage() {
         </>
       )}
 
-      {/* ===== WEBHOOK URL SECTION ===== */}
+      {/* ===== WEBHOOK ENDPOINTS ===== */}
       <motion.div
         className="rounded-2xl border p-5 mt-8"
         style={{
@@ -743,7 +883,7 @@ export default function IntegrationsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.55, duration: 0.5 }}
       >
-        <div className="flex items-center gap-2.5 mb-3">
+        <div className="flex items-center gap-2.5 mb-4">
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center"
             style={{ background: 'rgba(212,175,55,0.08)' }}
@@ -754,35 +894,23 @@ export default function IntegrationsPage() {
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--crm-text)' }}>Webhook URL</h3>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--crm-text)' }}>Webhook Endpoints</h3>
             <p className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>
-              Configure este endpoint na Evolution API para receber mensagens
+              Configure estes endpoints nos provedores externos para receber mensagens
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <code
-            className="flex-1 text-[11px] font-mono px-4 py-2.5 rounded-xl truncate select-all"
-            style={{
-              background: 'var(--crm-bg)',
-              color: '#D4AF37',
-              border: '1px solid var(--crm-border)',
-            }}
-          >
-            {webhookUrl}
-          </code>
-          <button
-            onClick={handleCopyWebhook}
-            className="shrink-0 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:brightness-110 active:scale-[0.97]"
-            style={{
-              background: copied ? 'rgba(46,204,138,0.12)' : 'var(--crm-surface-2)',
-              color: copied ? '#2ECC8A' : 'var(--crm-text-muted)',
-              border: `1px solid ${copied ? 'rgba(46,204,138,0.25)' : 'var(--crm-border)'}`,
-            }}
-          >
-            {copied ? 'Copiado!' : 'Copiar'}
-          </button>
+        <div className="space-y-2">
+          {[
+            { label: 'WhatsApp (Evolution)', path: '/api/webhooks/evolution', color: '#25D366' },
+            { label: 'Instagram', path: '/api/webhooks/instagram', color: '#E4405F' },
+            { label: 'Facebook', path: '/api/webhooks/facebook', color: '#0084FF' },
+            { label: 'Telegram', path: '/api/webhooks/telegram', color: '#229ED9' },
+            { label: 'Email (Resend)', path: '/api/webhooks/email', color: '#7C6AEF' },
+          ].map(wh => (
+            <WebhookRow key={wh.path} label={wh.label} url={`${baseUrl}${wh.path}`} color={wh.color} />
+          ))}
         </div>
       </motion.div>
 
