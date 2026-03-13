@@ -74,6 +74,16 @@ const CRM_NAV = [
     ),
   },
   {
+    href: '/admin/crm/automations/bots',
+    label: 'Bots',
+    icon: (
+      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2v4m0 12v4m-7.07-2.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4m-2.93 7.07l-2.83-2.83M6.76 6.76L3.93 3.93" />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/crm/broadcast',
     label: 'Transmissão',
     icon: (
@@ -131,6 +141,16 @@ const CRM_NAV = [
     icon: (
       <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
         <path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" />
+      </svg>
+    ),
+  },
+  {
+    href: '/admin/crm/webhooks',
+    label: 'Webhooks',
+    icon: (
+      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
       </svg>
     ),
   },
