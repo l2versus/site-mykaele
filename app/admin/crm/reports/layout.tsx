@@ -91,7 +91,7 @@ export default function ReportsLayout({ children }: { children: ReactNode }) {
 
   return (
     <ReportsProvider>
-      <div className="flex gap-0 min-h-[calc(100vh-8rem)]">
+      <div className="flex flex-col lg:flex-row gap-0 min-h-[calc(100vh-8rem)]">
         {/* Sidebar — desktop: fixed left, mobile: horizontal tabs */}
         <aside
           className="hidden lg:flex flex-col w-56 shrink-0 rounded-2xl p-2 mr-5"

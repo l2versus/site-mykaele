@@ -71,7 +71,7 @@ function formatDateTime(d: string) {
 }
 
 async function apiFetch(path: string, opts?: RequestInit) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null
   const res = await fetch(path, {
     ...opts,
     headers: {
