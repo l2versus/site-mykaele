@@ -1,9 +1,12 @@
-// app/api/admin/crm/conversations/messages/route.ts — Mensagens de uma conversa + envio
+// app/api/admin/crm/conversations/messages/route.ts — Mensagens de uma conversa + envio (multi-canal)
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { evolutionApi } from '@/lib/evolution-api'
+import { getChannelProvider } from '@/lib/channels'
+import type { ChannelType } from '@/lib/channels/types'
+import { decryptCredentials } from '@/lib/crypto'
 import { createAuditLog, CRM_ACTIONS } from '@/lib/audit'
+import { redis, isRedisReady } from '@/lib/redis'
 import { randomBytes } from 'crypto'
 
 export async function GET(req: NextRequest) {
@@ -64,6 +67,38 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * Resolve o instanceId correto para o provedor do canal.
+ * - WhatsApp: instanceId do CrmChannel (nome da instância Evolution API)
+ * - Instagram/Facebook: accessToken descriptografado
+ * - Telegram: botToken descriptografado
+ * - Email: instanceId ou vazio (usa RESEND_API_KEY do env)
+ */
+function resolveProviderInstanceId(channel: { type: string; instanceId: string | null; credentials: unknown }): string {
+  const channelType = channel.type as ChannelType
+
+  if (channelType === 'whatsapp') {
+    return channel.instanceId ?? ''
+  }
+
+  if (channelType === 'email') {
+    return channel.instanceId ?? ''
+  }
+
+  // Instagram, Facebook, Telegram — credenciais criptografadas
+  if (channel.credentials) {
+    try {
+      const creds = decryptCredentials(channel.credentials as string) as Record<string, string>
+      if (channelType === 'telegram') return creds.botToken ?? ''
+      return creds.accessToken ?? '' // Instagram e Facebook
+    } catch {
+      return ''
+    }
+  }
+
+  return ''
+}
+
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '')
@@ -82,28 +117,35 @@ export async function POST(req: NextRequest) {
 
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { channel: true },
+      include: { channel: true, lead: { select: { id: true } } },
     })
 
     if (!conversation) {
       return NextResponse.json({ error: 'Conversa não encontrada' }, { status: 404 })
     }
 
+    const channelType = (conversation.channel?.type ?? 'whatsapp') as ChannelType
     let waMessageId = `local-${randomBytes(8).toString('hex')}`
+    let status = 'PENDING'
 
-    // Tentar enviar via Evolution API
-    if (conversation.channel?.instanceId) {
+    // Enviar via provedor do canal (multi-canal)
+    const providerInstanceId = resolveProviderInstanceId(conversation.channel)
+
+    if (providerInstanceId) {
       try {
-        const result = await evolutionApi.sendText(
-          conversation.channel.instanceId,
-          conversation.remoteJid,
-          content,
-        )
-        waMessageId = result.key.id
+        const provider = getChannelProvider(channelType)
+        const result = await provider.sendMessage({
+          instanceId: providerInstanceId,
+          remoteId: conversation.remoteJid,
+          text: content,
+        })
+        waMessageId = result.messageId
+        status = result.status
       } catch (err) {
-        console.error('[send] Falha ao enviar via Evolution:', err instanceof Error ? err.message : err)
-        // Continuar — salvar mensagem como pendente
+        console.error(`[send] Falha ao enviar via ${channelType}:`, err instanceof Error ? err.message : err)
       }
+    } else {
+      console.error(`[send] Canal ${channelType} sem instanceId/credenciais — mensagem salva como PENDING`)
     }
 
     // Salvar mensagem no banco
@@ -115,24 +157,48 @@ export async function POST(req: NextRequest) {
         fromMe: true,
         type: 'TEXT',
         content,
-        status: waMessageId.startsWith('local-') ? 'PENDING' : 'SENT',
+        channel: channelType,
+        status,
         sentByUserId: payload.userId,
       },
     })
 
-    // Atualizar lastMessageAt
-    await prisma.conversation.update({
-      where: { id: conversationId },
-      data: { lastMessageAt: new Date() },
-    })
+    // Atualizar lastMessageAt na conversa e lead
+    await prisma.$transaction([
+      prisma.conversation.update({
+        where: { id: conversationId },
+        data: { lastMessageAt: new Date() },
+      }),
+      prisma.lead.update({
+        where: { id: conversation.leadId },
+        data: { lastInteractionAt: new Date() },
+      }),
+    ])
 
     createAuditLog({
       tenantId,
       userId: payload.userId,
       action: CRM_ACTIONS.MESSAGE_SENT,
       entityId: message.id,
-      details: { conversationId, contentPreview: content.slice(0, 100) },
+      details: { conversationId, channel: channelType, contentPreview: content.slice(0, 100) },
     })
+
+    // Publicar via SSE para atualização em tempo real
+    if (isRedisReady()) {
+      redis.publish('crm:events', JSON.stringify({
+        type: 'new-message',
+        tenantId,
+        data: {
+          conversationId,
+          leadId: conversation.leadId,
+          messageId: message.id,
+          fromMe: true,
+          content: content.slice(0, 100),
+          messageType: 'TEXT',
+          channel: channelType,
+        },
+      })).catch(() => {})
+    }
 
     return NextResponse.json(message, { status: 201 })
   } catch (err) {

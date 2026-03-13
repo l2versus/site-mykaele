@@ -269,6 +269,10 @@ function MessageBubble({ message }: { message: MessageItem }) {
       <span>✓</span>
     ) : message.status === 'SENDING' ? (
       <span className="animate-pulse">○</span>
+    ) : message.status === 'PENDING' ? (
+      <span title="Mensagem não enviada — verifique a conexão do canal" style={{ color: '#F0A500' }}>⚠</span>
+    ) : message.status === 'FAILED' ? (
+      <span title="Falha ao enviar" style={{ color: '#FF6B4A' }}>✕</span>
     ) : null
   ) : null
 
@@ -1272,8 +1276,13 @@ export default function InboxPage() {
         body: JSON.stringify({ conversationId: selectedId, content, tenantId: TENANT_ID }),
       })
       if (!res.ok) throw new Error()
+      const data = await res.json()
       await fetchMessages(selectedId)
-      playFeedback('click')
+      if (data.status === 'PENDING') {
+        addToast('Mensagem salva mas não enviada — verifique a conexão do canal', 'error')
+      } else {
+        playFeedback('click')
+      }
     } catch {
       setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id))
       addToast('Falha ao enviar mensagem', 'error')
