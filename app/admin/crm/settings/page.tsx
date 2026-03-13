@@ -2091,6 +2091,20 @@ function AiTab() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
+
+  // AI Agent (Recepcionista IA)
+  const [agentEnabled, setAgentEnabled] = useState(false)
+  const [agentName, setAgentName] = useState('Assistente Myka')
+  const [agentTone, setAgentTone] = useState<'formal' | 'informal' | 'carinhoso' | 'profissional'>('profissional')
+  const [agentInstructions, setAgentInstructions] = useState('')
+  const [agentMaxInteractions, setAgentMaxInteractions] = useState(10)
+  const [agentSchedule, setAgentSchedule] = useState<'always' | 'outside_hours'>('always')
+  const [agentHoursStart, setAgentHoursStart] = useState('08:00')
+  const [agentHoursEnd, setAgentHoursEnd] = useState('18:00')
+  const [agentModel, setAgentModel] = useState('gemini-2.0-flash')
+  const [agentDelayMs, setAgentDelayMs] = useState(3000)
+  const [agentSaving, setAgentSaving] = useState(false)
+
   const hasFetched = useRef(false)
 
   const PROVIDERS = [
@@ -2180,6 +2194,28 @@ function AiTab() {
       })
       .catch(() => { /* first time, no settings */ })
       .finally(() => setLoading(false))
+
+    // Carregar config do agente IA
+    fetch(`/api/admin/crm/settings/ai-agent?tenantId=${TENANT_ID}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.config) {
+          const c = data.config
+          setAgentEnabled(c.enabled === true)
+          if (c.agentName) setAgentName(c.agentName)
+          if (c.tone) setAgentTone(c.tone)
+          if (c.extraInstructions) setAgentInstructions(c.extraInstructions)
+          if (typeof c.maxInteractions === 'number') setAgentMaxInteractions(c.maxInteractions)
+          if (c.schedule) setAgentSchedule(c.schedule)
+          if (c.businessHoursStart) setAgentHoursStart(c.businessHoursStart)
+          if (c.businessHoursEnd) setAgentHoursEnd(c.businessHoursEnd)
+          if (c.model) setAgentModel(c.model)
+          if (typeof c.delayMs === 'number') setAgentDelayMs(c.delayMs)
+        }
+      })
+      .catch(() => { /* defaults */ })
   }, [TENANT_ID])
 
   // Quando troca provider, atualizar model e baseUrl
@@ -2224,6 +2260,39 @@ function AiTab() {
       addToast('Erro ao salvar configurações', 'error')
     } finally {
       if (!silent) setSaving(false)
+    }
+  }
+
+  // Salvar config do agente recepcionista IA
+  const handleSaveAgent = async () => {
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || localStorage.getItem('token')) : null
+    if (!token) return
+
+    setAgentSaving(true)
+    try {
+      const res = await fetch('/api/admin/crm/settings/ai-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          tenantId: TENANT_ID,
+          enabled: agentEnabled,
+          agentName,
+          tone: agentTone,
+          extraInstructions: agentInstructions,
+          maxInteractions: agentMaxInteractions,
+          schedule: agentSchedule,
+          businessHoursStart: agentHoursStart,
+          businessHoursEnd: agentHoursEnd,
+          model: agentModel,
+          delayMs: agentDelayMs,
+        }),
+      })
+      if (!res.ok) throw new Error('Falha ao salvar')
+      addToast('Agente IA configurado com sucesso')
+    } catch {
+      addToast('Erro ao salvar configuração do agente', 'error')
+    } finally {
+      setAgentSaving(false)
     }
   }
 
@@ -2445,6 +2514,222 @@ function AiTab() {
             </div>
           ))}
         </div>
+      </motion.div>
+
+      {/* Agente Recepcionista IA */}
+      <motion.div variants={staggerItem}>
+        <SectionTitle>Agente Recepcionista IA</SectionTitle>
+        <SectionCard>
+          <div className="space-y-5">
+            {/* Toggle principal */}
+            <div
+              className="flex items-start justify-between gap-4 rounded-xl border p-4 transition-all"
+              style={{
+                background: agentEnabled ? 'rgba(212,175,55,0.03)' : 'var(--crm-surface)',
+                borderColor: agentEnabled ? 'rgba(212,175,55,0.15)' : 'var(--crm-border)',
+              }}
+            >
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold" style={{ color: 'var(--crm-text)' }}>
+                    Ativar Agente IA
+                  </span>
+                  <span
+                    className="text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider"
+                    style={{ background: 'rgba(46,204,138,0.12)', color: '#2ECC8A', borderRadius: '6px' }}
+                  >
+                    RAG
+                  </span>
+                </div>
+                <p className="text-xs mt-1.5 leading-relaxed" style={{ color: 'var(--crm-text-muted)' }}>
+                  Responde automaticamente no WhatsApp usando a base de conhecimento da clínica. Prioridade: Bot Builder &gt; Agente IA &gt; Auto-Reply.
+                </p>
+              </div>
+              <Toggle enabled={agentEnabled} onToggle={() => setAgentEnabled(!agentEnabled)} />
+            </div>
+
+            {agentEnabled && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-4"
+              >
+                {/* Nome do agente */}
+                <InputField
+                  label="Nome do Agente"
+                  value={agentName}
+                  onChange={setAgentName}
+                  placeholder="Ex: Assistente Myka"
+                />
+
+                {/* Tom */}
+                <SelectField
+                  label="Tom da conversa"
+                  value={agentTone}
+                  onChange={v => setAgentTone(v as typeof agentTone)}
+                  options={[
+                    { value: 'formal', label: 'Formal — educada e respeitosa' },
+                    { value: 'informal', label: 'Informal — descontraída e amigável' },
+                    { value: 'carinhoso', label: 'Carinhoso — acolhedora e empática' },
+                    { value: 'profissional', label: 'Profissional — confiante e acessível' },
+                  ]}
+                />
+
+                {/* Modelo */}
+                <SelectField
+                  label="Modelo de IA"
+                  value={agentModel}
+                  onChange={setAgentModel}
+                  options={[
+                    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (grátis, recomendado)' },
+                    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (grátis, mais inteligente)' },
+                  ]}
+                />
+
+                {/* Instruções extras */}
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--crm-text-muted)' }}>
+                    Instruções extras
+                  </label>
+                  <textarea
+                    value={agentInstructions}
+                    onChange={e => setAgentInstructions(e.target.value)}
+                    placeholder="Ex: Sempre ofereça agendamento. Mencione promoções do mês. Não fale sobre preços exatos."
+                    rows={3}
+                    className="w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all resize-none"
+                    style={{
+                      background: 'var(--crm-surface-2)',
+                      border: '1px solid var(--crm-border)',
+                      color: 'var(--crm-text)',
+                    }}
+                    onFocus={e => { e.currentTarget.style.borderColor = 'var(--crm-gold)' }}
+                    onBlur={e => { e.currentTarget.style.borderColor = 'var(--crm-border)' }}
+                  />
+                  <p className="text-[10px] mt-1" style={{ color: 'var(--crm-text-muted)' }}>
+                    Regras adicionais para o agente seguir ao responder mensagens
+                  </p>
+                </div>
+
+                {/* Max interações */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium" style={{ color: 'var(--crm-text-muted)' }}>
+                      Máximo de interações antes de transferir
+                    </label>
+                    <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--crm-gold)' }}>
+                      {agentMaxInteractions}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={50}
+                    value={agentMaxInteractions}
+                    onChange={e => setAgentMaxInteractions(Number(e.target.value))}
+                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #D4AF37 ${(agentMaxInteractions / 50) * 100}%, var(--crm-border) ${(agentMaxInteractions / 50) * 100}%)`,
+                    }}
+                  />
+                  <div className="flex justify-between mt-1">
+                    <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>1</span>
+                    <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>50</span>
+                  </div>
+                </div>
+
+                {/* Delay */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium" style={{ color: 'var(--crm-text-muted)' }}>
+                      Delay da resposta (parecer humano)
+                    </label>
+                    <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--crm-gold)' }}>
+                      {(agentDelayMs / 1000).toFixed(1)}s
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={500}
+                    max={10000}
+                    step={500}
+                    value={agentDelayMs}
+                    onChange={e => setAgentDelayMs(Number(e.target.value))}
+                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #D4AF37 ${((agentDelayMs - 500) / 9500) * 100}%, var(--crm-border) ${((agentDelayMs - 500) / 9500) * 100}%)`,
+                    }}
+                  />
+                  <div className="flex justify-between mt-1">
+                    <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>0.5s</span>
+                    <span className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>10s</span>
+                  </div>
+                </div>
+
+                {/* Horário */}
+                <SelectField
+                  label="Horário de funcionamento"
+                  value={agentSchedule}
+                  onChange={v => setAgentSchedule(v as typeof agentSchedule)}
+                  options={[
+                    { value: 'always', label: '24 horas — responde sempre' },
+                    { value: 'outside_hours', label: 'Fora do horário comercial' },
+                  ]}
+                />
+
+                {agentSchedule === 'outside_hours' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--crm-text-muted)' }}>
+                        Início do expediente
+                      </label>
+                      <input
+                        type="time"
+                        value={agentHoursStart}
+                        onChange={e => setAgentHoursStart(e.target.value)}
+                        className="w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+                        style={{
+                          background: 'var(--crm-surface-2)',
+                          border: '1px solid var(--crm-border)',
+                          color: 'var(--crm-text)',
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--crm-text-muted)' }}>
+                        Fim do expediente
+                      </label>
+                      <input
+                        type="time"
+                        value={agentHoursEnd}
+                        onChange={e => setAgentHoursEnd(e.target.value)}
+                        className="w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+                        style={{
+                          background: 'var(--crm-surface-2)',
+                          border: '1px solid var(--crm-border)',
+                          color: 'var(--crm-text)',
+                        }}
+                      />
+                    </div>
+                    <p className="col-span-2 text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>
+                      O agente responde apenas FORA desse horário (fuso: América/São Paulo)
+                    </p>
+                  </div>
+                )}
+
+                {/* Botão salvar agente */}
+                <button
+                  onClick={handleSaveAgent}
+                  disabled={agentSaving}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg, #D4AF37, #B8962E)', color: 'var(--crm-bg)', boxShadow: '0 4px 16px rgba(212,175,55,0.2)' }}
+                >
+                  {agentSaving ? 'Salvando...' : 'Salvar Agente IA'}
+                </button>
+              </motion.div>
+            )}
+          </div>
+        </SectionCard>
       </motion.div>
 
       {/* Advanced config */}

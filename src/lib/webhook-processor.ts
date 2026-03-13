@@ -4,6 +4,7 @@
 import { prisma } from '@/lib/prisma'
 import { tryAutoReply } from '@/lib/auto-reply'
 import { tryBotReply } from '@/lib/bot-engine'
+import { tryAiAgentReply } from '@/lib/ai-agent'
 import { fireAutomations } from '@/lib/automation-engine'
 
 interface WebhookPayload {
@@ -216,9 +217,10 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
   // Fire-and-forget: bot → auto-reply → automações (não bloqueia o webhook)
   const ctx = autoReplyCtx[0]
   if (ctx && !key.fromMe) {
-    // 1. Tentar bot primeiro — se bot tratar, pula auto-reply
+    // Cadeia de prioridade: Bot Builder > Agente IA > Auto-Reply
     void (async () => {
       try {
+        // 1. Tentar bot visual primeiro
         const botHandled = await tryBotReply({
           tenantId,
           leadId: ctx.leadId,
@@ -228,20 +230,30 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
           messageContent: content,
           isNewLead,
         })
+        if (botHandled) return
 
-        // 2. Se bot não tratou, fallback para auto-reply
-        if (!botHandled) {
-          await tryAutoReply({
-            tenantId,
-            leadId: ctx.leadId,
-            leadName: ctx.leadName,
-            channelId: ctx.channelId,
-            remoteJid: key.remoteJid,
-            fromMe: key.fromMe,
-          })
-        }
+        // 2. Se bot não tratou, tentar agente IA (RAG + Gemini)
+        const aiHandled = await tryAiAgentReply({
+          tenantId,
+          leadId: ctx.leadId,
+          leadName: ctx.leadName,
+          channelId: ctx.channelId,
+          remoteJid: key.remoteJid,
+          messageContent: content,
+        })
+        if (aiHandled) return
+
+        // 3. Último fallback: auto-reply simples (uma vez por lead)
+        await tryAutoReply({
+          tenantId,
+          leadId: ctx.leadId,
+          leadName: ctx.leadName,
+          channelId: ctx.channelId,
+          remoteJid: key.remoteJid,
+          fromMe: key.fromMe,
+        })
       } catch (err) {
-        console.error('[webhook] Erro no fluxo bot/auto-reply:', err instanceof Error ? err.message : err)
+        console.error('[webhook] Erro no fluxo bot/ia/auto-reply:', err instanceof Error ? err.message : err)
       }
     })()
 
