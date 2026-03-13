@@ -88,6 +88,10 @@ export async function sendMessage(input: z.input<typeof sendMessageSchema>): Pro
     details: { conversationId, leadId: conversation.leadId },
   })
 
+  // Log de atividade para relatórios
+  const { logActivity } = await import('@/lib/activity-log')
+  logActivity({ tenantId, type: 'MESSAGE_SENT', description: 'Mensagem enviada via WhatsApp', leadId: conversation.leadId, userId: payload.userId, metadata: { conversationId, messageId: message.id } })
+
   // Notificar front-end via SSE (fire-and-forget)
   if (isRedisReady()) {
     redis.publish('crm:events', JSON.stringify({

@@ -558,6 +558,7 @@ model CrmTenant {
   proposals               CrmProposal[]
   teamMembers             CrmTeamMember[]
   marketingSpend          CrmMarketingSpend[]
+  activityLogs            CrmActivityLog[]
 }
 
 model CrmIntegration {
@@ -1094,4 +1095,26 @@ model CrmMarketingSpend {
 
   @@unique([tenantId, month, year, source])
   @@index([tenantId, year, month])
+}
+
+// ============================================================
+// MÓDULO RELATÓRIOS — Log de Atividades CRM
+// ============================================================
+
+model CrmActivityLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  type        String
+  description String
+  leadId      String?
+  userId      String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  tenant CrmTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, type])
+  @@index([tenantId, leadId])
+  @@index([tenantId, userId])
 }

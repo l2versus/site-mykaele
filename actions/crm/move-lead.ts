@@ -130,5 +130,10 @@ export async function moveLead(input: z.input<typeof moveLeadSchema>): Promise<M
     details: { fromStageId, toStageId, position: newPosition },
   })
 
+  // Log de atividade para relatórios
+  const { logActivity } = await import('@/lib/activity-log')
+  const actType = lead.status === 'WON' ? 'LEAD_WON' as const : lead.status === 'LOST' ? 'LEAD_LOST' as const : 'LEAD_STAGE_CHANGED' as const
+  logActivity({ tenantId, type: actType, description: actType === 'LEAD_WON' ? 'Lead marcado como ganho' : actType === 'LEAD_LOST' ? 'Lead marcado como perdido' : 'Lead movido de estagio', leadId, userId: payload.userId, metadata: { fromStageId, toStageId, status: lead.status } })
+
   return { ok: true, position: newPosition }
 }

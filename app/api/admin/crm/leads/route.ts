@@ -167,6 +167,10 @@ export async function POST(req: NextRequest) {
       details: { name, phone, stageId },
     })
 
+    // Log de atividade para relatórios
+    const { logActivity } = await import('@/lib/activity-log')
+    logActivity({ tenantId, type: 'LEAD_CREATED', description: `Lead "${name}" criado`, leadId: lead.id, userId: payload.userId, metadata: { phone, source, expectedValue } })
+
     return NextResponse.json(lead, { status: 201 })
   } catch (err) {
     console.error('[leads] POST error:', err instanceof Error ? err.message : err)
