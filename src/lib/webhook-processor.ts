@@ -2,6 +2,7 @@
 // Usado quando o Redis está offline e a fila BullMQ não está disponível.
 // Garante que NENHUMA mensagem WhatsApp seja perdida.
 import { prisma } from '@/lib/prisma'
+import { tryAutoReply } from '@/lib/auto-reply'
 
 interface WebhookPayload {
   event: string
@@ -104,6 +105,9 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
   const pushName = data.pushName ?? 'Contato'
   const phone = key.remoteJid.replace('@s.whatsapp.net', '')
 
+  // Contexto capturado dentro da transaction para auto-reply
+  const autoReplyCtx: { leadId: string; leadName: string; channelId: string }[] = []
+
   await prisma.$transaction(async (tx) => {
     let conversation = await tx.conversation.findUnique({
       where: { tenantId_remoteJid: { tenantId, remoteJid: key.remoteJid } },
@@ -160,6 +164,9 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
           unreadCount: key.fromMe ? 0 : 1,
         },
       })
+
+      // Capturar contexto para auto-reply (lead + canal)
+      autoReplyCtx.push({ leadId: lead.id, leadName: lead.name, channelId: channel.id })
     } else {
       await tx.conversation.update({
         where: { id: conversation.id },
@@ -171,6 +178,15 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
           isClosed: false,
         },
       })
+
+      // Capturar contexto mesmo para conversas existentes (lead pode nunca ter recebido auto-reply)
+      const lead = await tx.lead.findUnique({
+        where: { id: conversation.leadId },
+        select: { id: true, name: true },
+      })
+      if (lead) {
+        autoReplyCtx.push({ leadId: lead.id, leadName: lead.name, channelId: conversation.channelId })
+      }
     }
 
     await tx.message.create({
@@ -192,4 +208,17 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
       data: { lastInteractionAt: new Date() },
     })
   })
+
+  // Fire-and-forget: auto-reply após a transaction (não bloqueia o webhook)
+  const ctx = autoReplyCtx[0]
+  if (ctx && !key.fromMe) {
+    void tryAutoReply({
+      tenantId,
+      leadId: ctx.leadId,
+      leadName: ctx.leadName,
+      channelId: ctx.channelId,
+      remoteJid: key.remoteJid,
+      fromMe: key.fromMe,
+    })
+  }
 }

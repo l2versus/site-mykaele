@@ -993,6 +993,79 @@ function WhatsAppTab() {
   const qrTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const addToast = useToastStore(s => s.addToast)
 
+  // ━━━ Auto-reply state ━━━
+  const TENANT_ID = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID ?? 'clinica-mykaele-procopio'
+  const [arEnabled, setArEnabled] = useState(false)
+  const [arMessage, setArMessage] = useState(
+    'Olá {{nome}}! Obrigada por entrar em contato com a Mykaele Home Spa. Em breve retornaremos!'
+  )
+  const [arDelay, setArDelay] = useState(4000)
+  const [arSaving, setArSaving] = useState(false)
+  const arFetched = useRef(false)
+
+  const getToken = useCallback(() => {
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem('admin_token') || localStorage.getItem('token') || null
+  }, [])
+
+  // Carregar config de auto-reply do banco
+  useEffect(() => {
+    if (arFetched.current) return
+    arFetched.current = true
+    const token = getToken()
+    if (!token) return
+
+    fetch(`/api/admin/crm/settings?tenantId=${TENANT_ID}&provider=auto-reply`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.settings) {
+          const s = data.settings
+          if (s.enabled !== undefined) setArEnabled(s.enabled as boolean)
+          if (typeof s.message === 'string' && s.message) setArMessage(s.message)
+          if (typeof s.delayMs === 'number') setArDelay(s.delayMs)
+        }
+      })
+      .catch(() => { /* primeira vez sem settings */ })
+  }, [TENANT_ID, getToken])
+
+  // Salvar config de auto-reply
+  const saveAutoReply = useCallback(async (enabled: boolean, message: string, delayMs: number) => {
+    const token = getToken()
+    if (!token) return
+
+    setArSaving(true)
+    try {
+      const res = await fetch('/api/admin/crm/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          tenantId: TENANT_ID,
+          provider: 'auto-reply',
+          enabled,
+          message,
+          delayMs,
+        }),
+      })
+      if (res.ok) {
+        addToast(enabled ? 'Auto-resposta ativada' : 'Auto-resposta desativada')
+      }
+    } catch {
+      addToast('Erro ao salvar auto-resposta')
+    }
+    setArSaving(false)
+  }, [TENANT_ID, getToken, addToast])
+
+  // Salvar quando o botão global "Salvar" é clicado
+  useEffect(() => {
+    const handleSaveEvent = () => {
+      void saveAutoReply(arEnabled, arMessage, arDelay)
+    }
+    window.addEventListener('crm-settings-save', handleSaveEvent)
+    return () => window.removeEventListener('crm-settings-save', handleSaveEvent)
+  }, [arEnabled, arMessage, arDelay, saveAutoReply])
+
   // Limpa polling e timeouts
   const clearTimers = useCallback(() => {
     if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null }
@@ -1428,6 +1501,176 @@ function WhatsAppTab() {
             )}
           </div>
         </div>
+      </motion.div>
+
+      {/* ━━━ Auto-resposta ━━━ */}
+      <motion.div variants={staggerItem}>
+        <SectionTitle>Auto-resposta</SectionTitle>
+        <p className="text-xs -mt-1 mb-4" style={{ color: 'var(--crm-text-muted)' }}>
+          Envie uma mensagem automática de boas-vindas quando um novo lead entra em contato pelo WhatsApp
+        </p>
+      </motion.div>
+
+      <motion.div variants={staggerItem}>
+        <SectionCard>
+          <div className="space-y-5">
+            {/* Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{
+                    background: arEnabled ? 'rgba(46,204,138,0.1)' : 'rgba(139,138,148,0.08)',
+                  }}
+                >
+                  <svg width="16" height="16" fill="none" stroke={arEnabled ? '#2ECC8A' : 'var(--crm-text-muted)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold" style={{ color: 'var(--crm-text)' }}>
+                    Resposta automática
+                  </h4>
+                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--crm-text-muted)' }}>
+                    Envia uma vez por lead (nunca repete)
+                  </p>
+                </div>
+              </div>
+              <Toggle
+                enabled={arEnabled}
+                onToggle={() => {
+                  const next = !arEnabled
+                  setArEnabled(next)
+                  void saveAutoReply(next, arMessage, arDelay)
+                }}
+              />
+            </div>
+
+            {/* Config — visível apenas quando habilitado */}
+            <AnimatePresence>
+              {arEnabled && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-4 pt-1">
+                    {/* Mensagem */}
+                    <div>
+                      <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--crm-text-muted)' }}>
+                        Mensagem de boas-vindas
+                      </label>
+                      <textarea
+                        value={arMessage}
+                        onChange={e => setArMessage(e.target.value)}
+                        rows={4}
+                        placeholder="Olá {{nome}}! Obrigada por entrar em contato..."
+                        className="w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 resize-none"
+                        style={{
+                          background: 'var(--crm-surface-2)',
+                          border: '1px solid var(--crm-border)',
+                          color: 'var(--crm-text)',
+                          borderRadius: '8px',
+                        }}
+                        onFocus={e => { e.currentTarget.style.borderColor = 'var(--crm-gold)' }}
+                        onBlur={e => { e.currentTarget.style.borderColor = 'var(--crm-border)' }}
+                      />
+                      <p className="text-[10px] mt-1" style={{ color: 'var(--crm-text-muted)' }}>
+                        Use <code className="px-1 py-0.5 rounded text-[10px]" style={{ background: 'var(--crm-surface-2)' }}>{'{{nome}}'}</code> para inserir o primeiro nome do lead
+                      </p>
+                    </div>
+
+                    {/* Delay */}
+                    <div>
+                      <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--crm-text-muted)' }}>
+                        Tempo de espera antes de enviar
+                      </label>
+                      <div className="flex gap-2">
+                        {[
+                          { value: 3000, label: '3s' },
+                          { value: 4000, label: '4s' },
+                          { value: 5000, label: '5s' },
+                        ].map(opt => (
+                          <button
+                            key={opt.value}
+                            onClick={() => setArDelay(opt.value)}
+                            className="px-4 py-2 rounded-lg text-xs font-medium transition-all"
+                            style={{
+                              background: arDelay === opt.value ? 'var(--crm-gold-subtle)' : 'var(--crm-surface-2)',
+                              border: `1px solid ${arDelay === opt.value ? 'var(--crm-gold)' : 'var(--crm-border)'}`,
+                              color: arDelay === opt.value ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[10px] mt-1" style={{ color: 'var(--crm-text-muted)' }}>
+                        Delay para parecer humano — recomendado 4-5 segundos
+                      </p>
+                    </div>
+
+                    {/* Preview */}
+                    <div
+                      className="rounded-xl p-4"
+                      style={{ background: 'rgba(37,211,102,0.04)', border: '1px solid rgba(37,211,102,0.12)' }}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg width="12" height="12" fill="none" stroke="#25D366" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        <span className="text-[10px] font-semibold" style={{ color: '#25D366' }}>
+                          Preview da mensagem
+                        </span>
+                      </div>
+                      <div
+                        className="rounded-lg px-3 py-2.5 text-xs leading-relaxed"
+                        style={{
+                          background: 'var(--crm-surface)',
+                          border: '1px solid var(--crm-border)',
+                          color: 'var(--crm-text)',
+                        }}
+                      >
+                        {arMessage.replace(/\{\{nome\}\}/gi, 'Maria') || (
+                          <span style={{ color: 'var(--crm-text-muted)', fontStyle: 'italic' }}>
+                            Digite uma mensagem acima...
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div
+                      className="flex items-start gap-2.5 px-4 py-3 rounded-lg text-[11px]"
+                      style={{ background: 'rgba(74,123,255,0.06)', border: '1px solid rgba(74,123,255,0.12)' }}
+                    >
+                      <svg width="14" height="14" fill="none" stroke="#4A7BFF" strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 mt-0.5">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="16" x2="12" y2="12" />
+                        <line x1="12" y1="8" x2="12.01" y2="8" />
+                      </svg>
+                      <span style={{ color: 'var(--crm-text-muted)' }}>
+                        A mensagem e enviada <strong style={{ color: 'var(--crm-text)' }}>apenas uma vez</strong> por lead.
+                        Se o lead ja recebeu auto-resposta antes, nao enviara novamente — mesmo em novas conversas.
+                      </span>
+                    </div>
+
+                    {/* Saving indicator */}
+                    {arSaving && (
+                      <div className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--crm-text-muted)' }}>
+                        <div className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--crm-gold)', borderTopColor: 'transparent' }} />
+                        Salvando...
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </SectionCard>
       </motion.div>
 
       {/* Info cards */}
