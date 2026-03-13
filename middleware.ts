@@ -18,6 +18,7 @@ const PUBLIC_PATHS = [
   '/api/booking/availability',
   '/api/payments/webhook',
   '/api/webhooks/evolution',
+  '/api/webhooks/instagram',
 ]
 
 // Prefixos de rotas públicas
