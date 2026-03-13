@@ -42,6 +42,30 @@ const TONE_DESCRIPTIONS: Record<AiAgentConfig['tone'], string> = {
   profissional: 'profissional mas acessível, transmitindo confiança e competência',
 }
 
+/**
+ * Detecta mensagens triviais que podem gerar loops desnecessários.
+ * Emojis, "ok", "obrigado", saudações repetitivas, etc.
+ */
+function isLoopMessage(content: string): boolean {
+  const normalized = content.trim().toLowerCase().replace(/[!?.…,]+$/g, '')
+
+  // Mensagem é só emojis
+  const emojiOnly = /^[\p{Emoji}\s]+$/u.test(content.trim())
+  if (emojiOnly) return true
+
+  // Palavras triviais comuns
+  const trivialPatterns = [
+    'ok', 'okay', 'tá', 'ta', 'beleza', 'blz', 'certo', 'entendi',
+    'obrigado', 'obrigada', 'obg', 'valeu', 'vlw', 'grato', 'grata',
+    'oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'eae', 'eai',
+    'sim', 'não', 'nao', 'hmm', 'hm', 'uhum', 'aham', 'ss', 'nn',
+    'show', 'top', 'legal', 'massa', 'perfeito', 'ótimo', 'otimo',
+    'tudo bem', 'tudo bom', 'de boa', 'tranquilo', 'tranquila',
+  ]
+
+  return trivialPatterns.includes(normalized)
+}
+
 async function getAiAgentConfig(tenantId: string): Promise<AiAgentConfig | null> {
   const integration = await prisma.crmIntegration.findFirst({
     where: { tenantId, provider: 'ai-agent', isActive: true },
@@ -219,6 +243,19 @@ export async function tryAiAgentReply(params: {
 
     // 2. Verificar horário
     if (!isWithinSchedule(config)) return false
+
+    // 2.5 Anti-loop: ignorar mensagens triviais se IA respondeu há < 1 min
+    if (isLoopMessage(messageContent)) {
+      const lastAiReply = await prisma.leadActivity.findFirst({
+        where: { leadId, type: 'AI_AGENT_REPLY' },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      })
+      if (lastAiReply) {
+        const elapsedMs = Date.now() - lastAiReply.createdAt.getTime()
+        if (elapsedMs < 60_000) return false // Ignora para evitar loop
+      }
+    }
 
     // 3. Verificar limite de interações
     const interactions = await countAiInteractions(leadId)

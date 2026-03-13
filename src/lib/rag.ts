@@ -11,42 +11,73 @@ function getGenAI(): GoogleGenerativeAI {
   return _genAI
 }
 
-const CHUNK_SIZE = 1500
-const CHUNK_OVERLAP = 200
+const CHUNK_SIZE = 1000
+const CHUNK_OVERLAP_RATIO = 0.1 // 10% overlap
 const EMBEDDING_MODEL = 'text-embedding-004'
 const CHAT_MODEL = 'gemini-2.0-flash'
 
 /**
- * Divide texto em chunks com overlap para preservar contexto.
+ * Divide texto em chunks de ~1000 caracteres com 10% de overlap.
+ * Respeita quebras de parágrafo e de frase — nunca corta no meio de uma palavra.
  * PDFs devem ser pré-processados com pdf-parse antes de chamar esta função.
  */
-export function chunkText(text: string, chunkSize = CHUNK_SIZE, overlap = CHUNK_OVERLAP): string[] {
-  const chunks: string[] = []
+export function chunkText(text: string, chunkSize = CHUNK_SIZE): string[] {
   const cleaned = text.replace(/\n{3,}/g, '\n\n').trim()
+  const overlap = Math.round(chunkSize * CHUNK_OVERLAP_RATIO)
 
   if (cleaned.length <= chunkSize) {
     return [cleaned]
   }
 
-  let start = 0
-  while (start < cleaned.length) {
-    let end = start + chunkSize
+  // Separar em parágrafos primeiro
+  const paragraphs = cleaned.split(/\n\n+/)
+  const chunks: string[] = []
+  let currentChunk = ''
 
-    // Tentar quebrar em parágrafo ou frase
-    if (end < cleaned.length) {
-      const paragraphBreak = cleaned.lastIndexOf('\n\n', end)
-      if (paragraphBreak > start + chunkSize / 2) {
-        end = paragraphBreak
-      } else {
-        const sentenceBreak = cleaned.lastIndexOf('. ', end)
-        if (sentenceBreak > start + chunkSize / 2) {
-          end = sentenceBreak + 1
-        }
-      }
+  for (const para of paragraphs) {
+    const trimmed = para.trim()
+    if (!trimmed) continue
+
+    // Se o parágrafo inteiro cabe no chunk atual
+    if (currentChunk.length + trimmed.length + 2 <= chunkSize) {
+      currentChunk = currentChunk ? `${currentChunk}\n\n${trimmed}` : trimmed
+      continue
     }
 
-    chunks.push(cleaned.slice(start, end).trim())
-    start = end - overlap
+    // Se o chunk atual já tem conteúdo, salvar e iniciar overlap
+    if (currentChunk) {
+      chunks.push(currentChunk.trim())
+      // Overlap: pegar o final do chunk como início do próximo
+      const overlapText = currentChunk.slice(-overlap)
+      const lastSentence = overlapText.indexOf('. ')
+      currentChunk = lastSentence >= 0
+        ? overlapText.slice(lastSentence + 2)
+        : overlapText
+    }
+
+    // Parágrafo maior que chunkSize: quebrar por frase
+    if (trimmed.length > chunkSize) {
+      const sentences = trimmed.split(/(?<=[.!?])\s+/)
+      for (const sentence of sentences) {
+        if (currentChunk.length + sentence.length + 1 <= chunkSize) {
+          currentChunk = currentChunk ? `${currentChunk} ${sentence}` : sentence
+        } else {
+          if (currentChunk) {
+            chunks.push(currentChunk.trim())
+            const overlapText = currentChunk.slice(-overlap)
+            currentChunk = overlapText
+          }
+          currentChunk = currentChunk ? `${currentChunk} ${sentence}` : sentence
+        }
+      }
+    } else {
+      currentChunk = currentChunk ? `${currentChunk}\n\n${trimmed}` : trimmed
+    }
+  }
+
+  // Último chunk
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim())
   }
 
   return chunks.filter(c => c.length > 50)

@@ -748,6 +748,8 @@ export default function InboxPage() {
   const [isMovingStage, setIsMovingStage] = useState(false)
   const [aiInsight, setAiInsight] = useState<{ insight: string; sentiment: string; engagementLevel: string; detectedIntents: string[] } | null>(null)
   const [isLoadingInsight, setIsLoadingInsight] = useState(false)
+  const [smartReplies, setSmartReplies] = useState<string[]>([])
+  const [isLoadingSmartReplies, setIsLoadingSmartReplies] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -856,6 +858,27 @@ export default function InboxPage() {
     }
   }, [token])
 
+  // Smart Replies — gera 3 sugestões curtas via IA
+  const fetchSmartReplies = useCallback(async (convId: string) => {
+    if (!token) return
+    setIsLoadingSmartReplies(true)
+    setSmartReplies([])
+    try {
+      const res = await fetch('/api/admin/crm/smart-replies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ conversationId: convId, tenantId: TENANT_ID }),
+      })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      if (Array.isArray(data.suggestions)) setSmartReplies(data.suggestions)
+    } catch {
+      // Silencioso — smart replies são opcionais
+    } finally {
+      setIsLoadingSmartReplies(false)
+    }
+  }, [token])
+
   useEffect(() => { fetchConversations(); fetchStages(); fetchTemplates() }, [fetchConversations, fetchStages, fetchTemplates])
 
   useEffect(() => {
@@ -868,9 +891,13 @@ export default function InboxPage() {
       // Buscar insight do lead selecionado
       const conv = conversations.find(c => c.id === selectedId)
       if (conv?.lead?.id) fetchAiInsight(conv.lead.id)
+
+      // Gerar smart replies para a conversa
+      setSmartReplies([])
+      fetchSmartReplies(selectedId)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, fetchMessages, fetchAiInsight])
+  }, [selectedId, fetchMessages, fetchAiInsight, fetchSmartReplies])
 
   // SSE: real-time updates — cirúrgico, sem refetch total
   useCrmStream(TENANT_ID, useCallback((event) => {
@@ -927,9 +954,12 @@ export default function InboxPage() {
           return [...prev, newMsg]
         })
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+
+        // Atualizar smart replies com a nova mensagem
+        fetchSmartReplies(convId)
       }
     }
-  }, [fetchConversations, selectedId]))
+  }, [fetchConversations, selectedId, fetchSmartReplies]))
 
   // Send message
   const handleSend = async () => {
@@ -937,6 +967,7 @@ export default function InboxPage() {
     setIsSending(true)
     const content = newMessage
     setNewMessage('')
+    setSmartReplies([])
 
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
@@ -1363,12 +1394,79 @@ export default function InboxPage() {
             </div>
 
             {/* Input Area */}
-            <div className="p-3.5 border-t shrink-0" style={{
+            <div className="border-t shrink-0" style={{
               borderColor: 'var(--crm-border)',
               background: 'rgba(17,17,20,0.92)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
             }}>
+              {/* Smart Reply Chips */}
+              <AnimatePresence>
+                {(smartReplies.length > 0 || isLoadingSmartReplies) && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="px-3.5 pt-2.5 pb-0"
+                  >
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <svg width="12" height="12" fill="var(--crm-gold)" viewBox="0 0 24 24" className="shrink-0 opacity-60">
+                        <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+                      </svg>
+                      <span className="text-[10px] font-medium" style={{ color: 'var(--crm-text-muted)' }}>
+                        Sugestões IA
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {isLoadingSmartReplies ? (
+                        <>
+                          {[1, 2, 3].map(i => (
+                            <div
+                              key={i}
+                              className="h-7 rounded-lg animate-pulse"
+                              style={{ background: 'var(--crm-surface-2)', width: `${60 + i * 20}px` }}
+                            />
+                          ))}
+                        </>
+                      ) : (
+                        smartReplies.map((reply, i) => (
+                          <motion.button
+                            key={i}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: i * 0.08, type: 'spring', stiffness: 400, damping: 25 }}
+                            onClick={() => {
+                              setNewMessage(reply)
+                              setSmartReplies([])
+                              playFeedback('click')
+                              setTimeout(() => {
+                                if (textareaRef.current) {
+                                  textareaRef.current.style.height = 'auto'
+                                  textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px'
+                                  textareaRef.current.focus()
+                                }
+                              }, 50)
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:brightness-125 active:scale-95 cursor-pointer max-w-60 truncate"
+                            style={{
+                              background: 'rgba(212,175,55,0.06)',
+                              border: '1px solid rgba(212,175,55,0.15)',
+                              color: 'var(--crm-text)',
+                            }}
+                            whileHover={{ borderColor: 'rgba(212,175,55,0.35)' }}
+                            title={reply}
+                          >
+                            {reply}
+                          </motion.button>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="p-3.5">
               <div className="flex items-end gap-2 relative">
                 <AnimatePresence>
                   {showQuickReplies && (
@@ -1502,6 +1600,7 @@ export default function InboxPage() {
                     </svg>
                   )}
                 </motion.button>
+              </div>
               </div>
             </div>
           </>
