@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { playFeedback } from '@/lib/crm-feedback'
 import { useToastStore } from '@/stores/toast-store'
@@ -21,6 +22,7 @@ interface IntegrationCard {
   accentColor: string
   isHero?: boolean
   envKey?: string // maps to the key in /api/admin/crm/integrations/status response
+  configurable?: boolean // if true, shows config modal on click
 }
 
 // --- Icons ---
@@ -174,24 +176,28 @@ const BASE_INTEGRATIONS: IntegrationCard[] = [
     envKey: 'openai',
   },
   {
-    id: 'google-calendar',
-    name: 'Google Calendar',
-    description: 'Sincronização bidirecional de agendamentos com Google Agenda',
-    category: 'coming_soon',
-    status: 'coming_soon',
-    statusLabel: 'Em breve',
-    icon: <CalendarIcon />,
-    accentColor: '#4A7BFF',
-  },
-  {
     id: 'n8n',
     name: 'n8n (Automação)',
     description: 'Conecte fluxos de automação externos e webhooks customizados',
-    category: 'coming_soon',
-    status: 'coming_soon',
-    statusLabel: 'Em breve',
+    category: 'services',
+    status: 'optional',
+    statusLabel: 'Não configurado',
     icon: <AutomationIcon />,
     accentColor: '#F0A500',
+    envKey: 'n8n',
+    configurable: true,
+  },
+  {
+    id: 'google-calendar',
+    name: 'Google Calendar',
+    description: 'Sincronização bidirecional de agendamentos com Google Agenda',
+    category: 'services',
+    status: 'optional',
+    statusLabel: 'Não configurado',
+    icon: <CalendarIcon />,
+    accentColor: '#4A7BFF',
+    envKey: 'google-calendar',
+    configurable: true,
   },
 ]
 
@@ -232,10 +238,11 @@ function StatPill({ count, label, color }: { count: number; label: string; color
 
 // --- Integration card (non-hero) ---
 
-function IntegrationCardDisplay({ card, index }: { card: IntegrationCard; index: number }) {
+function IntegrationCardDisplay({ card, index, onClick }: { card: IntegrationCard; index: number; onClick?: () => void }) {
   return (
     <motion.div
-      className="group rounded-2xl border p-5 relative overflow-hidden cursor-default"
+      className={`group rounded-2xl border p-5 relative overflow-hidden ${card.configurable ? 'cursor-pointer' : 'cursor-default'}`}
+      onClick={card.configurable ? onClick : undefined}
       style={{
         background: 'var(--crm-surface)',
         borderColor: card.status === 'connected' ? `${card.accentColor}22` : 'var(--crm-border)',
@@ -272,6 +279,15 @@ function IntegrationCardDisplay({ card, index }: { card: IntegrationCard; index:
       <p className="text-[11px] leading-relaxed" style={{ color: 'var(--crm-text-muted)' }}>
         {card.description}
       </p>
+
+      {/* Configurar hint for configurable cards */}
+      {card.configurable && (
+        <div className="mt-3 flex items-center gap-1.5">
+          <span className="text-[10px] font-medium" style={{ color: card.accentColor, opacity: 0.7 }}>
+            {card.status === 'connected' ? 'Editar configuração' : 'Clique para configurar'} →
+          </span>
+        </div>
+      )}
 
       {/* Subtle bottom line accent */}
       {card.status === 'connected' && (
@@ -319,6 +335,7 @@ export default function IntegrationsPage() {
   const [instanceId, setInstanceId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [integrations, setIntegrations] = useState<IntegrationCard[]>(BASE_INTEGRATIONS)
+  const [configModal, setConfigModal] = useState<string | null>(null) // provider id
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const addToast = useToastStore(s => s.addToast)
 
@@ -328,12 +345,10 @@ export default function IntegrationsPage() {
     : '/api/webhooks/evolution'
 
   // --- Fetch env var status and update integrations ---
-  useEffect(() => {
+  const refreshIntegrationStatus = useCallback(() => {
     if (!token) return
-    const controller = new AbortController()
-    fetch('/api/admin/crm/integrations/status', {
+    fetch(`/api/admin/crm/integrations/status?tenantId=${TENANT_ID}`, {
       headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
     })
       .then(res => res.ok ? res.json() : null)
       .then((data: { configured: Record<string, boolean> } | null) => {
@@ -351,8 +366,11 @@ export default function IntegrationsPage() {
         }))
       })
       .catch(() => { /* silently fail */ })
-    return () => controller.abort()
   }, [token])
+
+  useEffect(() => {
+    refreshIntegrationStatus()
+  }, [refreshIntegrationStatus])
 
   // Compute stats from dynamic integrations
   const connectedCount = integrations.filter(i => i.status === 'connected' && !i.isHero).length + (waStatus === 'connected' ? 1 : 0)
@@ -662,7 +680,7 @@ export default function IntegrationsPage() {
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {channelIntegrations.map((card, i) => (
-              <IntegrationCardDisplay key={card.id} card={card} index={i} />
+              <IntegrationCardDisplay key={card.id} card={card} index={i} onClick={() => card.configurable && setConfigModal(card.id)} />
             ))}
           </div>
         </>
@@ -682,7 +700,7 @@ export default function IntegrationsPage() {
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {serviceIntegrations.map((card, i) => (
-              <IntegrationCardDisplay key={card.id} card={card} index={i + channelIntegrations.length} />
+              <IntegrationCardDisplay key={card.id} card={card} index={i + channelIntegrations.length} onClick={() => card.configurable && setConfigModal(card.id)} />
             ))}
           </div>
         </>
@@ -770,6 +788,325 @@ export default function IntegrationsPage() {
 
       {/* Bottom spacer */}
       <div className="h-8" />
+
+      {/* ===== CONFIG MODAL ===== */}
+      {configModal && (
+        <IntegrationConfigModal
+          provider={configModal}
+          card={integrations.find(i => i.id === configModal)!}
+          onClose={() => setConfigModal(null)}
+          onSaved={() => {
+            refreshIntegrationStatus()
+            setConfigModal(null)
+          }}
+          token={token}
+        />
+      )}
     </div>
+  )
+}
+
+// =============================================
+// INTEGRATION CONFIG MODAL
+// =============================================
+
+function IntegrationConfigModal({
+  provider,
+  card,
+  onClose,
+  onSaved,
+  token,
+}: {
+  provider: string
+  card: IntegrationCard
+  onClose: () => void
+  onSaved: () => void
+  token: string | null
+}) {
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const addToast = useToastStore(s => s.addToast)
+
+  // n8n fields
+  const [n8nUrl, setN8nUrl] = useState('')
+  const [n8nApiKey, setN8nApiKey] = useState('')
+
+  // Google Calendar fields
+  const [gcalApiKey, setGcalApiKey] = useState('')
+  const [gcalCalendarId, setGcalCalendarId] = useState('')
+
+  // Load existing config
+  useEffect(() => {
+    if (!token) return
+    fetch(`/api/admin/crm/integrations/config?tenantId=${TENANT_ID}&provider=${provider}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data?.configured) return
+        const creds = data.credentials ?? {}
+        if (provider === 'n8n') {
+          setN8nUrl(creds.url ?? '')
+          // Don't populate masked key
+        }
+        if (provider === 'google-calendar') {
+          setGcalCalendarId(creds.calendarId ?? '')
+        }
+      })
+      .catch(() => { /* silently fail */ })
+  }, [token, provider])
+
+  const handleTest = async () => {
+    if (!token) return
+    setTesting(true)
+    setTestResult(null)
+    setError('')
+
+    const body: Record<string, string> = { provider }
+    if (provider === 'n8n') {
+      if (!n8nUrl.trim()) { setError('URL é obrigatória'); setTesting(false); return }
+      body.url = n8nUrl.trim()
+      if (n8nApiKey.trim()) body.apiKey = n8nApiKey.trim()
+    }
+    if (provider === 'google-calendar') {
+      if (!gcalApiKey.trim()) { setError('API Key é obrigatória'); setTesting(false); return }
+      body.apiKey = gcalApiKey.trim()
+    }
+
+    try {
+      const res = await fetch('/api/admin/crm/integrations/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      setTestResult({ ok: data.ok ?? false, message: data.message ?? data.error ?? 'Resultado desconhecido' })
+      if (data.ok) playFeedback('click')
+    } catch {
+      setTestResult({ ok: false, message: 'Erro de conexão com o servidor' })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const handleSave = async () => {
+    if (!token) return
+    setSaving(true)
+    setError('')
+    setSuccess('')
+
+    const credentials: Record<string, string> = {}
+    if (provider === 'n8n') {
+      if (!n8nUrl.trim()) { setError('URL é obrigatória'); setSaving(false); return }
+      credentials.url = n8nUrl.trim()
+      if (n8nApiKey.trim()) credentials.apiKey = n8nApiKey.trim()
+    }
+    if (provider === 'google-calendar') {
+      if (!gcalApiKey.trim()) { setError('API Key é obrigatória'); setSaving(false); return }
+      credentials.apiKey = gcalApiKey.trim()
+      if (gcalCalendarId.trim()) credentials.calendarId = gcalCalendarId.trim()
+    }
+
+    try {
+      const res = await fetch('/api/admin/crm/integrations/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tenantId: TENANT_ID, provider, credentials, isActive: true }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSuccess('Configuração salva com sucesso!')
+        playFeedback('won')
+        addToast(`${card.name} configurado com sucesso!`)
+        setTimeout(onSaved, 1500)
+      } else {
+        setError(data.error ?? 'Erro ao salvar')
+      }
+    } catch {
+      setError('Erro de conexão')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleRemove = async () => {
+    if (!token || !confirm('Remover configuração? A integração será desativada.')) return
+    try {
+      const res = await fetch(`/api/admin/crm/integrations/config?tenantId=${TENANT_ID}&provider=${provider}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        addToast('Configuração removida')
+        onSaved()
+      }
+    } catch {
+      setError('Erro ao remover')
+    }
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }} onClick={onClose}>
+      <motion.div
+        className="w-full max-w-lg rounded-2xl border overflow-hidden"
+        style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }}
+        onClick={e => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--crm-border)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--crm-surface-2)' }}>
+              {card.icon}
+            </div>
+            <div>
+              <h3 className="text-sm font-bold" style={{ color: 'var(--crm-text)' }}>Configurar {card.name}</h3>
+              <p className="text-[10px]" style={{ color: 'var(--crm-text-muted)' }}>Insira as credenciais abaixo</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg transition-all hover:bg-white/5" style={{ color: 'var(--crm-text-muted)' }}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-4">
+          {error && (
+            <div className="px-4 py-2.5 rounded-xl text-xs" style={{ background: 'rgba(255,107,74,0.08)', color: '#FF6B4A', border: '1px solid rgba(255,107,74,0.15)' }}>
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="px-4 py-2.5 rounded-xl text-xs flex items-center gap-2" style={{ background: 'rgba(46,204,138,0.08)', color: '#2ECC8A', border: '1px solid rgba(46,204,138,0.15)' }}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" /></svg>
+              {success}
+            </div>
+          )}
+
+          {/* n8n fields */}
+          {provider === 'n8n' && (
+            <>
+              <div>
+                <label className="block text-[11px] font-medium mb-1.5" style={{ color: 'var(--crm-text-muted)' }}>URL da Instância n8n *</label>
+                <input
+                  type="url"
+                  value={n8nUrl}
+                  onChange={e => setN8nUrl(e.target.value)}
+                  placeholder="https://n8n.suaempresa.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none transition-all focus:ring-1"
+                  style={{ background: 'var(--crm-bg)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)', focusRingColor: card.accentColor }}
+                />
+                <p className="text-[10px] mt-1" style={{ color: 'var(--crm-text-muted)' }}>Ex: http://187.77.226.144:5678</p>
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium mb-1.5" style={{ color: 'var(--crm-text-muted)' }}>API Key (opcional)</label>
+                <input
+                  type="password"
+                  value={n8nApiKey}
+                  onChange={e => setN8nApiKey(e.target.value)}
+                  placeholder="Sua API Key do n8n"
+                  className="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none transition-all focus:ring-1"
+                  style={{ background: 'var(--crm-bg)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
+                />
+                <p className="text-[10px] mt-1" style={{ color: 'var(--crm-text-muted)' }}>Gere em: Settings → API → Create API Key</p>
+              </div>
+            </>
+          )}
+
+          {/* Google Calendar fields */}
+          {provider === 'google-calendar' && (
+            <>
+              <div>
+                <label className="block text-[11px] font-medium mb-1.5" style={{ color: 'var(--crm-text-muted)' }}>API Key do Google *</label>
+                <input
+                  type="password"
+                  value={gcalApiKey}
+                  onChange={e => setGcalApiKey(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none transition-all focus:ring-1"
+                  style={{ background: 'var(--crm-bg)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
+                />
+                <p className="text-[10px] mt-1" style={{ color: 'var(--crm-text-muted)' }}>Console Google → APIs → Credentials → API Key</p>
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium mb-1.5" style={{ color: 'var(--crm-text-muted)' }}>Calendar ID (opcional)</label>
+                <input
+                  type="text"
+                  value={gcalCalendarId}
+                  onChange={e => setGcalCalendarId(e.target.value)}
+                  placeholder="primary ou email@gmail.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none transition-all focus:ring-1"
+                  style={{ background: 'var(--crm-bg)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Test result */}
+          {testResult && (
+            <div
+              className="px-4 py-3 rounded-xl text-xs leading-relaxed"
+              style={{
+                background: testResult.ok ? 'rgba(46,204,138,0.06)' : 'rgba(255,107,74,0.06)',
+                color: testResult.ok ? '#2ECC8A' : '#FF6B4A',
+                border: `1px solid ${testResult.ok ? 'rgba(46,204,138,0.15)' : 'rgba(255,107,74,0.15)'}`,
+              }}
+            >
+              <div className="flex items-center gap-2 font-medium mb-1">
+                {testResult.ok ? (
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" /></svg>
+                ) : (
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                )}
+                {testResult.ok ? 'Conexão bem-sucedida' : 'Falha na conexão'}
+              </div>
+              {testResult.message}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t flex items-center justify-between gap-3" style={{ borderColor: 'var(--crm-border)' }}>
+          <div className="flex items-center gap-2">
+            {card.status === 'connected' && (
+              <button
+                onClick={handleRemove}
+                className="px-3 py-2 rounded-xl text-[11px] font-medium transition-all hover:brightness-110"
+                style={{ color: 'var(--crm-hot)', background: 'rgba(255,107,74,0.06)', border: '1px solid rgba(255,107,74,0.12)' }}
+              >
+                Remover
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleTest}
+              disabled={testing}
+              className="px-4 py-2 rounded-xl text-[11px] font-semibold transition-all hover:brightness-110 disabled:opacity-50 flex items-center gap-1.5"
+              style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
+            >
+              {testing && <div className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--crm-text-muted)', borderTopColor: 'transparent' }} />}
+              Testar Conexão
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !!success}
+              className="px-5 py-2 rounded-xl text-[11px] font-bold transition-all hover:brightness-110 disabled:opacity-50 flex items-center gap-1.5"
+              style={{ background: card.accentColor, color: '#0A0A0B', boxShadow: `0 4px 16px ${card.accentColor}40` }}
+            >
+              {saving && <div className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: '#0A0A0B', borderTopColor: 'transparent' }} />}
+              Salvar
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>,
+    document.body
   )
 }

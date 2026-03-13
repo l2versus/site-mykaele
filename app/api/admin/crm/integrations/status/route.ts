@@ -1,6 +1,7 @@
 // app/api/admin/crm/integrations/status/route.ts — Check configured integrations
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 // Map of integration ID → env var names to check
 const ENV_VAR_MAP: Record<string, string[]> = {
@@ -17,6 +18,9 @@ const ENV_VAR_MAP: Record<string, string[]> = {
   'redis': ['REDIS_URL'],
 }
 
+// Integrations stored in DB (CrmIntegration table)
+const DB_PROVIDERS = ['n8n', 'google-calendar']
+
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '')
@@ -27,14 +31,46 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(req.url)
+    const tenantId = searchParams.get('tenantId')
+
     const configured: Record<string, boolean> = {}
 
+    // Check env-based integrations
     for (const [id, envVars] of Object.entries(ENV_VAR_MAP)) {
-      // Integration is configured if ALL required env vars are present and non-empty
       configured[id] = envVars.every(v => {
         const val = process.env[v]
         return val !== undefined && val !== '' && val !== null
       })
+    }
+
+    // Check DB-based integrations (n8n, google-calendar)
+    if (tenantId) {
+      try {
+        const tenant = await prisma.crmTenant.findFirst({
+          where: { OR: [{ id: tenantId }, { slug: tenantId }] },
+        })
+
+        if (tenant) {
+          const dbIntegrations = await prisma.crmIntegration.findMany({
+            where: {
+              tenantId: tenant.id,
+              provider: { in: DB_PROVIDERS },
+              isActive: true,
+            },
+            select: { provider: true },
+          })
+
+          for (const provider of DB_PROVIDERS) {
+            configured[provider] = dbIntegrations.some(i => i.provider === provider)
+          }
+        }
+      } catch {
+        // DB check failed, mark as not configured
+        for (const provider of DB_PROVIDERS) {
+          configured[provider] = false
+        }
+      }
     }
 
     return NextResponse.json({ configured })
