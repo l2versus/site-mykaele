@@ -3,6 +3,7 @@
 // Garante que NENHUMA mensagem WhatsApp seja perdida.
 import { prisma } from '@/lib/prisma'
 import { tryAutoReply } from '@/lib/auto-reply'
+import { fireAutomations } from '@/lib/automation-engine'
 
 interface WebhookPayload {
   event: string
@@ -105,8 +106,9 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
   const pushName = data.pushName ?? 'Contato'
   const phone = key.remoteJid.replace('@s.whatsapp.net', '')
 
-  // Contexto capturado dentro da transaction para auto-reply
+  // Contexto capturado dentro da transaction para auto-reply e automações
   const autoReplyCtx: { leadId: string; leadName: string; channelId: string }[] = []
+  let isNewLead = false
 
   await prisma.$transaction(async (tx) => {
     let conversation = await tx.conversation.findUnique({
@@ -127,6 +129,7 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
       })
 
       if (!lead) {
+        isNewLead = true
         const lastLead = await tx.lead.findFirst({
           where: { tenantId, stageId: firstStage.id, deletedAt: null },
           orderBy: { position: 'desc' },
@@ -220,5 +223,20 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
       remoteJid: key.remoteJid,
       fromMe: key.fromMe,
     })
+
+    // Disparar automações por gatilho (non-blocking)
+    void fireAutomations('NEW_MESSAGE_RECEIVED', {
+      tenantId,
+      leadId: ctx.leadId,
+      metadata: { messageType: type, content },
+    })
+
+    if (isNewLead) {
+      void fireAutomations('LEAD_CREATED', {
+        tenantId,
+        leadId: ctx.leadId,
+        metadata: { source: 'whatsapp', phone },
+      })
+    }
   }
 }

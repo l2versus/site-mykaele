@@ -1,7 +1,8 @@
 // src/workers/crm/execute-automation.ts — Executor de automações com logging em CrmAutomationLog
-// Suporta dois formatos de flowJson:
-//   1. Simples (UI de regras): { action, message?, conditions?, stageId? }
-//   2. DAG (React Flow):       { nodes: AutomationNode[], edges?: [] }
+// Suporta três formatos de flowJson:
+//   1. Simples (legado):     { action, message?, conditions?, stageId? }
+//   2. Multi-ação (novo UI): { actions: [{type, config}], conditions?, triggerConditions? }
+//   3. DAG (React Flow):     { nodes: AutomationNode[], edges?: [] }
 import type { Job } from 'bullmq'
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
@@ -28,12 +29,22 @@ interface AutomationNode {
   next?: string[]
 }
 
+interface ActionConfig {
+  type: string
+  config: Record<string, unknown>
+}
+
 interface SimpleFlow {
   action?: string
+  actions?: ActionConfig[]
   message?: string
   conditions?: Array<{ field: string; op: string; value: string }>
+  triggerConditions?: Array<{ field: string; op: string; value: string }>
   stageId?: string
   tag?: string
+  subject?: string
+  body?: string
+  webhookUrl?: string
 }
 
 interface DagFlow {
@@ -111,10 +122,13 @@ export async function executeAutomation(job: Job<AutomationPayload>): Promise<vo
   const flowRaw = automation.flowJson as Record<string, unknown>
   const flowJson = flowRaw as unknown as DagFlow | SimpleFlow
   const isDag = 'nodes' in flowRaw && Array.isArray(flowRaw.nodes)
+  const isMultiAction = 'actions' in flowRaw && Array.isArray(flowRaw.actions)
 
   try {
     if (isDag) {
       await executeDagNode(job, automation, flowJson as DagFlow, leadId, tenantId, currentNodeId, context ?? {})
+    } else if (isMultiAction) {
+      await executeMultiActionFlow(job, automation, flowJson as SimpleFlow, leadId, tenantId)
     } else {
       await executeSimpleFlow(job, automation, flowJson as SimpleFlow, leadId, tenantId)
     }
@@ -232,6 +246,32 @@ async function executeSimpleFlow(
       break
     }
 
+    case 'SEND_EMAIL': {
+      if (!lead.email || !flow.subject || !flow.body) break
+      const { sendEmail } = await import('../../lib/email')
+      const subj = interpolateVars(flow.subject, lead)
+      const htmlBody = `<div style="font-family:sans-serif;line-height:1.6">${interpolateVars(flow.body, lead).replace(/\n/g, '<br>')}</div>`
+      await sendEmail({ to: lead.email, subject: subj, html: htmlBody })
+      break
+    }
+
+    case 'SEND_WEBHOOK': {
+      if (!flow.webhookUrl) break
+      await fetch(flow.webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'automation_triggered',
+          automation: automation.name,
+          lead: { id: leadId, name: lead.name, phone: lead.phone, email: lead.email, status: lead.status },
+          tenantId,
+          timestamp: new Date().toISOString(),
+        }),
+        signal: AbortSignal.timeout(10_000),
+      })
+      break
+    }
+
     case 'NOTIFY_TEAM': {
       // Publica evento via Redis pub/sub para SSE
       const { redis } = await import('../../lib/queues')
@@ -240,6 +280,153 @@ async function executeSimpleFlow(
         automationName: automation.name,
         leadName: lead.name,
         message: flow.message ?? `Automação "${automation.name}" disparada`,
+        timestamp: new Date().toISOString(),
+      }))
+      break
+    }
+  }
+}
+
+// ━━━ Interpolação de variáveis ━━━
+
+function interpolateVars(
+  template: string,
+  lead: { name: string; phone: string; email: string | null },
+): string {
+  return template
+    .replace(/\{\{nome\}\}/gi, lead.name.split(' ')[0] || lead.name)
+    .replace(/\{\{telefone\}\}/gi, lead.phone)
+    .replace(/\{\{email\}\}/gi, lead.email ?? '')
+}
+
+// ━━━ Multi-Action Flow Executor (novo formato UI) ━━━
+
+async function executeMultiActionFlow(
+  job: Job,
+  automation: { id: string; name: string },
+  flow: SimpleFlow,
+  leadId: string,
+  tenantId: string,
+): Promise<void> {
+  const lead = await prisma.lead.findFirst({
+    where: { id: leadId, tenantId, deletedAt: null },
+  })
+  if (!lead) throw new Error(`Lead ${leadId} não encontrado`)
+
+  // Verificar condições no lead
+  if (flow.conditions && flow.conditions.length > 0) {
+    const allMatch = flow.conditions.every(cond => {
+      const leadValue = (lead as Record<string, unknown>)[cond.field.replace('lead.', '')]
+      switch (cond.op) {
+        case 'eq': return String(leadValue) === cond.value
+        case 'neq': return String(leadValue) !== cond.value
+        case 'gt': return Number(leadValue) > Number(cond.value)
+        case 'lt': return Number(leadValue) < Number(cond.value)
+        case 'contains': return String(leadValue).toLowerCase().includes(cond.value.toLowerCase())
+        default: return true
+      }
+    })
+    if (!allMatch) return
+  }
+
+  // Executar cada ação na ordem
+  const actions = flow.actions ?? []
+  for (const act of actions) {
+    await executeSingleAction(act.type, act.config, lead, tenantId, automation)
+  }
+}
+
+async function executeSingleAction(
+  actionType: string,
+  config: Record<string, unknown>,
+  lead: { id: string; name: string; phone: string; email: string | null; tags: string[]; stageId: string; expectedValue: number | null; status: string },
+  tenantId: string,
+  automation: { id: string; name: string },
+): Promise<void> {
+  switch (actionType) {
+    case 'SEND_MESSAGE': {
+      const message = config.message as string | undefined
+      if (!message) break
+      const conversation = await prisma.conversation.findFirst({
+        where: { leadId: lead.id, tenantId },
+        include: { channel: true },
+      })
+      if (conversation?.channel?.instanceId) {
+        const text = interpolateVars(message, lead)
+        await evolutionApi.sendText(conversation.channel.instanceId, conversation.remoteJid, text)
+      }
+      break
+    }
+
+    case 'SEND_EMAIL': {
+      const subject = config.subject as string | undefined
+      const body = config.body as string | undefined
+      if (!lead.email || !subject || !body) break
+      const { sendEmail } = await import('../../lib/email')
+      await sendEmail({
+        to: lead.email,
+        subject: interpolateVars(subject, lead),
+        html: `<div style="font-family:sans-serif;line-height:1.6">${interpolateVars(body, lead).replace(/\n/g, '<br>')}</div>`,
+      })
+      break
+    }
+
+    case 'SEND_WEBHOOK': {
+      const url = config.webhookUrl as string | undefined
+      if (!url) break
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'automation_triggered',
+          automation: automation.name,
+          lead: { id: lead.id, name: lead.name, phone: lead.phone, email: lead.email, status: lead.status },
+          tenantId,
+          timestamp: new Date().toISOString(),
+        }),
+        signal: AbortSignal.timeout(10_000),
+      })
+      break
+    }
+
+    case 'MOVE_STAGE': {
+      const targetStageId = config.stageId as string | undefined
+      if (!targetStageId || targetStageId === lead.stageId) break
+      await prisma.$transaction([
+        prisma.stage.update({
+          where: { id: lead.stageId },
+          data: { cachedLeadCount: { decrement: 1 }, cachedTotalValue: { decrement: lead.expectedValue ?? 0 }, cacheUpdatedAt: new Date() },
+        }),
+        prisma.lead.update({
+          where: { id: lead.id },
+          data: { stageId: targetStageId },
+        }),
+        prisma.stage.update({
+          where: { id: targetStageId },
+          data: { cachedLeadCount: { increment: 1 }, cachedTotalValue: { increment: lead.expectedValue ?? 0 }, cacheUpdatedAt: new Date() },
+        }),
+      ])
+      break
+    }
+
+    case 'ADD_TAG': {
+      const tag = (config.tag as string) ?? (config.message as string)
+      if (tag && !lead.tags.includes(tag)) {
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: { tags: [...lead.tags, tag] },
+        })
+      }
+      break
+    }
+
+    case 'NOTIFY_TEAM': {
+      const { redis } = await import('../../lib/queues')
+      await redis.publish(`crm:${tenantId}:notifications`, JSON.stringify({
+        type: 'AUTOMATION_NOTIFY',
+        automationName: automation.name,
+        leadName: lead.name,
+        message: (config.message as string) ?? `Automação "${automation.name}" disparada`,
         timestamp: new Date().toISOString(),
       }))
       break

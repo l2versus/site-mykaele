@@ -135,5 +135,20 @@ export async function moveLead(input: z.input<typeof moveLeadSchema>): Promise<M
   const actType = lead.status === 'WON' ? 'LEAD_WON' as const : lead.status === 'LOST' ? 'LEAD_LOST' as const : 'LEAD_STAGE_CHANGED' as const
   logActivity({ tenantId, type: actType, description: actType === 'LEAD_WON' ? 'Lead marcado como ganho' : actType === 'LEAD_LOST' ? 'Lead marcado como perdido' : 'Lead movido de estagio', leadId, userId: payload.userId, metadata: { fromStageId, toStageId, status: lead.status } })
 
+  // Disparar automações por gatilho (non-blocking)
+  if (fromStageId !== toStageId) {
+    const { fireAutomations } = await import('@/lib/automation-engine')
+    void fireAutomations('LEAD_STAGE_CHANGED', {
+      tenantId,
+      leadId,
+      metadata: {
+        fromStageId,
+        toStageId,
+        newStatus: lead.status,
+        stageType: lead.status === 'WON' ? 'WON' : lead.status === 'LOST' ? 'LOST' : 'OPEN',
+      },
+    })
+  }
+
   return { ok: true, position: newPosition }
 }
