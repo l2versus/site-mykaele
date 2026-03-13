@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createAuditLog, CRM_ACTIONS } from '@/lib/audit'
+import { generateVerificationToken, sendTeamInviteEmail } from '@/lib/email'
 
 function resolveTenant(tenantId: string) {
   return prisma.crmTenant.findFirst({
@@ -125,6 +126,8 @@ export async function POST(req: NextRequest) {
       select: { id: true },
     })
 
+    const inviteToken = user ? null : generateVerificationToken()
+
     const member = await prisma.crmTeamMember.create({
       data: {
         tenantId: tenant.id,
@@ -134,9 +137,29 @@ export async function POST(req: NextRequest) {
         phone: phone || null,
         role: role || 'agent',
         invitedBy: payload.userId,
+        inviteToken,
+        inviteStatus: user ? 'accepted' : 'pending',
+        invitedAt: new Date(),
         joinedAt: user ? new Date() : null,
       },
     })
+
+    // Send invite email if user doesn't exist yet
+    if (!user && inviteToken) {
+      // Get inviter name for the email
+      const inviter = await prisma.user.findUnique({
+        where: { id: payload.userId },
+        select: { name: true },
+      })
+
+      sendTeamInviteEmail({
+        email: member.email,
+        name: member.name,
+        inviterName: inviter?.name || 'A equipe',
+        role: member.role,
+        inviteToken,
+      }).catch(err => console.error('[team] Failed to send invite email:', err))
+    }
 
     createAuditLog({
       tenantId: tenant.id,

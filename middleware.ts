@@ -21,7 +21,7 @@ const PUBLIC_PATHS = [
 ]
 
 // Prefixos de rotas públicas
-const PUBLIC_PREFIXES = ['/check-in/', '/api/crm/stream', '/proposta/', '/api/public/proposals/', '/api/webhooks/crm/']
+const PUBLIC_PREFIXES = ['/check-in/', '/api/crm/stream', '/proposta/', '/api/public/proposals/', '/api/webhooks/crm/', '/convite/', '/api/crm/invite/']
 
 // Prefixos de rotas estáticas
 const STATIC_PREFIXES = ['/_next', '/favicon', '/media', '/images', '/icon', '/apple-icon', '/uploads']
@@ -114,5 +114,6 @@ export const config = {
     '/cliente/(.*)',
     '/ref/(.*)',
     '/check-in/(.*)',
+    '/convite/(.*)',
   ],
 }

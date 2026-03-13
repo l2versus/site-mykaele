@@ -1028,6 +1028,9 @@ model CrmTeamMember {
   isActive          Boolean  @default(true)
   commissionPercent Float?   // % sobre leads ganhos
   invitedBy         String?
+  inviteToken       String?  @unique
+  inviteStatus      String   @default("pending") // pending, accepted
+  invitedAt         DateTime?
   joinedAt          DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

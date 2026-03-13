@@ -399,6 +399,135 @@ export function getVerificationEmailTemplate(name: string, verificationUrl: stri
 }
 
 /**
+ * Template de email de convite para equipe CRM
+ */
+export function getTeamInviteEmailTemplate(name: string, inviterName: string, role: string, inviteUrl: string) {
+  const roleLabels: Record<string, string> = {
+    owner: 'Proprietário(a)',
+    admin: 'Administrador(a)',
+    manager: 'Gerente',
+    agent: 'Agente',
+  }
+  const roleLabel = roleLabels[role] || role
+
+  return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Convite para equipe - Colify CRM</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0A0A0B; font-family: 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0A0A0B;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px; background: #111114; border-radius: 24px; overflow: hidden; border: 1px solid #2A2A32;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); padding: 45px 30px; text-align: center;">
+              <h1 style="margin: 0; color: #0A0A0B; font-size: 26px; font-weight: 700; letter-spacing: 0.5px;">
+                Colify CRM
+              </h1>
+              <p style="margin: 8px 0 0; color: rgba(10,10,11,0.7); font-size: 12px; letter-spacing: 2px; text-transform: uppercase;">
+                Você foi convidado(a)
+              </p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 40px 45px;">
+              <p style="margin: 0 0 25px; color: #F0EDE8; font-size: 18px; font-weight: 300; line-height: 1.6;">
+                Olá, <strong style="color: #D4AF37; font-weight: 500;">${name}</strong>!
+              </p>
+
+              <p style="margin: 0 0 20px; color: #8B8A94; font-size: 15px; line-height: 1.7;">
+                <strong style="color: #F0EDE8;">${inviterName}</strong> convidou você para fazer parte da equipe como <strong style="color: #D4AF37;">${roleLabel}</strong>.
+              </p>
+
+              <p style="margin: 0 0 30px; color: #8B8A94; font-size: 15px; line-height: 1.7;">
+                Clique no botão abaixo para criar sua senha e acessar o CRM:
+              </p>
+
+              <!-- CTA -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center" style="padding: 10px 0 35px;">
+                    <a href="${inviteUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #0A0A0B; text-decoration: none; padding: 16px 45px; border-radius: 50px; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 8px 25px rgba(212,175,55,0.3);">
+                      Aceitar Convite
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="padding: 15px 0;">
+                    <div style="height: 1px; background: linear-gradient(90deg, transparent, #2A2A32, transparent);"></div>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 20px 0 0; color: #8B8A94; font-size: 13px; line-height: 1.6;">
+                Com o Colify CRM você poderá:
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 15px 0 25px;">
+                <tr><td style="padding: 6px 0;"><span style="color: #D4AF37;">✦</span><span style="color: #8B8A94; font-size: 13px; margin-left: 10px;">Gerenciar leads e pipeline de vendas</span></td></tr>
+                <tr><td style="padding: 6px 0;"><span style="color: #D4AF37;">✦</span><span style="color: #8B8A94; font-size: 13px; margin-left: 10px;">Conversar com clientes via WhatsApp</span></td></tr>
+                <tr><td style="padding: 6px 0;"><span style="color: #D4AF37;">✦</span><span style="color: #8B8A94; font-size: 13px; margin-left: 10px;">Acompanhar métricas e inteligência artificial</span></td></tr>
+              </table>
+
+              <p style="margin: 25px 0 0; color: rgba(139,138,148,0.5); font-size: 11px; line-height: 1.6;">
+                Se o botão não funcionar, copie e cole este link:<br>
+                <a href="${inviteUrl}" style="color: #D4AF37; word-break: break-all; font-size: 10px;">${inviteUrl}</a>
+              </p>
+              <p style="margin: 15px 0 0; color: rgba(139,138,148,0.4); font-size: 10px;">
+                Este convite expira em 7 dias.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: rgba(0,0,0,0.3); padding: 25px 40px; border-top: 1px solid #2A2A32;">
+              <p style="margin: 0; color: rgba(139,138,148,0.4); font-size: 9px; text-align: center; letter-spacing: 1px;">
+                © ${new Date().getFullYear()} Colify CRM · Mykaele Procópio
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`
+}
+
+/**
+ * Envia email de convite para membro da equipe CRM
+ */
+export async function sendTeamInviteEmail(params: {
+  email: string
+  name: string
+  inviterName: string
+  role: string
+  inviteToken: string
+}) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mykaprocopio.com.br'
+  const inviteUrl = `${baseUrl}/convite/${params.inviteToken}`
+  const html = getTeamInviteEmailTemplate(params.name, params.inviterName, params.role, inviteUrl)
+
+  return sendEmail({
+    to: params.email,
+    subject: 'Você foi convidado(a) para o Colify CRM',
+    html,
+  })
+}
+
+/**
  * Envia email de verificação
  */
 export async function sendVerificationEmail(email: string, name: string, token: string) {
