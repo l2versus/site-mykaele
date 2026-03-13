@@ -26,9 +26,14 @@ export async function GET(req: NextRequest) {
     }
 
     const search = req.nextUrl.searchParams.get('search')?.toLowerCase()
+    const channelFilter = req.nextUrl.searchParams.get('channel') // whatsapp, instagram, facebook, telegram, email
+
+    const channelWhere = channelFilter
+      ? { channel: { type: channelFilter } }
+      : {}
 
     const conversations = await prisma.conversation.findMany({
-      where: { tenantId, isClosed: false },
+      where: { tenantId, isClosed: false, ...channelWhere },
       orderBy: { lastMessageAt: 'desc' },
       select: {
         id: true,
@@ -36,6 +41,9 @@ export async function GET(req: NextRequest) {
         unreadCount: true,
         lastMessageAt: true,
         assignedToUserId: true,
+        channel: {
+          select: { type: true, name: true },
+        },
         lead: {
           select: {
             id: true,
@@ -59,7 +67,7 @@ export async function GET(req: NextRequest) {
         messages: {
           take: 1,
           orderBy: { createdAt: 'desc' },
-          select: { content: true, fromMe: true, type: true, createdAt: true },
+          select: { content: true, fromMe: true, type: true, createdAt: true, channel: true },
         },
       },
       take: 100,
@@ -68,6 +76,7 @@ export async function GET(req: NextRequest) {
     // Enriquecer com última mensagem e filtrar por busca
     let result = conversations.map(c => ({
       ...c,
+      channelType: c.channel?.type ?? 'whatsapp',
       lastMessage: c.messages[0] ?? null,
       messages: undefined,
     }))

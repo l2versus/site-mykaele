@@ -766,6 +766,7 @@ model Message {
   content       String         @db.Text
   mediaMimeType String?
   mediaUrl      String?
+  channel       String         @default("whatsapp") // whatsapp, instagram, facebook, telegram, email
 
   isClinicalMedia Boolean @default(false)
 
@@ -782,6 +783,7 @@ model Message {
   @@index([conversationId, createdAt(sort: Desc)])
   @@index([tenantId, isClinicalMedia])
   @@index([tenantId])
+  @@index([tenantId, channel])
 }
 
 model CrmAutomation {

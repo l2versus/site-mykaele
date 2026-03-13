@@ -246,6 +246,7 @@ export async function processWebhook(job: Job<WebhookPayload>): Promise<WebhookR
         content,
         mediaMimeType,
         mediaUrl,
+        channel: channel.type || 'whatsapp',
         status: key.fromMe ? 'SENT' : 'RECEIVED',
       },
     })
@@ -270,6 +271,7 @@ export async function processWebhook(job: Job<WebhookPayload>): Promise<WebhookR
       fromMe: key.fromMe,
       content: content.slice(0, 100),
       messageType: type,
+      channel: channel.type || 'whatsapp',
     },
   }))
 

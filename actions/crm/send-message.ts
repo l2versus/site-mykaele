@@ -4,7 +4,8 @@ import { z } from 'zod'
 import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { evolutionApi } from '@/lib/evolution-api'
+import { getChannelProvider } from '@/lib/channels'
+import type { ChannelType } from '@/lib/channels'
 import { createAuditLog, CRM_ACTIONS } from '@/lib/audit'
 import { redis, isRedisReady } from '@/lib/redis'
 
@@ -35,33 +36,38 @@ export async function sendMessage(input: z.input<typeof sendMessageSchema>): Pro
   const tenantId = process.env.DEFAULT_TENANT_ID
   if (!tenantId) return { ok: false, error: 'Tenant não configurado' }
 
-  // Buscar conversa com canal
+  // Buscar conversa com canal (inclui tipo do canal)
   const conversation = await prisma.conversation.findFirst({
     where: { id: conversationId, tenantId },
     include: {
-      channel: { select: { instanceId: true } },
+      channel: { select: { instanceId: true, type: true } },
     },
   })
 
   if (!conversation) return { ok: false, error: 'Conversa não encontrada' }
   if (!conversation.channel.instanceId) return { ok: false, error: 'Canal sem instância configurada' }
 
-  // Enviar via Evolution API
-  const result = await evolutionApi.sendText(
-    conversation.channel.instanceId,
-    conversation.remoteJid,
+  // Resolver provedor pelo tipo do canal
+  const channelType = (conversation.channel.type || 'whatsapp') as ChannelType
+  const provider = getChannelProvider(channelType)
+
+  // Enviar via provedor do canal (WhatsApp, Instagram, etc.)
+  const result = await provider.sendMessage({
+    instanceId: conversation.channel.instanceId,
+    remoteId: conversation.remoteJid,
     text,
-  )
+  })
 
   // Salvar mensagem no banco
   const message = await prisma.message.create({
     data: {
       conversationId,
       tenantId,
-      waMessageId: result.key.id,
+      waMessageId: result.messageId,
       fromMe: true,
       type: 'TEXT',
       content: text,
+      channel: channelType,
       status: 'SENT',
       sentByUserId: payload.userId,
     },
@@ -85,12 +91,12 @@ export async function sendMessage(input: z.input<typeof sendMessageSchema>): Pro
     userId: payload.userId,
     action: CRM_ACTIONS.MESSAGE_SENT,
     entityId: message.id,
-    details: { conversationId, leadId: conversation.leadId },
+    details: { conversationId, leadId: conversation.leadId, channel: channelType },
   })
 
   // Log de atividade para relatórios
   const { logActivity } = await import('@/lib/activity-log')
-  logActivity({ tenantId, type: 'MESSAGE_SENT', description: 'Mensagem enviada via WhatsApp', leadId: conversation.leadId, userId: payload.userId, metadata: { conversationId, messageId: message.id } })
+  logActivity({ tenantId, type: 'MESSAGE_SENT', description: `Mensagem enviada via ${provider.displayName}`, leadId: conversation.leadId, userId: payload.userId, metadata: { conversationId, messageId: message.id, channel: channelType } })
 
   // Notificar front-end via SSE (fire-and-forget)
   if (isRedisReady()) {
@@ -104,6 +110,7 @@ export async function sendMessage(input: z.input<typeof sendMessageSchema>): Pro
         fromMe: true,
         content: text.slice(0, 100),
         messageType: 'TEXT',
+        channel: channelType,
       },
     })).catch(() => {})
   }

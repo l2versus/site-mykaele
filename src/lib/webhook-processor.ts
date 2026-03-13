@@ -204,6 +204,7 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
         content,
         mediaMimeType,
         mediaUrl,
+        channel: channel.type || 'whatsapp',
         status: key.fromMe ? 'SENT' : 'RECEIVED',
       },
     })
