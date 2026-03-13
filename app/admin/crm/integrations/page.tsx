@@ -20,6 +20,7 @@ interface IntegrationCard {
   icon: React.ReactNode
   accentColor: string
   isHero?: boolean
+  envKey?: string // maps to the key in /api/admin/crm/integrations/status response
 }
 
 // --- Icons ---
@@ -70,9 +71,30 @@ const AIIcon = ({ size = 20 }: { size?: number }) => (
   </svg>
 )
 
-// --- Integration definitions ---
+const GeminiIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} fill="none" stroke="#8B5CF6" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3v18" />
+    <path d="M5.5 6.5L12 12l6.5-5.5" />
+    <path d="M5.5 17.5L12 12l6.5 5.5" />
+  </svg>
+)
 
-const INTEGRATIONS: IntegrationCard[] = [
+const TelegramIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} fill="none" stroke="#229ED9" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 2L11 13" />
+    <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+  </svg>
+)
+
+const CallMeBotIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} fill="none" stroke="#10B981" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+  </svg>
+)
+
+// --- All integration definitions (default statuses, will be overridden by env check) ---
+
+const BASE_INTEGRATIONS: IntegrationCard[] = [
   {
     id: 'whatsapp',
     name: 'WhatsApp',
@@ -83,26 +105,62 @@ const INTEGRATIONS: IntegrationCard[] = [
     icon: <WhatsAppIcon size={28} />,
     accentColor: '#25D366',
     isHero: true,
+    envKey: 'whatsapp-evolution',
   },
   {
     id: 'email',
     name: 'E-mail (Resend)',
     description: 'Envio de e-mails transacionais e notificações para pacientes',
     category: 'channels',
-    status: 'connected',
-    statusLabel: 'Configurado',
+    status: 'optional',
+    statusLabel: 'Não configurado',
     icon: <EmailIcon />,
     accentColor: '#7C6AEF',
+    envKey: 'email',
+  },
+  {
+    id: 'callmebot',
+    name: 'CallMeBot',
+    description: 'Notificações WhatsApp via CallMeBot para alertas internos',
+    category: 'channels',
+    status: 'optional',
+    statusLabel: 'Não configurado',
+    icon: <CallMeBotIcon />,
+    accentColor: '#10B981',
+    envKey: 'callmebot',
+  },
+  {
+    id: 'telegram',
+    name: 'Telegram',
+    description: 'Notificações via Telegram Bot para alertas e atualizações',
+    category: 'channels',
+    status: 'optional',
+    statusLabel: 'Não configurado',
+    icon: <TelegramIcon />,
+    accentColor: '#229ED9',
+    envKey: 'telegram',
   },
   {
     id: 'mercadopago',
     name: 'Mercado Pago',
     description: 'Processamento de pagamentos, cobranças e links de pagamento',
     category: 'services',
-    status: 'connected',
-    statusLabel: 'Configurado',
+    status: 'optional',
+    statusLabel: 'Não configurado',
     icon: <PaymentIcon />,
     accentColor: '#2ECC8A',
+    envKey: 'mercadopago',
+  },
+  {
+    id: 'gemini',
+    name: 'Google Gemini (IA)',
+    description: 'Embeddings, RAG e análise inteligente via Gemini API (gratuito)',
+    category: 'services',
+    status: 'optional',
+    statusLabel: 'Não configurado',
+    icon: <GeminiIcon />,
+    accentColor: '#8B5CF6',
+    envKey: 'gemini',
   },
   {
     id: 'openai',
@@ -113,6 +171,7 @@ const INTEGRATIONS: IntegrationCard[] = [
     statusLabel: 'Opcional',
     icon: <AIIcon />,
     accentColor: '#D4AF37',
+    envKey: 'openai',
   },
   {
     id: 'google-calendar',
@@ -129,8 +188,8 @@ const INTEGRATIONS: IntegrationCard[] = [
     name: 'n8n (Automação)',
     description: 'Conecte fluxos de automação externos e webhooks customizados',
     category: 'coming_soon',
-    status: 'optional',
-    statusLabel: 'Opcional',
+    status: 'coming_soon',
+    statusLabel: 'Em breve',
     icon: <AutomationIcon />,
     accentColor: '#F0A500',
   },
@@ -259,6 +318,7 @@ export default function IntegrationsPage() {
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [instanceId, setInstanceId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [integrations, setIntegrations] = useState<IntegrationCard[]>(BASE_INTEGRATIONS)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const addToast = useToastStore(s => s.addToast)
 
@@ -267,14 +327,41 @@ export default function IntegrationsPage() {
     ? `${window.location.origin}/api/webhooks/evolution`
     : '/api/webhooks/evolution'
 
-  // Compute stats
-  const connectedCount = INTEGRATIONS.filter(i => i.status === 'connected').length + (waStatus === 'connected' ? 1 : 0)
-  const availableCount = INTEGRATIONS.filter(i => i.status === 'available' || i.status === 'optional').length - (waStatus === 'connected' ? 1 : 0)
-  const comingSoonCount = INTEGRATIONS.filter(i => i.status === 'coming_soon').length
+  // --- Fetch env var status and update integrations ---
+  useEffect(() => {
+    if (!token) return
+    const controller = new AbortController()
+    fetch('/api/admin/crm/integrations/status', {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then((data: { configured: Record<string, boolean> } | null) => {
+        if (!data) return
+        setIntegrations(prev => prev.map(card => {
+          if (!card.envKey) return card
+          const isConfigured = data.configured[card.envKey] === true
+          if (isConfigured && card.status !== 'connected') {
+            return { ...card, status: 'connected' as const, statusLabel: 'Configurado' }
+          }
+          if (!isConfigured && card.status === 'connected') {
+            return { ...card, status: 'optional' as const, statusLabel: 'Não configurado' }
+          }
+          return card
+        }))
+      })
+      .catch(() => { /* silently fail */ })
+    return () => controller.abort()
+  }, [token])
 
-  const channelIntegrations = INTEGRATIONS.filter(i => i.category === 'channels' && !i.isHero)
-  const serviceIntegrations = INTEGRATIONS.filter(i => i.category === 'services')
-  const comingSoonIntegrations = INTEGRATIONS.filter(i => i.category === 'coming_soon')
+  // Compute stats from dynamic integrations
+  const connectedCount = integrations.filter(i => i.status === 'connected' && !i.isHero).length + (waStatus === 'connected' ? 1 : 0)
+  const availableCount = integrations.filter(i => (i.status === 'available' || i.status === 'optional') && !i.isHero).length - (waStatus === 'connected' ? 1 : 0)
+  const comingSoonCount = integrations.filter(i => i.status === 'coming_soon').length
+
+  const channelIntegrations = integrations.filter(i => i.category === 'channels' && !i.isHero)
+  const serviceIntegrations = integrations.filter(i => i.category === 'services')
+  const comingSoonIntegrations = integrations.filter(i => i.category === 'coming_soon')
 
   // --- WhatsApp logic (preserved) ---
 
@@ -562,57 +649,69 @@ export default function IntegrationsPage() {
       </motion.div>
 
       {/* ===== CANAIS DE COMUNICAÇÃO ===== */}
-      <SectionHeader
-        title="Canais de Comunicação"
-        delay={0.25}
-        icon={
-          <svg width="12" height="12" fill="none" stroke="#D4AF37" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-        }
-      />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {channelIntegrations.map((card, i) => (
-          <IntegrationCardDisplay key={card.id} card={card} index={i} />
-        ))}
-      </div>
+      {channelIntegrations.length > 0 && (
+        <>
+          <SectionHeader
+            title="Canais de Comunicação"
+            delay={0.25}
+            icon={
+              <svg width="12" height="12" fill="none" stroke="#D4AF37" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            }
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {channelIntegrations.map((card, i) => (
+              <IntegrationCardDisplay key={card.id} card={card} index={i} />
+            ))}
+          </div>
+        </>
+      )}
 
       {/* ===== SERVIÇOS CONECTADOS ===== */}
-      <SectionHeader
-        title="Serviços Conectados"
-        delay={0.35}
-        icon={
-          <svg width="12" height="12" fill="none" stroke="#D4AF37" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
-        }
-      />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {serviceIntegrations.map((card, i) => (
-          <IntegrationCardDisplay key={card.id} card={card} index={i + channelIntegrations.length} />
-        ))}
-      </div>
+      {serviceIntegrations.length > 0 && (
+        <>
+          <SectionHeader
+            title="Serviços Conectados"
+            delay={0.35}
+            icon={
+              <svg width="12" height="12" fill="none" stroke="#D4AF37" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            }
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {serviceIntegrations.map((card, i) => (
+              <IntegrationCardDisplay key={card.id} card={card} index={i + channelIntegrations.length} />
+            ))}
+          </div>
+        </>
+      )}
 
       {/* ===== EM BREVE ===== */}
-      <SectionHeader
-        title="Em Breve"
-        delay={0.45}
-        icon={
-          <svg width="12" height="12" fill="none" stroke="#D4AF37" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-        }
-      />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {comingSoonIntegrations.map((card, i) => (
-          <IntegrationCardDisplay
-            key={card.id}
-            card={card}
-            index={i + channelIntegrations.length + serviceIntegrations.length}
+      {comingSoonIntegrations.length > 0 && (
+        <>
+          <SectionHeader
+            title="Em Breve"
+            delay={0.45}
+            icon={
+              <svg width="12" height="12" fill="none" stroke="#D4AF37" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            }
           />
-        ))}
-      </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {comingSoonIntegrations.map((card, i) => (
+              <IntegrationCardDisplay
+                key={card.id}
+                card={card}
+                index={i + channelIntegrations.length + serviceIntegrations.length}
+              />
+            ))}
+          </div>
+        </>
+      )}
 
       {/* ===== WEBHOOK URL SECTION ===== */}
       <motion.div
