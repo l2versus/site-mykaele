@@ -52,11 +52,23 @@ async function request<T>(method: string, path: string, body?: unknown, timeoutM
   return res.json()
 }
 
+/**
+ * Normaliza remoteJid para número puro.
+ * Evolution API v2 aceita JID ou número, mas algumas versões
+ * falham com sufixos como @s.whatsapp.net. Removemos por segurança.
+ */
+function normalizeNumber(remoteJid: string): string {
+  return remoteJid
+    .replace(/@s\.whatsapp\.net$/, '')
+    .replace(/@c\.us$/, '')
+    .replace(/\D/g, '')
+}
+
 export const evolutionApi = {
   /** Envia mensagem de texto */
   sendText: (instanceId: string, remoteJid: string, text: string) =>
     request<{ key: { id: string } }>('POST', `/message/sendText/${instanceId}`, {
-      number: remoteJid,
+      number: normalizeNumber(remoteJid),
       text,
       delay: 1200,
     }, 8_000),
@@ -64,7 +76,7 @@ export const evolutionApi = {
   /** Envia template (HSM) */
   sendTemplate: (instanceId: string, remoteJid: string, template: string, variables: string[]) =>
     request<{ key: { id: string } }>('POST', `/message/sendTemplate/${instanceId}`, {
-      number: remoteJid,
+      number: normalizeNumber(remoteJid),
       name: template,
       language: { code: 'pt_BR' },
       components: [{

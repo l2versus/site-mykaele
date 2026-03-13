@@ -1279,7 +1279,8 @@ export default function InboxPage() {
       const data = await res.json()
       await fetchMessages(selectedId)
       if (data.status === 'PENDING') {
-        addToast('Mensagem salva mas não enviada — verifique a conexão do canal', 'error')
+        const reason = data.sendError ? `: ${data.sendError}` : ' — verifique a conexão do canal'
+        addToast(`Mensagem salva mas não enviada${reason}`, 'error')
       } else {
         playFeedback('click')
       }
@@ -1409,11 +1410,10 @@ export default function InboxPage() {
 
       {/* ━━━ Column 1: Conversation List ━━━ */}
       <div
-        className="w-full sm:w-80 shrink-0 border-r flex flex-col"
+        className={`w-full sm:w-80 shrink-0 border-r flex-col ${selectedId ? 'hidden sm:flex' : 'flex'}`}
         style={{
           borderColor: 'var(--crm-border)',
           background: 'var(--crm-surface)',
-          display: selectedId && typeof window !== 'undefined' && window.innerWidth < 640 ? 'none' : 'flex',
         }}
       >
         {/* Search Header */}
@@ -1591,7 +1591,7 @@ export default function InboxPage() {
       </div>
 
       {/* ━━━ Column 2: Chat ━━━ */}
-      <div className="flex-1 flex flex-col min-w-0" style={{ background: 'var(--crm-bg)' }}>
+      <div className={`flex-1 flex-col min-w-0 ${selectedId ? 'flex' : 'hidden sm:flex'}`} style={{ background: 'var(--crm-bg)' }}>
         {!selectedId ? (
           <div className="flex-1 flex items-center justify-center">
             <EmptyChat />

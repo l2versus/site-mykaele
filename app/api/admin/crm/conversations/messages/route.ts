@@ -127,6 +127,7 @@ export async function POST(req: NextRequest) {
     const channelType = (conversation.channel?.type ?? 'whatsapp') as ChannelType
     let waMessageId = `local-${randomBytes(8).toString('hex')}`
     let status = 'PENDING'
+    let sendError: string | undefined
 
     // Enviar via provedor do canal (multi-canal)
     const providerInstanceId = resolveProviderInstanceId(conversation.channel)
@@ -142,10 +143,13 @@ export async function POST(req: NextRequest) {
         waMessageId = result.messageId
         status = result.status
       } catch (err) {
-        console.error(`[send] Falha ao enviar via ${channelType}:`, err instanceof Error ? err.message : err)
+        const errMsg = err instanceof Error ? err.message : String(err)
+        console.error(`[send] Falha ao enviar via ${channelType} (instance: ${providerInstanceId}, remoteJid: ${conversation.remoteJid}):`, errMsg)
+        sendError = errMsg
       }
     } else {
-      console.error(`[send] Canal ${channelType} sem instanceId/credenciais — mensagem salva como PENDING`)
+      sendError = `Canal ${channelType} sem instanceId/credenciais`
+      console.error(`[send] ${sendError} — channelId: ${conversation.channel?.id}, instanceId: ${conversation.channel?.instanceId}`)
     }
 
     // Salvar mensagem no banco
@@ -200,7 +204,7 @@ export async function POST(req: NextRequest) {
       })).catch(() => {})
     }
 
-    return NextResponse.json(message, { status: 201 })
+    return NextResponse.json({ ...message, sendError }, { status: 201 })
   } catch (err) {
     console.error('[messages] POST error:', err instanceof Error ? err.message : err)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
