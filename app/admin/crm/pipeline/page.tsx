@@ -919,6 +919,14 @@ function LeadDrawer({ leadId, stages, onClose, onLeadUpdated }: {
                     </Link>
                   )}
 
+                  <Link href={`/admin/crm/leads/${lead.id}`}
+                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-xs sm:text-sm font-medium transition-all hover:brightness-110 active:scale-[0.98]"
+                    style={{ background: 'var(--crm-surface-2)', color: 'var(--crm-text)', border: '1px solid var(--crm-border)' }}
+                  >
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+                    Ver Página Completa
+                  </Link>
+
                   {/* Excluir lead (soft-delete) */}
                   <div className="pt-3 sm:pt-4 mt-3 sm:mt-4" style={{ borderTop: '1px solid var(--crm-border)' }}>
                     {!confirmDelete ? (
