@@ -1,5 +1,6 @@
 // src/lib/activity-log.ts — Helper para registrar atividades no CRM
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 
 export type ActivityType =
   | 'LEAD_CREATED' | 'LEAD_STAGE_CHANGED' | 'LEAD_WON' | 'LEAD_LOST'
@@ -17,7 +18,7 @@ interface LogActivityParams {
   description: string
   leadId?: string
   userId?: string
-  metadata?: Record<string, unknown>
+  metadata?: Prisma.InputJsonValue
 }
 
 /** Registra atividade de forma fire-and-forget (não bloqueia a request) */
@@ -29,7 +30,7 @@ export function logActivity(params: LogActivityParams) {
       description: params.description,
       leadId: params.leadId ?? null,
       userId: params.userId ?? null,
-      metadata: params.metadata ?? null,
+      metadata: params.metadata ?? Prisma.JsonNull,
     },
   }).catch(console.error)
 }

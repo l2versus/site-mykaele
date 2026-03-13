@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     const daysElapsed = today >= monthEnd ? daysInMonth : dayOfMonth
 
     // Buscar metas e dados atuais em paralelo
-    const [goals, leadsCreated, leadsWon, revenue, npsData, responseTimeData, dailyLeads] = await Promise.all([
+    const [goals, leadsCreated, leadsWon, npsData, responseTimeData, dailyLeads] = await Promise.all([
       // Metas configuradas para este mês
       prisma.crmGoal.findMany({
         where: { tenantId, month, year },
@@ -49,15 +49,12 @@ export async function GET(req: NextRequest) {
         where: { tenantId, deletedAt: null, createdAt: { gte: monthStart, lte: monthEnd } },
       }),
 
-      // Leads ganhos no mês
+      // Leads ganhos no mês (receita = leadsWon._sum.expectedValue)
       prisma.lead.aggregate({
         where: { tenantId, status: 'WON', deletedAt: null, closedAt: { gte: monthStart, lte: monthEnd } },
         _count: true,
         _sum: { expectedValue: true },
       }),
-
-      // Receita no mês (valor dos leads ganhos)
-      // Já incluída em leadsWon._sum.expectedValue
 
       // NPS score médio
       prisma.crmNpsResponse.aggregate({

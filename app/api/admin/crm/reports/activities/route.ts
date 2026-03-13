@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
       // Team members para filtro
       prisma.crmTeamMember.findMany({
         where: { tenantId, isActive: true },
-        select: { userId: true, displayName: true },
+        select: { userId: true, name: true },
       }),
     ])
 
@@ -160,7 +160,7 @@ export async function GET(req: NextRequest) {
         description: `${a.type} — ${a.lead.name}`,
         leadId: a.leadId,
         userId: a.createdBy,
-        metadata: a.payload as Record<string, unknown> | null,
+        metadata: a.payload,
         createdAt: a.createdAt,
       }))
       fallbackTotal = laCount
@@ -191,7 +191,10 @@ export async function GET(req: NextRequest) {
           count: Number(d.count),
         })),
       },
-      teamMembers,
+      teamMembers: teamMembers.map(m => ({
+        userId: m.userId,
+        displayName: m.name,
+      })),
     })
   } catch (err) {
     console.error('[CRM Activities Report API]', err)

@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
       // Team members para filtro
       prisma.crmTeamMember.findMany({
         where: { tenantId, isActive: true },
-        select: { userId: true, displayName: true },
+        select: { userId: true, name: true },
       }),
     ])
 
@@ -145,7 +145,10 @@ export async function GET(req: NextRequest) {
       stages: stagesWithConversion,
       wonLostStages: stages.filter(s => s.type !== 'OPEN'),
       heatmap: heatmapMatrix,
-      teamMembers,
+      teamMembers: teamMembers.map(m => ({
+        userId: m.userId,
+        displayName: m.name,
+      })),
     })
   } catch (err) {
     console.error('[CRM Consolidated Report API]', err)
