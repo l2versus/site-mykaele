@@ -108,10 +108,7 @@ export default function ReportsLayout({ children }: { children: ReactNode }) {
 
           <nav className="flex flex-col gap-0.5">
             {REPORT_NAV.map((item) => {
-              const isExact = pathname === item.href
-              const isActive = item.href === '/admin/crm/reports'
-                ? isExact
-                : pathname.startsWith(item.href)
+              const isActive = pathname === item.href
 
               return (
                 <Link
@@ -151,10 +148,7 @@ export default function ReportsLayout({ children }: { children: ReactNode }) {
             className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-2 -mx-1 px-1"
           >
             {REPORT_NAV.map((item) => {
-              const isExact = pathname === item.href
-              const isActive = item.href === '/admin/crm/reports'
-                ? isExact
-                : pathname.startsWith(item.href)
+              const isActive = pathname === item.href
 
               return (
                 <Link

@@ -66,23 +66,25 @@ const CRM_NAV = [
   {
     href: '/admin/crm/automations',
     label: 'Automações',
+    accentColor: '#4A7BFF',
     icon: (
       <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-        <polyline points="16 3 21 3 21 8" />
-        <line x1="4" y1="20" x2="21" y2="3" />
-        <polyline points="21 16 21 21 16 21" />
-        <line x1="15" y1="15" x2="21" y2="21" />
-        <line x1="4" y1="4" x2="9" y2="9" />
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
       </svg>
     ),
   },
   {
     href: '/admin/crm/automations/bots',
     label: 'Bots',
+    accentColor: '#2ECC8A',
     icon: (
       <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M12 2v4m0 12v4m-7.07-2.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4m-2.93 7.07l-2.83-2.83M6.76 6.76L3.93 3.93" />
+        <rect x="3" y="11" width="18" height="10" rx="2" />
+        <circle cx="9" cy="16" r="1.5" />
+        <circle cx="15" cy="16" r="1.5" />
+        <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+        <line x1="12" y1="4" x2="12" y2="2" />
+        <circle cx="12" cy="2" r="1" />
       </svg>
     ),
   },
@@ -219,15 +221,21 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
           style={{ minHeight: '44px' }}
         >
           {CRM_NAV.map((item) => {
-            const active = pathname.startsWith(item.href)
+            // Exact match for all items except /reports which has sub-pages
+            const active = item.href === '/admin/crm/reports'
+              ? pathname === item.href || pathname.startsWith(item.href + '/')
+              : pathname === item.href
+            const accent = (item as { accentColor?: string }).accentColor
+            const activeColor = accent ?? 'var(--crm-gold)'
+            const activeBg = accent ? `${accent}14` : 'var(--crm-gold-subtle)'
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className="relative flex items-center gap-1.5 px-2.5 lg:px-3.5 py-2.5 lg:py-3 text-[11px] lg:text-[13px] font-medium whitespace-nowrap transition-all duration-200 rounded-lg my-0.5"
                 style={{
-                  color: active ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
-                  background: active ? 'var(--crm-gold-subtle)' : 'transparent',
+                  color: active ? activeColor : 'var(--crm-text-muted)',
+                  background: active ? activeBg : 'transparent',
                 }}
                 onMouseEnter={(e) => {
                   if (!active) e.currentTarget.style.color = 'var(--crm-text)'
@@ -241,7 +249,7 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
                 {active && (
                   <span
                     className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full"
-                    style={{ background: 'var(--crm-gold)' }}
+                    style={{ background: activeColor }}
                   />
                 )}
               </Link>
