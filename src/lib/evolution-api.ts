@@ -70,6 +70,7 @@ export const evolutionApi = {
     request<{ key: { id: string } }>('POST', `/message/sendText/${instanceId}`, {
       number: normalizeNumber(remoteJid),
       text,
+      textMessage: { text },
       delay: 1200,
     }, 8_000),
 
