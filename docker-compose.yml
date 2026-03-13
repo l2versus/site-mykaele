@@ -40,9 +40,9 @@ services:
     networks:
       - mykaele-net
 
-  # --- Banco de Dados PostgreSQL ---
+  # --- Banco de Dados PostgreSQL (com pgvector para RAG) ---
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: always
     environment:
       POSTGRES_DB: mykaele_db
@@ -104,7 +104,7 @@ services:
   crm-worker:
     build: .
     restart: always
-    command: npx tsx src/workers/crm/index.ts
+    command: sh ./worker.sh
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://mykaele:${DB_PASSWORD}@db:5432/mykaele_db

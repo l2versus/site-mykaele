@@ -49,9 +49,16 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma.config.mjs ./prisma.config.mjs
 
-# Script de inicialização
+# Workers CRM — código fonte necessário para tsx
+COPY --from=builder /app/src/workers ./src/workers
+COPY --from=builder /app/src/lib ./src/lib
+COPY --from=builder /app/src/stores ./src/stores
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+
+# Scripts de inicialização
 COPY start.sh ./start.sh
-RUN chmod +x ./start.sh
+COPY worker.sh ./worker.sh
+RUN chmod +x ./start.sh ./worker.sh
 
 # Criar diretório de dados
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app

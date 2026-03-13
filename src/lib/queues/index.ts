@@ -1,7 +1,7 @@
 // src/lib/queues/index.ts — BullMQ (versão gratuita) com DLQ integrada
 // Importa Redis centralizado de src/lib/redis.ts
 import { Queue, QueueEvents } from 'bullmq'
-import { redis, parseBullConnection, isRedisReady } from '@/lib/redis'
+import { redis, parseBullConnection, isRedisReady } from '../redis'
 
 // Re-exporta para código que já importa daqui
 export { redis }
