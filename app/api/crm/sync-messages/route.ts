@@ -1,12 +1,16 @@
 // app/api/crm/sync-messages/route.ts — Polling de mensagens da Evolution API
 // Fallback para quando webhooks não funcionam.
 // Busca mensagens novas diretamente da Evolution API e salva no banco.
+// Também dispara o fluxo de bot/IA para mensagens recentes (< 2 min).
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { evolutionApi } from '@/lib/evolution-api'
 import type { EvolutionMessage } from '@/lib/evolution-api'
 import { redis, isRedisReady } from '@/lib/redis'
+import { tryBotReply } from '@/lib/bot-engine'
+import { tryAiAgentReply } from '@/lib/ai-agent'
+import { tryAutoReply } from '@/lib/auto-reply'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -64,6 +68,14 @@ export async function POST(req: NextRequest) {
     const instanceName = channel.instanceId
     let synced = 0
     let errors = 0
+
+    // Contexto para disparar bot/IA em mensagens recentes
+    // Chave: remoteJid → só dispara para a mensagem mais recente de cada conversa
+    const botTriggers = new Map<string, {
+      tenantId: string; leadId: string; leadName: string
+      channelId: string; remoteJid: string; messageContent: string
+      isNewLead: boolean
+    }>()
 
     // Buscar chats recentes da Evolution API
     // NOTA: findChats retorna { id: "...@s.whatsapp.net" }, NÃO { remoteJid }
@@ -140,6 +152,11 @@ export async function POST(req: NextRequest) {
 
           // Buscar ou criar conversa + lead
           try {
+            let isNewLead = false
+            let savedLeadId = ''
+            let savedLeadName = ''
+            const { type, content, mediaMimeType, mediaUrl } = extractContent(msg.message)
+
             await prisma.$transaction(async (tx) => {
               let conversation = await tx.conversation.findUnique({
                 where: { tenantId_remoteJid: { tenantId: effectiveTenantId, remoteJid } },
@@ -151,6 +168,7 @@ export async function POST(req: NextRequest) {
                 })
 
                 if (!lead) {
+                  isNewLead = true
                   const lastLead = await tx.lead.findFirst({
                     where: { tenantId: effectiveTenantId, stageId: firstStage.id, deletedAt: null },
                     orderBy: { position: 'desc' },
@@ -173,6 +191,9 @@ export async function POST(req: NextRequest) {
                   })
                 }
 
+                savedLeadId = lead.id
+                savedLeadName = lead.name
+
                 conversation = await tx.conversation.create({
                   data: {
                     tenantId: effectiveTenantId,
@@ -183,18 +204,26 @@ export async function POST(req: NextRequest) {
                     unreadCount: msg.key.fromMe ? 0 : 1,
                   },
                 })
-              } else if (!msg.key.fromMe) {
-                await tx.conversation.update({
-                  where: { id: conversation.id },
-                  data: {
-                    lastMessageAt: new Date(),
-                    unreadCount: { increment: 1 },
-                    isClosed: false,
-                  },
+              } else {
+                // Buscar lead para contexto do bot
+                const lead = await tx.lead.findUnique({
+                  where: { id: conversation.leadId },
+                  select: { id: true, name: true },
                 })
-              }
+                savedLeadId = lead?.id ?? conversation.leadId
+                savedLeadName = lead?.name ?? pushName
 
-              const { type, content, mediaMimeType, mediaUrl } = extractContent(msg.message)
+                if (!msg.key.fromMe) {
+                  await tx.conversation.update({
+                    where: { id: conversation.id },
+                    data: {
+                      lastMessageAt: new Date(),
+                      unreadCount: { increment: 1 },
+                      isClosed: false,
+                    },
+                  })
+                }
+              }
 
               await tx.message.create({
                 data: {
@@ -218,6 +247,27 @@ export async function POST(req: NextRequest) {
             })
 
             synced++
+
+            // Disparar bot/IA apenas para mensagens recebidas (não fromMe) e recentes (< 2 min)
+            if (!msg.key.fromMe && savedLeadId) {
+              const msgTimestamp = msg.messageTimestamp
+                ? (msg.messageTimestamp > 9999999999 ? msg.messageTimestamp : msg.messageTimestamp * 1000)
+                : 0
+              const ageMs = msgTimestamp ? Date.now() - msgTimestamp : 0
+              const isRecent = msgTimestamp === 0 || ageMs < 120_000 // < 2 min ou sem timestamp
+
+              if (isRecent) {
+                botTriggers.set(remoteJid, {
+                  tenantId: effectiveTenantId,
+                  leadId: savedLeadId,
+                  leadName: savedLeadName,
+                  channelId: channel.id,
+                  remoteJid,
+                  messageContent: content,
+                  isNewLead,
+                })
+              }
+            }
           } catch (txErr) {
             // Provavelmente duplicata — ignorar
             const msg2 = txErr instanceof Error ? txErr.message : ''
@@ -233,6 +283,46 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Disparar bot/IA para mensagens recentes importadas (fire-and-forget)
+    for (const ctx of botTriggers.values()) {
+      void (async () => {
+        try {
+          // Cadeia: Bot Builder > Agente IA > Auto-Reply
+          const botHandled = await tryBotReply({
+            tenantId: ctx.tenantId,
+            leadId: ctx.leadId,
+            leadName: ctx.leadName,
+            channelId: ctx.channelId,
+            remoteJid: ctx.remoteJid,
+            messageContent: ctx.messageContent,
+            isNewLead: ctx.isNewLead,
+          })
+          if (botHandled) return
+
+          const aiHandled = await tryAiAgentReply({
+            tenantId: ctx.tenantId,
+            leadId: ctx.leadId,
+            leadName: ctx.leadName,
+            channelId: ctx.channelId,
+            remoteJid: ctx.remoteJid,
+            messageContent: ctx.messageContent,
+          })
+          if (aiHandled) return
+
+          await tryAutoReply({
+            tenantId: ctx.tenantId,
+            leadId: ctx.leadId,
+            leadName: ctx.leadName,
+            channelId: ctx.channelId,
+            remoteJid: ctx.remoteJid,
+            fromMe: false,
+          })
+        } catch (err) {
+          console.error('[sync] Erro no fluxo bot/ia/auto-reply:', err instanceof Error ? err.message : err)
+        }
+      })()
+    }
+
     // Notificar frontend via SSE se sincronizou algo
     if (synced > 0 && isRedisReady()) {
       redis.publish('crm:events', JSON.stringify({
@@ -242,7 +332,7 @@ export async function POST(req: NextRequest) {
       })).catch(() => {})
     }
 
-    return NextResponse.json({ ok: true, synced, errors, chatsChecked: chats.length })
+    return NextResponse.json({ ok: true, synced, errors, chatsChecked: chats.length, botTriggered: botTriggers.size })
   } catch (err) {
     console.error('[sync] Erro:', err instanceof Error ? err.message : err)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
