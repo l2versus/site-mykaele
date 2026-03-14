@@ -1,7 +1,7 @@
 # CLAUDE.md — Clínica Mykaele Procópio · CRM "Kommo Killer"
 > **LEIA ESTE ARQUIVO INTEIRO ANTES DE ESCREVER QUALQUER LINHA DE CÓDIGO.**
 > Você é o Tech Lead Sênior, Arquiteto de Software e Head of Design deste projeto.
-> **Versão: 8.0 (Português Completo + Regras de Implementação)** — Março 2026
+> **Versão: 8.1 (Multi-Provedor IA + Cascade + Lições de Quota)** — Março 2026
 >
 > Auditoria completa realizada: 35+ arquivos lidos, 27 models preservados,
 > risco de regressão BAIXO (96% do código é aditivo).
@@ -72,7 +72,8 @@
 | Construtor Visual | React Flow (@xyflow/react) | DAG → JSON (NOVO) |
 | Estado Global | Zustand + `useOptimistic` | (NOVO) |
 | Criptografia | `crypto` (Node nativo) | AES-256-GCM (NOVO) |
-| IA/Embeddings | OpenAI `text-embedding-3-small` | 1536 dim + pgvector (NOVO) |
+| IA/LLM | Multi-provedor com cascade | `src/lib/gemini.ts` — Gemini→Groq→OpenRouter→Together→OpenAI→Claude |
+| IA/Embeddings | Gemini `text-embedding-004` | 768 dim + pgvector (via geminiKey do cascade) |
 | Análise de PDF | `pdf-parse` | (NOVO) |
 
 ### Alias de Importação (tsconfig.json)
@@ -696,6 +697,33 @@ export async function criarLogAuditoria(params: ParametrosAuditoria) {
 }
 ```
 
+### 7.6 — `src/lib/gemini.ts` — Provedor IA Unificado com Cascade
+
+O sistema suporta **6 provedores de IA** com fallback automático. Quando um provedor falha (quota esgotada, erro 429/500), tenta o próximo automaticamente.
+
+**Ordem fixa (grátis → pago):**
+```
+Gemini (1.500 req/dia grátis)
+  → Groq (14.400 req/dia grátis)
+    → OpenRouter (modelos :free grátis)
+      → Together AI (free tier)
+        → OpenAI GPT-4o Mini (pago)
+          → Claude Haiku (pago — último recurso)
+```
+
+**Configuração:** Via UI do CRM (Configurações > IA > Fallback automático).
+As API keys são salvas no banco (`CrmIntegration`, provider: `'ai-settings'`).
+Campos: `geminiKey`, `groqKey`, `openrouterKey`, `togetherKey`, `openaiKey`, `claudeKey`.
+
+**Health tracking:** Provedor que falha entra em cooldown de 5 min (in-memory).
+
+**Embeddings:** Sempre usam Gemini (`text-embedding-004`) via `geminiKey` do cascade.
+Se Gemini indisponível, `findSimilarChunks()` usa fallback de busca textual.
+
+**NUNCA:**
+- Hardcodar provedor de IA — sempre usar `createGeminiModel()` que roteia automaticamente
+- Expor erros brutos de quota ao usuário — retornar 503 com mensagem amigável
+
 ---
 
 ## 8. SSE — `/api/crm/stream`
@@ -1208,21 +1236,51 @@ Docker acumula imagens de builds antigos. Limpar periodicamente:
 docker system prune -a --volumes -f
 ```
 
-### 25.6 — Variáveis de Ambiente: Gemini API Key
+### 25.6 — Provedor IA: Cascade Multi-Provedor
 
-A key do Gemini é usada em 3 lugares:
-1. **Banco (CrmIntegration)** — salva pela UI de configurações, lida pelo `test-ai` e `ai-agent`
-2. **process.env.GEMINI_API_KEY** — usada por `smart-replies` e `concierge` diretamente
-3. **.env local** — desenvolvimento apenas
+**Arquitetura atual:** `src/lib/gemini.ts` é um provedor unificado que suporta 6 IAs com fallback automático.
 
-**IMPORTANTE:** Ao trocar a key, atualizar nos 3 lugares:
-- UI do CRM → Configurações → IA → colar nova key → Salvar
-- Coolify → Environment Variables → GEMINI_API_KEY → Update
-- .env local (para dev)
+**Configuração:** 100% via UI do CRM (Configurações > IA > Fallback automático).
+As API keys são salvas no banco (`CrmIntegration`, provider: `'ai-settings'`).
+Não precisa de `.env` nem Coolify para Groq/Claude/OpenAI — só para Gemini como fallback de env var.
 
-Após alterar no Coolify, é OBRIGATÓRIO fazer redeploy (variáveis são injetadas no build).
+**IMPORTANTE:** `process.env.GEMINI_API_KEY` é apenas fallback — a key principal vem do banco.
+Ao adicionar novos provedores, NUNCA hardcodar — usar `createGeminiModel()` que roteia automaticamente.
+
+**Provedores suportados:**
+| # | Provedor | Key prefix | Custo |
+|---|----------|-----------|-------|
+| 1 | Gemini | `AIzaSy...` | Grátis (1.500 req/dia) |
+| 2 | Groq | `gsk_...` | Grátis (14.400 req/dia) |
+| 3 | OpenRouter | `sk-or-...` | Grátis (modelos :free) |
+| 4 | Together | (varia) | Free tier |
+| 5 | OpenAI | `sk-...` | Pago ($0.15/1M tokens) |
+| 6 | Claude | `sk-ant-...` | Pago ($0.25/1M tokens) |
+
+### 25.7 — Polling: Mensagens sem Timestamp
+
+O campo `messageTimestamp` da Evolution API pode vir zerado (`0` ou `undefined`).
+
+**Regra:** Mensagens sem timestamp válido NUNCA devem disparar o AI Agent.
+Antes: `msgTimestamp === 0` era tratado como "recente" → queimava tokens IA em mensagens antigas.
+Fix: `const isRecent = msgTimestamp > 0 && ageMs < 120_000`
+
+**Arquivo:** `app/api/crm/sync-messages/route.ts` — linha do `isRecent`.
+
+### 25.8 — Consumo de Tokens: Onde a IA é Chamada
+
+Cada ação que consome tokens (para dimensionar custos):
+| Ação | Chamadas IA | Trigger |
+|------|------------|---------|
+| Mensagem recebida (AI Agent) | 2 (1 embedding + 1 chat) | Automático |
+| Abrir conversa (inbox) | 3 (smart-replies + summary) | Automático ao clicar |
+| Botão Concierge | 2 (1 embedding + 1 chat) | Manual |
+| Upload knowledge base | N (1 embedding por chunk) | Manual |
+
+**Estimativa:** Clínica com ~17 conversas ativas ≈ 300-400 req/dia.
+Com Gemini + Groq grátis = ~16.000 req/dia de folga.
 
 ---
 
-*CLAUDE.md v8.0 (Português Completo + Regras de Implementação) — Março 2026*
-*Inclui: Protocolo de auditoria, padrão de design, fases de implementação, protocolo de entrega*
+*CLAUDE.md v8.1 (Multi-Provedor IA + Cascade + Lições de Quota) — Março 2026*
+*Inclui: Protocolo de auditoria, padrão de design, fases de implementação, protocolo de entrega, cascade IA*

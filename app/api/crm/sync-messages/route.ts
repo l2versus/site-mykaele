@@ -254,8 +254,8 @@ export async function POST(req: NextRequest) {
               const msgTimestamp = msg.messageTimestamp
                 ? (msg.messageTimestamp > 9999999999 ? msg.messageTimestamp : msg.messageTimestamp * 1000)
                 : 0
-              const ageMs = msgTimestamp ? Date.now() - msgTimestamp : 0
-              const isRecent = msgTimestamp === 0 || ageMs < 120_000 // < 2 min ou sem timestamp
+              const ageMs = msgTimestamp ? Date.now() - msgTimestamp : Infinity
+              const isRecent = msgTimestamp > 0 && ageMs < 120_000 // < 2 min E com timestamp válido
 
               if (isRecent) {
                 botTriggers.set(remoteJid, {
