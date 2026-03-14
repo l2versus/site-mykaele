@@ -147,8 +147,9 @@ export const evolutionApi = {
       `/webhook/set/${instanceName}`,
       {
         url: webhookUrl,
-        webhook_by_events: false,
-        webhook_base64: false,
+        enabled: true,
+        webhookByEvents: false,
+        webhookBase64: false,
         events: [
           'MESSAGES_UPSERT',
           'MESSAGES_UPDATE',

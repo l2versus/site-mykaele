@@ -2370,7 +2370,7 @@ function AiTab() {
 
   // Testar conexão — via server-side para evitar CORS/CSP
   const handleTestConnection = async () => {
-    if (!apiKey || apiKey.includes('*')) {
+    if (!apiKey && !apiKeySet) {
       addToast('Insira a API key antes de testar', 'error')
       return
     }
@@ -2378,12 +2378,20 @@ function AiTab() {
     const token = typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || localStorage.getItem('token')) : null
     if (!token) return
 
+    // Se a key está mascarada (vinda do banco), pedir ao backend para usar a key armazenada
+    const isMasked = apiKey.includes('*')
+
     setTestStatus('testing')
     try {
       const res = await fetch('/api/crm/test-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ provider, apiKey, baseUrl: baseUrl || BASE_URLS[provider] || '' }),
+        body: JSON.stringify({
+          provider,
+          apiKey: isMasked ? '' : apiKey,
+          baseUrl: baseUrl || BASE_URLS[provider] || '',
+          useStoredKey: isMasked,
+        }),
       })
       const data = await res.json()
       if (res.ok) {
