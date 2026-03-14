@@ -36,8 +36,11 @@ export async function POST(req: NextRequest) {
     if (!lead) return NextResponse.json({ error: 'Lead não encontrado' }, { status: 404 })
     if (!lead.phone) return NextResponse.json({ error: 'Lead não tem número de telefone' }, { status: 400 })
 
-    // Normalizar remoteJid
-    const phone = lead.phone.replace(/\D/g, '')
+    // Normalizar remoteJid — garantir código do país 55 (Brasil)
+    let phone = lead.phone.replace(/\D/g, '')
+    if (phone.length === 10 || phone.length === 11) {
+      phone = `55${phone}`
+    }
     const remoteJid = phone.includes('@') ? phone : `${phone}@s.whatsapp.net`
 
     // Buscar conversa existente

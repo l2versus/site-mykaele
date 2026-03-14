@@ -60,14 +60,8 @@ export function usePresence(tenantId: string, currentPage?: string) {
   const markOffline = useCallback(async () => {
     const token = getToken()
     if (!token) return
-    // Usar sendBeacon para garantir envio mesmo no unload
-    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-      navigator.sendBeacon(
-        `/api/admin/crm/presence?tenantId=${tenantId}`,
-        // sendBeacon não suporta DELETE, mas podemos usar um workaround
-      )
-    }
     try {
+      // keepalive garante envio mesmo durante unload (substitui sendBeacon)
       await fetch(`/api/admin/crm/presence?tenantId=${tenantId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },

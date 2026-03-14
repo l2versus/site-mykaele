@@ -53,15 +53,23 @@ async function request<T>(method: string, path: string, body?: unknown, timeoutM
 }
 
 /**
- * Normaliza remoteJid para número puro.
- * Evolution API v2 aceita JID ou número, mas algumas versões
- * falham com sufixos como @s.whatsapp.net. Removemos por segurança.
+ * Normaliza remoteJid para número puro com código do país.
+ * Evolution API v2 exige número no formato internacional (ex: 5585998500344).
+ * Números brasileiros sem o prefixo 55 recebem o código automaticamente.
  */
 function normalizeNumber(remoteJid: string): string {
-  return remoteJid
+  const digits = remoteJid
     .replace(/@s\.whatsapp\.net$/, '')
     .replace(/@c\.us$/, '')
     .replace(/\D/g, '')
+
+  // Número brasileiro sem código do país (10-11 dígitos: DDD + número)
+  // 10 dígitos = fixo/celular antigo, 11 dígitos = celular com 9
+  if (digits.length === 10 || digits.length === 11) {
+    return `55${digits}`
+  }
+
+  return digits
 }
 
 export const evolutionApi = {
