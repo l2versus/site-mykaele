@@ -1133,5 +1133,96 @@ criar /api/webhooks/* sem publicRoutes        // retorna 401 em produção
 
 ---
 
+## 25. LIÇÕES OPERACIONAIS (Produção)
+
+> Documentação de problemas encontrados e soluções aplicadas em produção.
+> Atualizado: 14/03/2026
+
+### 25.1 — WhatsApp LID (@lid)
+
+O WhatsApp migrou alguns contatos para o formato **Linked ID** (`@lid`) em vez do tradicional `@s.whatsapp.net`.
+
+**Impacto:** remoteJid como `122715923083278@lid` não é número de telefone — é um ID interno.
+
+**Arquivos que DEVEM tratar @lid:**
+- `src/lib/evolution-api.ts` — `normalizeNumber()` mantém JID completo para @lid
+- `app/api/crm/sync-messages/route.ts` — filtro aceita @lid, phone extraction remove @lid
+- `src/lib/webhook-processor.ts` — phone extraction remove @lid
+- `src/workers/crm/process-webhook.ts` — phone extraction remove @lid
+
+**Regra:** Ao adicionar QUALQUER código que manipule `remoteJid`, SEMPRE tratar os 3 formatos:
+```typescript
+phone = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace('@lid', '')
+```
+
+### 25.2 — Evolution API: webhookByEvents
+
+A Evolution API pode operar com `webhookByEvents: true`, enviando webhooks para sub-paths:
+- `/api/webhooks/evolution/messages-upsert`
+- `/api/webhooks/evolution/connection-update`
+- `/api/webhooks/evolution/qrcode-updated`
+
+**Solução:** Rota catch-all em `app/api/webhooks/evolution/[...slug]/route.ts`
+
+**Middleware:** `/api/webhooks/evolution` está em `PUBLIC_PREFIXES` (não `PUBLIC_PATHS`) para cobrir sub-paths.
+
+**NUNCA** mover de volta para PUBLIC_PATHS — quebraria os webhooks.
+
+### 25.3 — Race Condition: Auto-Reply Duplicado
+
+Quando webhook E polling processam a mesma mensagem simultaneamente, ambos podem disparar o auto-reply.
+
+**Solução:** `markAutoReplySent()` é chamado ANTES do delay e envio (lock otimista).
+
+```typescript
+// ✅ CORRETO — marcar antes de enviar
+await markAutoReplySent(leadId, message)
+await delay(config.delayMs)
+await evolutionApi.sendText(...)
+
+// ❌ ERRADO — janela de race condition durante o delay
+await delay(config.delayMs)
+await evolutionApi.sendText(...)
+await markAutoReplySent(leadId, message) // tarde demais
+```
+
+### 25.4 — Polling: Limites da Evolution API
+
+A Evolution API em VPS compartilhada tem capacidade limitada. O `findMessages` pode levar >12s por chat.
+
+**Configuração atual (otimizada):**
+| Parâmetro | Antes | Depois |
+|---|---|---|
+| Chats por ciclo | 20 | 5 |
+| Timeout findMessages | 12s | 6s |
+| Intervalo polling | 20s | 30s |
+
+**Regra:** O polling é FALLBACK. O mecanismo principal são os webhooks.
+
+### 25.5 — VPS: Espaço em Disco
+
+Docker acumula imagens de builds antigos. Limpar periodicamente:
+
+```bash
+# No terminal do Coolify (Server > Terminal)
+docker system prune -a --volumes -f
+```
+
+### 25.6 — Variáveis de Ambiente: Gemini API Key
+
+A key do Gemini é usada em 3 lugares:
+1. **Banco (CrmIntegration)** — salva pela UI de configurações, lida pelo `test-ai` e `ai-agent`
+2. **process.env.GEMINI_API_KEY** — usada por `smart-replies` e `concierge` diretamente
+3. **.env local** — desenvolvimento apenas
+
+**IMPORTANTE:** Ao trocar a key, atualizar nos 3 lugares:
+- UI do CRM → Configurações → IA → colar nova key → Salvar
+- Coolify → Environment Variables → GEMINI_API_KEY → Update
+- .env local (para dev)
+
+Após alterar no Coolify, é OBRIGATÓRIO fazer redeploy (variáveis são injetadas no build).
+
+---
+
 *CLAUDE.md v8.0 (Português Completo + Regras de Implementação) — Março 2026*
 *Inclui: Protocolo de auditoria, padrão de design, fases de implementação, protocolo de entrega*

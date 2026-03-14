@@ -1352,6 +1352,99 @@ S3_ENDPOINT=
 
 ---
 
-*BÍBLIA.md v1.0 — Março 2026*
+## 25. LIÇÕES OPERACIONAIS (Produção — 14/03/2026)
+
+> Problemas reais encontrados em produção e suas soluções documentadas.
+
+### 25.1 — WhatsApp LID (@lid)
+
+O WhatsApp migrou alguns contatos do formato `@s.whatsapp.net` para **Linked ID** (`@lid`).
+
+| Campo | Formato Antigo | Formato LID |
+|---|---|---|
+| remoteJid | `5585999999999@s.whatsapp.net` | `122715923083278@lid` |
+| Phone | `5585999999999` | `122715923083278` (NÃO é telefone!) |
+
+**Arquivos que tratam @lid:**
+```
+src/lib/evolution-api.ts         — normalizeNumber() mantém JID @lid intacto
+app/api/crm/sync-messages/       — filtro + extração de phone
+src/lib/webhook-processor.ts     — extração de phone
+src/workers/crm/process-webhook.ts — extração de phone
+```
+
+**Padrão obrigatório em qualquer código novo:**
+```typescript
+const phone = remoteJid
+  .replace('@s.whatsapp.net', '')
+  .replace('@c.us', '')
+  .replace('@lid', '')
+```
+
+### 25.2 — Evolution API: webhookByEvents
+
+A Evolution API (v1.8.1) opera com `webhookByEvents: true`, enviando webhooks para sub-paths:
+
+| Evento | URL chamada |
+|---|---|
+| messages.upsert | `/api/webhooks/evolution/messages-upsert` |
+| connection.update | `/api/webhooks/evolution/connection-update` |
+| qrcode.updated | `/api/webhooks/evolution/qrcode-updated` |
+
+**Solução:** Rota catch-all `app/api/webhooks/evolution/[...slug]/route.ts`
+
+**Middleware:** `/api/webhooks/evolution` está em `PUBLIC_PREFIXES` (não PUBLIC_PATHS).
+
+**NUNCA** mover para PUBLIC_PATHS — quebraria webhooks com sub-path.
+
+### 25.3 — Race Condition: Auto-Reply Duplicado
+
+Webhook + polling simultâneo → ambos passam `alreadySentAutoReply()` → mensagem duplicada.
+
+**Solução:** `markAutoReplySent()` chamado ANTES do delay/envio (lock otimista).
+
+### 25.4 — Polling: Limites da Evolution API
+
+| Parâmetro | Antes | Depois (otimizado) |
+|---|---|---|
+| Chats por ciclo | 20 | 5 |
+| Timeout findMessages | 12s | 6s |
+| Intervalo polling | 20s | 30s |
+
+O polling é **FALLBACK**. O mecanismo principal são os **webhooks**.
+
+### 25.5 — VPS: Espaço em Disco
+
+Docker acumula imagens. Limpar periodicamente no terminal do Coolify:
+```bash
+docker system prune -a --volumes -f
+```
+
+### 25.6 — Gemini API Key (3 locais)
+
+| Local | Onde | Usado por |
+|---|---|---|
+| Banco (CrmIntegration) | UI Configurações → IA | test-ai, ai-agent |
+| Coolify env var | GEMINI_API_KEY | smart-replies, concierge |
+| .env local | GEMINI_API_KEY | desenvolvimento |
+
+**Após trocar a key:** atualizar nos 3 locais + redeploy obrigatório.
+
+### 25.7 — Webhook Route Architecture
+
+```
+/api/webhooks/evolution/          ← handler principal (POST)
+/api/webhooks/evolution/[...slug] ← catch-all para webhookByEvents (POST)
+    ├── /messages-upsert          → processa via inline ou BullMQ
+    ├── /connection-update        → ignora (não é HANDLED_EVENT com dados)
+    └── /qrcode-updated           → ignora
+```
+
+Ambos os handlers usam a mesma lógica: validate → parse → enqueue/inline.
+
+---
+
+*BÍBLIA.md v1.1 — Março 2026*
 *Documento gerado automaticamente a partir da auditoria completa do codebase*
 *65+ páginas · 133+ APIs · 47 models · 8+ integrações*
+*Seção 25 adicionada: Lições Operacionais de Produção (14/03/2026)*
