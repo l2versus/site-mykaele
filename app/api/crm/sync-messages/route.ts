@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
           return jid.endsWith('@s.whatsapp.net') || jid.endsWith('@lid')
         })
         .sort((a, b) => (b.lastMsgTimestamp ?? 0) - (a.lastMsgTimestamp ?? 0))
-        .slice(0, 20) // Top 20 chats mais recentes
+        .slice(0, 5) // Top 5 chats mais recentes (evita sobrecarregar a Evolution API)
     } catch (err) {
       console.error('[sync] findChats falhou:', err instanceof Error ? err.message : err)
       return NextResponse.json({ error: 'Falha ao buscar chats da Evolution API' }, { status: 502 })

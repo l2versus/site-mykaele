@@ -196,7 +196,7 @@ export const evolutionApi = {
       'POST',
       `/chat/findMessages/${instanceName}`,
       { where: { key: { remoteJid } }, limit },
-      12_000,
+      6_000, // 6s timeout — evita travar o polling inteiro
     ),
 
   /** Lista todos os chats da instância */

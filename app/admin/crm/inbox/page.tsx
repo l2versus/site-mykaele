@@ -1183,10 +1183,10 @@ export default function InboxPage() {
       }
     }
 
-    // Primeira sync após 3s (dar tempo da página carregar)
-    const initialTimeout = setTimeout(syncMessages, 3_000)
-    // Depois a cada 20s
-    const interval = setInterval(syncMessages, 20_000)
+    // Primeira sync após 5s (dar tempo da página carregar)
+    const initialTimeout = setTimeout(syncMessages, 5_000)
+    // Depois a cada 30s (evita sobrecarregar Evolution API)
+    const interval = setInterval(syncMessages, 30_000)
 
     return () => { active = false; clearTimeout(initialTimeout); clearInterval(interval) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
