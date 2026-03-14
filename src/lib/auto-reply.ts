@@ -118,15 +118,17 @@ export async function tryAutoReply(params: {
     // 4. Interpolar mensagem
     const finalMessage = interpolateMessage(config.message, leadName)
 
-    // 5. Delay para parecer humano (3-5s)
+    // 5. Marcar como enviado ANTES de enviar (previne duplicação por race condition webhook+polling)
+    await markAutoReplySent(leadId, finalMessage)
+
+    // 6. Delay para parecer humano (3-5s)
     await new Promise(resolve => setTimeout(resolve, config.delayMs))
 
-    // 6. Enviar via Evolution API
+    // 7. Enviar via Evolution API
     const result = await evolutionApi.sendText(channel.instanceId, remoteJid, finalMessage)
 
-    // 7. Salvar mensagem enviada no banco
+    // 8. Salvar mensagem enviada no banco
     if (result?.key?.id) {
-      // Buscar conversa para vincular a mensagem
       const conversation = await prisma.conversation.findUnique({
         where: { tenantId_remoteJid: { tenantId, remoteJid } },
         select: { id: true },
@@ -146,9 +148,6 @@ export async function tryAutoReply(params: {
         })
       }
     }
-
-    // 8. Marcar como enviado (nunca mais envia para este lead)
-    await markAutoReplySent(leadId, finalMessage)
   } catch (err) {
     // Non-blocking — não deve quebrar o fluxo principal
     console.error('[auto-reply] Erro ao enviar auto-reply:', err instanceof Error ? err.message : err)
