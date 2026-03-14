@@ -28,29 +28,31 @@ redis.on('error', (err) => console.error('[worker/webhook] Redis error:', err.me
 
 const CRM_CHANNEL = 'crm:events'
 
+interface WebhookMessageData {
+  key?: { id: string; fromMe: boolean; remoteJid: string }
+  message?: {
+    conversation?: string
+    extendedTextMessage?: { text: string }
+    imageMessage?: { mimetype: string; url: string; caption?: string }
+    audioMessage?: { mimetype: string; url: string }
+    videoMessage?: { mimetype: string; url: string; caption?: string }
+    documentMessage?: { mimetype: string; url: string; fileName?: string }
+  }
+  messageTimestamp?: number
+  pushName?: string
+  status?: string
+}
+
 interface WebhookPayload {
   event: string
   instance: string
-  data: {
-    key?: { id: string; fromMe: boolean; remoteJid: string }
-    message?: {
-      conversation?: string
-      extendedTextMessage?: { text: string }
-      imageMessage?: { mimetype: string; url: string; caption?: string }
-      audioMessage?: { mimetype: string; url: string }
-      videoMessage?: { mimetype: string; url: string; caption?: string }
-      documentMessage?: { mimetype: string; url: string; fileName?: string }
-    }
-    messageTimestamp?: number
-    pushName?: string
-    status?: string
-  }
+  data: WebhookMessageData | WebhookMessageData[]
   receivedAt: string
 }
 
 type MessageType = 'TEXT' | 'IMAGE' | 'AUDIO' | 'VIDEO' | 'DOCUMENT'
 
-function extractContent(message: WebhookPayload['data']['message']): {
+function extractContent(message: WebhookMessageData['message']): {
   type: MessageType
   content: string
   mediaMimeType: string | null
@@ -106,7 +108,14 @@ export interface WebhookResult {
 }
 
 export async function processWebhook(job: Job<WebhookPayload>): Promise<WebhookResult | null> {
-  const { event, instance, data } = job.data
+  const { event: rawEvent, instance } = job.data
+
+  // Normalizar evento (defesa extra — rota já normaliza antes de enfileirar)
+  const event = rawEvent.toLowerCase().replace(/_/g, '.')
+
+  // Normalizar data (defesa extra — rota já extrai primeiro item do array)
+  const data: WebhookMessageData = Array.isArray(job.data.data) ? job.data.data[0] : job.data.data
+  if (!data) return null
 
   if (event === 'connection.update') {
     // Atualizar status da conexão no canal

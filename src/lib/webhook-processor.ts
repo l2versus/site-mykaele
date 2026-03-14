@@ -7,28 +7,30 @@ import { tryBotReply } from '@/lib/bot-engine'
 import { tryAiAgentReply } from '@/lib/ai-agent'
 import { fireAutomations } from '@/lib/automation-engine'
 
+interface WebhookMessageData {
+  key?: { id: string; fromMe: boolean; remoteJid: string }
+  message?: {
+    conversation?: string
+    extendedTextMessage?: { text: string }
+    imageMessage?: { mimetype: string; url: string; caption?: string }
+    audioMessage?: { mimetype: string; url: string }
+    videoMessage?: { mimetype: string; url: string; caption?: string }
+    documentMessage?: { mimetype: string; url: string; fileName?: string }
+  }
+  pushName?: string
+  status?: string
+}
+
 interface WebhookPayload {
   event: string
   instance: string
-  data: {
-    key?: { id: string; fromMe: boolean; remoteJid: string }
-    message?: {
-      conversation?: string
-      extendedTextMessage?: { text: string }
-      imageMessage?: { mimetype: string; url: string; caption?: string }
-      audioMessage?: { mimetype: string; url: string }
-      videoMessage?: { mimetype: string; url: string; caption?: string }
-      documentMessage?: { mimetype: string; url: string; fileName?: string }
-    }
-    pushName?: string
-    status?: string
-  }
+  data: WebhookMessageData | WebhookMessageData[]
   receivedAt: string
 }
 
 type MessageType = 'TEXT' | 'IMAGE' | 'AUDIO' | 'VIDEO' | 'DOCUMENT'
 
-function extractContent(message: WebhookPayload['data']['message']): {
+function extractContent(message: WebhookMessageData['message']): {
   type: MessageType
   content: string
   mediaMimeType: string | null
@@ -79,10 +81,17 @@ function extractContent(message: WebhookPayload['data']['message']): {
  * Não faz: SSE, AI score, golden window — essas são enfileiradas quando Redis voltar.
  */
 export async function processWebhookInline(payload: WebhookPayload): Promise<void> {
-  const { event, instance, data } = payload
+  const { event, instance } = payload
+
+  // Normalizar evento (Evolution API v2 pode enviar MESSAGES_UPSERT)
+  const normalizedEvent = event.toLowerCase().replace(/_/g, '.')
 
   // Só processa messages.upsert
-  if (event !== 'messages.upsert') return
+  if (normalizedEvent !== 'messages.upsert') return
+
+  // Evolution API v2 pode enviar data como array — normalizar
+  const data = Array.isArray(payload.data) ? payload.data[0] : payload.data
+  if (!data) return
 
   const key = data.key
   if (!key?.id || !key.remoteJid) return

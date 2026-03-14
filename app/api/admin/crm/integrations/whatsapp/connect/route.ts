@@ -65,6 +65,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // SEMPRE configurar webhook — pode ter sido criada sem ou com URL errada
+    try {
+      await evolutionApi.setWebhook(resolvedInstanceName, webhookUrl)
+    } catch (whErr) {
+      console.error('[whatsapp/connect] Falha ao configurar webhook:', whErr instanceof Error ? whErr.message : whErr)
+    }
+
     // Passo 2: Sincronizar canal no banco
     let channel = await prisma.crmChannel.findFirst({
       where: { tenantId, type: 'whatsapp' },

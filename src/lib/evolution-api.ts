@@ -139,4 +139,31 @@ export const evolutionApi = {
     request<Array<{
       instance: { instanceName: string; instanceId: string; owner: string; status: string }
     }>>('GET', '/instance/fetchInstances', undefined, 10_000),
+
+  /** Configura webhook na instância (obrigatório para receber mensagens) */
+  setWebhook: (instanceName: string, webhookUrl: string) =>
+    request<{ webhook: { url: string; events: string[] } }>(
+      'POST',
+      `/webhook/set/${instanceName}`,
+      {
+        url: webhookUrl,
+        webhook_by_events: false,
+        webhook_base64: false,
+        events: [
+          'MESSAGES_UPSERT',
+          'MESSAGES_UPDATE',
+          'CONNECTION_UPDATE',
+        ],
+      },
+      8_000,
+    ),
+
+  /** Busca configuração atual do webhook */
+  findWebhook: (instanceName: string) =>
+    request<{ url?: string; events?: string[]; enabled?: boolean } | null>(
+      'GET',
+      `/webhook/find/${instanceName}`,
+      undefined,
+      6_000,
+    ),
 }

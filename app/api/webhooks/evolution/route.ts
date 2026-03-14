@@ -9,12 +9,20 @@ import { processWebhookInline } from '@/lib/webhook-processor'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-/** Tipos de evento que o CRM processa */
+/** Tipos de evento que o CRM processa (normalizado para lowercase) */
 const HANDLED_EVENTS = new Set([
   'messages.upsert',
   'messages.update',
   'connection.update',
 ])
+
+/**
+ * Normaliza nome do evento — Evolution API v2 pode enviar
+ * tanto "messages.upsert" quanto "MESSAGES_UPSERT"
+ */
+function normalizeEventName(event: string): string {
+  return event.toLowerCase().replace(/_/g, '.')
+}
 
 /**
  * Valida HMAC-SHA256 do webhook.
@@ -64,19 +72,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
     }
 
-    const event = (payload.event as string) ?? ''
+    const rawEvent = (payload.event as string) ?? ''
+    const event = normalizeEventName(rawEvent)
     const instance = (payload.instance as string) ?? ''
 
     // Ignorar eventos não processados
     if (!HANDLED_EVENTS.has(event)) {
-      return NextResponse.json({ status: 'ignored', event })
+      return NextResponse.json({ status: 'ignored', event: rawEvent })
+    }
+
+    // Evolution API v2 envia data como ARRAY para messages.upsert
+    // Normalizar para objeto único (processar apenas a primeira mensagem do batch)
+    let rawData = (payload.data ?? payload) as Record<string, unknown> | Record<string, unknown>[]
+    if (Array.isArray(rawData)) {
+      if (rawData.length === 0) {
+        return NextResponse.json({ status: 'ignored', reason: 'empty data array' })
+      }
+      rawData = rawData[0]
     }
 
     // Tentar enfileirar para processamento assíncrono
     const webhookData = {
       event,
       instance,
-      data: (payload.data ?? payload) as Record<string, unknown>,
+      data: rawData as Record<string, unknown>,
       receivedAt: new Date().toISOString(),
     }
 

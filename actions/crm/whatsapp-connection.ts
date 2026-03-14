@@ -105,17 +105,26 @@ export async function getWhatsAppStatus(): Promise<ActionResult<ConnectionStatus
   }
 }
 
+/** Constrói a URL do webhook baseado nas variáveis de ambiente */
+function resolveWebhookUrl(): string {
+  return process.env.EVOLUTION_WEBHOOK_URL
+    || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/webhooks/evolution`
+}
+
 /** Garante que a instância existe na Evolution API. Reutiliza existente ou cria nova. */
 async function ensureEvolutionInstance(tenantId: string): Promise<string> {
   const instanceName = `crm-${tenantId.slice(0, 12)}`
-  const webhookUrl = process.env.EVOLUTION_WEBHOOK_URL
-    || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/webhooks/evolution`
+  const webhookUrl = resolveWebhookUrl()
 
   // 1. Verificar se instância já existe na Evolution API
   try {
     const instances = await evolutionApi.fetchInstances()
     const existing = instances.find(i => i.instance.instanceName === instanceName)
-    if (existing) return existing.instance.instanceName
+    if (existing) {
+      // SEMPRE configurar webhook — pode ter sido criada sem ou com URL errada
+      await configureWebhook(instanceName, webhookUrl)
+      return existing.instance.instanceName
+    }
   } catch (err) {
     console.error('[whatsapp-connection] fetchInstances falhou:', err instanceof Error ? err.message : err)
     // Continua para tentar criar
@@ -123,7 +132,22 @@ async function ensureEvolutionInstance(tenantId: string): Promise<string> {
 
   // 2. Criar nova instância
   const created = await evolutionApi.createInstance(instanceName, webhookUrl)
+
+  // 3. Configurar webhook explicitamente (createInstance pode não setar corretamente)
+  await configureWebhook(instanceName, webhookUrl)
+
   return created.instance.instanceName
+}
+
+/** Configura o webhook na Evolution API com os eventos corretos */
+async function configureWebhook(instanceName: string, webhookUrl: string): Promise<void> {
+  try {
+    await evolutionApi.setWebhook(instanceName, webhookUrl)
+    console.error(`[whatsapp-connection] Webhook configurado: ${webhookUrl}`)
+  } catch (err) {
+    // Não bloquear conexão se falhar — apenas logar
+    console.error('[whatsapp-connection] Falha ao configurar webhook:', err instanceof Error ? err.message : err)
+  }
 }
 
 /** Gera QR Code para conectar o WhatsApp. Cria instância se não existir. */
@@ -259,6 +283,49 @@ export async function disconnectWhatsApp(): Promise<ActionResult> {
   } catch (err) {
     console.error('[whatsapp-connection] Erro ao desconectar:', err instanceof Error ? err.message : err)
     return { ok: false, error: 'Falha ao desconectar. Tente novamente.' }
+  }
+}
+
+/** Diagnostica o webhook — verifica se está configurado corretamente */
+export async function diagnoseWebhook(): Promise<ActionResult<{
+  webhookUrl: string | null
+  expectedUrl: string
+  isCorrect: boolean
+  events: string[]
+  fixed: boolean
+}>> {
+  const payload = await getAdminPayload()
+  if (!payload) return { ok: false, error: 'Não autorizado' }
+
+  const tenantId = await resolveTenantId()
+  if (!tenantId) return { ok: false, error: 'Tenant não configurado' }
+
+  const channel = await getChannelForTenant(tenantId)
+  if (!channel?.instanceId) {
+    return { ok: false, error: 'Nenhuma instância configurada' }
+  }
+
+  const expectedUrl = resolveWebhookUrl()
+
+  try {
+    const webhook = await evolutionApi.findWebhook(channel.instanceId)
+    const currentUrl = webhook?.url ?? null
+    const events = webhook?.events ?? []
+    const isCorrect = currentUrl === expectedUrl && events.length > 0
+
+    let fixed = false
+    if (!isCorrect) {
+      // Auto-corrigir webhook
+      await configureWebhook(channel.instanceId, expectedUrl)
+      fixed = true
+    }
+
+    return {
+      ok: true,
+      data: { webhookUrl: currentUrl, expectedUrl, isCorrect, events, fixed },
+    }
+  } catch (err) {
+    return { ok: false, error: `Falha ao diagnosticar: ${err instanceof Error ? err.message : String(err)}` }
   }
 }
 
