@@ -1159,6 +1159,39 @@ export default function InboxPage() {
 
   useEffect(() => { fetchConversations(); fetchStages(); fetchTemplates() }, [fetchConversations, fetchStages, fetchTemplates])
 
+  // Polling: sincronizar mensagens da Evolution API a cada 20s (fallback para webhook)
+  useEffect(() => {
+    if (!token) return
+    let active = true
+
+    const syncMessages = async () => {
+      try {
+        const res = await fetch('/api/crm/sync-messages', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.synced > 0 && active) {
+            // Novas mensagens encontradas — recarregar conversas
+            fetchConversations()
+            if (selectedId) fetchMessages(selectedId)
+          }
+        }
+      } catch {
+        // Silencioso — não travar a UI se o sync falhar
+      }
+    }
+
+    // Primeira sync após 3s (dar tempo da página carregar)
+    const initialTimeout = setTimeout(syncMessages, 3_000)
+    // Depois a cada 20s
+    const interval = setInterval(syncMessages, 20_000)
+
+    return () => { active = false; clearTimeout(initialTimeout); clearInterval(interval) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, selectedId])
+
   useEffect(() => {
     if (selectedId) {
       setMessages([])

@@ -7,6 +7,20 @@ interface FetchMessagesResult {
   }>
 }
 
+export interface EvolutionMessage {
+  key: { id: string; fromMe: boolean; remoteJid: string }
+  pushName?: string
+  messageTimestamp?: number
+  message?: {
+    conversation?: string
+    extendedTextMessage?: { text?: string }
+    imageMessage?: { mimetype?: string; url?: string; caption?: string }
+    audioMessage?: { mimetype?: string; url?: string }
+    videoMessage?: { mimetype?: string; url?: string; caption?: string }
+    documentMessage?: { mimetype?: string; url?: string; fileName?: string }
+  }
+}
+
 interface InstanceStatusResult {
   instance: {
     instanceName: string
@@ -166,5 +180,23 @@ export const evolutionApi = {
       `/webhook/find/${instanceName}`,
       undefined,
       6_000,
+    ),
+
+  /** Busca mensagens de um chat específico (para polling) */
+  findMessages: (instanceName: string, remoteJid: string, limit = 20) =>
+    request<{ messages?: EvolutionMessage[] } | EvolutionMessage[]>(
+      'POST',
+      `/chat/findMessages/${instanceName}`,
+      { where: { key: { remoteJid } }, limit },
+      12_000,
+    ),
+
+  /** Lista todos os chats da instância */
+  findChats: (instanceName: string) =>
+    request<Array<{ id: string; remoteJid: string; name?: string; unreadCount?: number }>>(
+      'GET',
+      `/chat/findChats/${instanceName}`,
+      undefined,
+      10_000,
     ),
 }
