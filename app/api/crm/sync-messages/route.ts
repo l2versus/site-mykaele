@@ -25,6 +25,13 @@ function extractContent(msg: EvolutionMessage['message']): {
   return { type: 'TEXT', content: text, mediaMimeType: null, mediaUrl: null }
 }
 
+/** Resolve tenant: tenta por slug, depois por ID. Cacheia na request. */
+async function resolveTenant(rawId: string): Promise<string> {
+  const bySlug = await prisma.crmTenant.findUnique({ where: { slug: rawId }, select: { id: true } })
+  if (bySlug) return bySlug.id
+  return rawId // Usar raw — pode ser ID direto
+}
+
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '')
@@ -37,43 +44,55 @@ export async function POST(req: NextRequest) {
     const rawTenantId = process.env.DEFAULT_TENANT_ID
     if (!rawTenantId) return NextResponse.json({ error: 'Tenant não configurado' }, { status: 500 })
 
-    // Resolver tenant: pode ser slug ou ID
-    let tenantId = rawTenantId
-    const tenantBySlug = await prisma.crmTenant.findUnique({ where: { slug: rawTenantId } })
-    if (tenantBySlug) {
-      tenantId = tenantBySlug.id
-    } else {
-      const tenantById = await prisma.crmTenant.findUnique({ where: { id: rawTenantId } })
-      if (!tenantById) return NextResponse.json({ error: 'Tenant não encontrado' }, { status: 500 })
-      tenantId = tenantById.id
-    }
+    const tenantId = await resolveTenant(rawTenantId)
 
-    // Buscar canal WhatsApp ativo
-    const channel = await prisma.crmChannel.findFirst({
+    // Buscar canal WhatsApp ativo — tentar com resolved e raw
+    let channel = await prisma.crmChannel.findFirst({
       where: { tenantId, type: 'whatsapp', isActive: true },
     })
+    if (!channel && tenantId !== rawTenantId) {
+      channel = await prisma.crmChannel.findFirst({
+        where: { tenantId: rawTenantId, type: 'whatsapp', isActive: true },
+      })
+    }
     if (!channel?.instanceId) {
-      return NextResponse.json({ error: `WhatsApp não conectado (tenant: ${tenantId})`, debug: { rawTenantId, tenantId } }, { status: 400 })
+      return NextResponse.json({ error: 'WhatsApp não conectado' }, { status: 400 })
     }
 
+    // Usar o tenantId real do canal (pode ser diferente do env)
+    const effectiveTenantId = channel.tenantId
     const instanceName = channel.instanceId
     let synced = 0
+    let errors = 0
 
     // Buscar chats recentes da Evolution API
-    let chats: Array<{ remoteJid: string; name?: string }> = []
+    // NOTA: findChats retorna { id: "...@s.whatsapp.net" }, NÃO { remoteJid }
+    type ChatItem = { id?: string; remoteJid?: string; name?: string; lastMsgTimestamp?: number }
+    let chats: ChatItem[] = []
     try {
       const raw = await evolutionApi.findChats(instanceName)
-      chats = (Array.isArray(raw) ? raw : [])
-        .filter(c => c.remoteJid?.endsWith('@s.whatsapp.net'))
-        .slice(0, 30) // Limitar a 30 chats mais recentes
+      const allChats: ChatItem[] = Array.isArray(raw) ? raw : []
+      // Filtrar apenas contatos pessoais (não grupos)
+      // Campo pode ser "id" ou "remoteJid" dependendo da versão
+      chats = allChats
+        .filter(c => {
+          const jid = c.id ?? c.remoteJid ?? ''
+          return jid.endsWith('@s.whatsapp.net')
+        })
+        .sort((a, b) => (b.lastMsgTimestamp ?? 0) - (a.lastMsgTimestamp ?? 0))
+        .slice(0, 20) // Top 20 chats mais recentes
     } catch (err) {
       console.error('[sync] findChats falhou:', err instanceof Error ? err.message : err)
       return NextResponse.json({ error: 'Falha ao buscar chats da Evolution API' }, { status: 502 })
     }
 
+    if (chats.length === 0) {
+      return NextResponse.json({ ok: true, synced: 0, chatsChecked: 0, note: 'Nenhum chat pessoal encontrado' })
+    }
+
     // Pipeline padrão para criar leads novos
     const pipeline = await prisma.pipeline.findFirst({
-      where: { tenantId, isDefault: true },
+      where: { tenantId: effectiveTenantId, isDefault: true },
       include: { stages: { orderBy: { order: 'asc' }, take: 1 } },
     })
     if (!pipeline || pipeline.stages.length === 0) {
@@ -82,19 +101,33 @@ export async function POST(req: NextRequest) {
     const firstStage = pipeline.stages[0]
 
     for (const chat of chats) {
+      const chatJid = chat.id ?? chat.remoteJid ?? ''
+      if (!chatJid) continue
+
       try {
-        // Buscar mensagens deste chat
-        const rawResult = await evolutionApi.findMessages(instanceName, chat.remoteJid, 15)
-        const messages: EvolutionMessage[] = Array.isArray(rawResult)
-          ? rawResult
-          : (rawResult as { messages?: EvolutionMessage[] }).messages ?? []
+        // Buscar mensagens deste chat via findMessages
+        const rawResult = await evolutionApi.findMessages(instanceName, chatJid, 15)
+
+        // A resposta pode ser: array direto, { messages: [...] }, ou { data: [...] }
+        let messages: EvolutionMessage[] = []
+        if (Array.isArray(rawResult)) {
+          messages = rawResult
+        } else {
+          const obj = rawResult as Record<string, unknown>
+          const inner = obj.messages ?? obj.data
+          if (Array.isArray(inner)) {
+            messages = inner as EvolutionMessage[]
+          }
+        }
 
         if (messages.length === 0) continue
 
         for (const msg of messages) {
-          if (!msg.key?.id || !msg.key?.remoteJid) continue
-          // Ignorar grupos e status
-          if (msg.key.remoteJid.endsWith('@g.us') || msg.key.remoteJid === 'status@broadcast') continue
+          if (!msg.key?.id) continue
+
+          // Usar o remoteJid da mensagem, ou do chat se não tiver
+          const remoteJid = msg.key.remoteJid || chatJid
+          if (remoteJid.endsWith('@g.us') || remoteJid === 'status@broadcast') continue
 
           // Deduplicar: já existe no banco?
           const existing = await prisma.message.findUnique({
@@ -102,56 +135,55 @@ export async function POST(req: NextRequest) {
           })
           if (existing) continue
 
-          const phone = msg.key.remoteJid.replace('@s.whatsapp.net', '')
+          const phone = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '')
           const pushName = msg.pushName ?? chat.name ?? 'Contato'
 
           // Buscar ou criar conversa + lead
-          await prisma.$transaction(async (tx) => {
-            let conversation = await tx.conversation.findUnique({
-              where: { tenantId_remoteJid: { tenantId, remoteJid: msg.key.remoteJid } },
-            })
-
-            if (!conversation) {
-              // Buscar ou criar lead
-              let lead = await tx.lead.findFirst({
-                where: { tenantId, phone, deletedAt: null },
+          try {
+            await prisma.$transaction(async (tx) => {
+              let conversation = await tx.conversation.findUnique({
+                where: { tenantId_remoteJid: { tenantId: effectiveTenantId, remoteJid } },
               })
 
-              if (!lead) {
-                const lastLead = await tx.lead.findFirst({
-                  where: { tenantId, stageId: firstStage.id, deletedAt: null },
-                  orderBy: { position: 'desc' },
+              if (!conversation) {
+                let lead = await tx.lead.findFirst({
+                  where: { tenantId: effectiveTenantId, phone, deletedAt: null },
                 })
-                lead = await tx.lead.create({
+
+                if (!lead) {
+                  const lastLead = await tx.lead.findFirst({
+                    where: { tenantId: effectiveTenantId, stageId: firstStage.id, deletedAt: null },
+                    orderBy: { position: 'desc' },
+                  })
+                  lead = await tx.lead.create({
+                    data: {
+                      tenantId: effectiveTenantId,
+                      pipelineId: pipeline.id,
+                      stageId: firstStage.id,
+                      name: pushName,
+                      phone,
+                      source: 'whatsapp',
+                      status: 'WARM',
+                      position: lastLead ? lastLead.position + 1.0 : 1.0,
+                    },
+                  })
+                  await tx.stage.update({
+                    where: { id: firstStage.id },
+                    data: { cachedLeadCount: { increment: 1 }, cacheUpdatedAt: new Date() },
+                  })
+                }
+
+                conversation = await tx.conversation.create({
                   data: {
-                    tenantId,
-                    pipelineId: pipeline.id,
-                    stageId: firstStage.id,
-                    name: pushName,
-                    phone,
-                    source: 'whatsapp',
-                    status: 'WARM',
-                    position: lastLead ? lastLead.position + 1.0 : 1.0,
+                    tenantId: effectiveTenantId,
+                    leadId: lead.id,
+                    channelId: channel.id,
+                    remoteJid,
+                    lastMessageAt: new Date(),
+                    unreadCount: msg.key.fromMe ? 0 : 1,
                   },
                 })
-                await tx.stage.update({
-                  where: { id: firstStage.id },
-                  data: { cachedLeadCount: { increment: 1 }, cacheUpdatedAt: new Date() },
-                })
-              }
-
-              conversation = await tx.conversation.create({
-                data: {
-                  tenantId,
-                  leadId: lead.id,
-                  channelId: channel.id,
-                  remoteJid: msg.key.remoteJid,
-                  lastMessageAt: new Date(),
-                  unreadCount: msg.key.fromMe ? 0 : 1,
-                },
-              })
-            } else {
-              if (!msg.key.fromMe) {
+              } else if (!msg.key.fromMe) {
                 await tx.conversation.update({
                   where: { id: conversation.id },
                   data: {
@@ -161,36 +193,43 @@ export async function POST(req: NextRequest) {
                   },
                 })
               }
+
+              const { type, content, mediaMimeType, mediaUrl } = extractContent(msg.message)
+
+              await tx.message.create({
+                data: {
+                  conversationId: conversation.id,
+                  tenantId: effectiveTenantId,
+                  waMessageId: msg.key.id,
+                  fromMe: msg.key.fromMe,
+                  type,
+                  content,
+                  mediaMimeType,
+                  mediaUrl,
+                  channel: 'whatsapp',
+                  status: msg.key.fromMe ? 'SENT' : 'RECEIVED',
+                },
+              })
+
+              await tx.lead.update({
+                where: { id: conversation.leadId },
+                data: { lastInteractionAt: new Date() },
+              })
+            })
+
+            synced++
+          } catch (txErr) {
+            // Provavelmente duplicata — ignorar
+            const msg2 = txErr instanceof Error ? txErr.message : ''
+            if (!msg2.includes('Unique constraint')) {
+              console.error(`[sync] Erro na transação:`, msg2.slice(0, 200))
+              errors++
             }
-
-            const { type, content, mediaMimeType, mediaUrl } = extractContent(msg.message)
-
-            await tx.message.create({
-              data: {
-                conversationId: conversation.id,
-                tenantId,
-                waMessageId: msg.key.id,
-                fromMe: msg.key.fromMe,
-                type,
-                content,
-                mediaMimeType,
-                mediaUrl,
-                channel: 'whatsapp',
-                status: msg.key.fromMe ? 'SENT' : 'RECEIVED',
-              },
-            })
-
-            await tx.lead.update({
-              where: { id: conversation.leadId },
-              data: { lastInteractionAt: new Date() },
-            })
-          })
-
-          synced++
+          }
         }
       } catch (err) {
-        // Não parar se um chat falhar
-        console.error(`[sync] Erro no chat ${chat.remoteJid}:`, err instanceof Error ? err.message : err)
+        console.error(`[sync] Erro no chat ${chatJid}:`, err instanceof Error ? err.message : err)
+        errors++
       }
     }
 
@@ -198,12 +237,12 @@ export async function POST(req: NextRequest) {
     if (synced > 0 && isRedisReady()) {
       redis.publish('crm:events', JSON.stringify({
         type: 'messages-synced',
-        tenantId,
+        tenantId: effectiveTenantId,
         data: { count: synced },
       })).catch(() => {})
     }
 
-    return NextResponse.json({ ok: true, synced, chatsChecked: chats.length })
+    return NextResponse.json({ ok: true, synced, errors, chatsChecked: chats.length })
   } catch (err) {
     console.error('[sync] Erro:', err instanceof Error ? err.message : err)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
