@@ -52,6 +52,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // Claude (Anthropic) — API própria
+    if (provider === 'claude') {
+      const res = await fetch('https://api.anthropic.com/v1/models', {
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        return NextResponse.json(
+          { error: `Claude retornou ${res.status}: ${(err as { error?: { message?: string } })?.error?.message ?? 'verifique a API key'}` },
+          { status: 400 }
+        )
+      }
+      return NextResponse.json({ ok: true })
+    }
+
     // Outros provedores compatíveis com OpenAI
     const BASE_URLS: Record<string, string> = {
       openai: 'https://api.openai.com/v1',

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createAuditLog } from '@/lib/audit'
+import { clearAiConfigCache } from '@/lib/gemini'
 
 const DEFAULT_PROVIDER_KEY = 'ai-settings'
 
@@ -116,6 +117,11 @@ export async function PUT(req: NextRequest) {
         isActive: true,
       },
     })
+
+    // Limpar cache do provedor de IA quando ai-settings for alterado
+    if (providerKey === 'ai-settings') {
+      clearAiConfigCache()
+    }
 
     createAuditLog({
       tenantId: resolvedTenantId,

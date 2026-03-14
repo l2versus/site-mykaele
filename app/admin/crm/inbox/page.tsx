@@ -1377,7 +1377,7 @@ export default function InboxPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        addToast(data.error || 'Concierge indisponível', 'error')
+        addToast(data.error || 'Concierge indisponível', data.quotaExceeded ? 'info' : 'error')
         return
       }
       setNewMessage(data.reply)

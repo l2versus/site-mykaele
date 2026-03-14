@@ -18,7 +18,7 @@ interface AiAgentConfig {
   schedule: 'always' | 'outside_hours'
   businessHoursStart: string // "08:00"
   businessHoursEnd: string   // "18:00"
-  model: 'gemini-2.0-flash' | 'gemini-1.5-pro'
+  model: string
   delayMs: number
 }
 

@@ -141,6 +141,15 @@ REGRAS:
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[conversation/summary] Error:', msg)
-    return NextResponse.json({ error: `Falha no resumo: ${msg}` }, { status: 500 })
+
+    // Quota do Gemini esgotada — retornar 503 com mensagem amigável
+    if (msg.includes('429') || msg.includes('quota') || msg.includes('rate-limit') || msg.includes('Too Many Requests') || msg.includes('RESOURCE_EXHAUSTED')) {
+      return NextResponse.json(
+        { error: 'IA temporariamente indisponível — cota esgotada.', quotaExceeded: true },
+        { status: 503 }
+      )
+    }
+
+    return NextResponse.json({ error: 'Falha ao gerar resumo. Tente novamente.' }, { status: 500 })
   }
 }

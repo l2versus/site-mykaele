@@ -2,7 +2,7 @@
 // Usa Google Gemini (grátis: 1500 req/dia embeddings, 15 req/min chat)
 import { prisma } from '@/lib/prisma'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { getGeminiApiKey, createGeminiModel } from '@/lib/gemini'
+import { getAiConfig, createGeminiModel } from '@/lib/gemini'
 
 const CHUNK_SIZE = 1000
 const CHUNK_OVERLAP_RATIO = 0.1 // 10% overlap
@@ -77,12 +77,20 @@ export function chunkText(text: string, chunkSize = CHUNK_SIZE): string[] {
 
 /**
  * Gera embedding via Google Gemini text-embedding-004 (768 dim).
- * Grátis: 1500 requisições/dia.
+ * Usa a geminiKey do cascade se disponível, senão a apiKey principal.
+ * Se nenhuma key Gemini disponível, lança erro (caller usa fallback textual).
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const apiKey = await getGeminiApiKey()
-  if (!apiKey) throw new Error('GEMINI_API_KEY não encontrada')
-  const genAI = new GoogleGenerativeAI(apiKey)
+  const config = await getAiConfig()
+  if (!config) throw new Error('Nenhum provedor de IA configurado')
+
+  // Embeddings só funcionam com Gemini — tentar geminiKey do cascade primeiro
+  const geminiApiKey = config.geminiKey || (config.aiProvider === 'gemini' ? config.apiKey : '')
+  if (!geminiApiKey) {
+    throw new Error('EMBEDDING_NOT_AVAILABLE')
+  }
+
+  const genAI = new GoogleGenerativeAI(geminiApiKey)
   const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL })
   const result = await model.embedContent(text.slice(0, 8000))
   return result.embedding.values

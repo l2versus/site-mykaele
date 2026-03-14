@@ -2098,6 +2098,72 @@ function TeamTab() {
   )
 }
 
+// ━━━ Cascade Key Input ━━━
+
+function CascadeKeyInput({ step, name, badge, badgeColor, detail, howTo, placeholder, value, onChange }: {
+  step: number; name: string; badge: string; badgeColor: string
+  detail: string; howTo: string; placeholder: string
+  value: string; onChange: (v: string) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const hasKey = value.length > 4 && !value.includes('*')
+
+  return (
+    <div style={{
+      padding: '10px 12px', borderRadius: 8,
+      background: hasKey ? 'rgba(46,204,138,0.04)' : 'var(--crm-surface)',
+      border: `1px solid ${hasKey ? 'rgba(46,204,138,0.15)' : 'var(--crm-border)'}`,
+      transition: 'all 0.2s',
+    }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span style={{
+          width: 20, height: 20, borderRadius: 10, fontSize: 10, fontWeight: 700,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: hasKey ? 'rgba(46,204,138,0.15)' : 'var(--crm-surface-2)',
+          color: hasKey ? '#2ECC8A' : 'var(--crm-text-muted)',
+        }}>
+          {hasKey ? '\u2713' : step}
+        </span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--crm-text)', flex: 1 }}>
+          {name}
+        </span>
+        <span style={{
+          fontSize: 8, padding: '2px 5px', borderRadius: 3, fontWeight: 700,
+          background: `${badgeColor}15`, color: badgeColor,
+          letterSpacing: 0.5, textTransform: 'uppercase',
+        }}>
+          {badge}
+        </span>
+        <span style={{ fontSize: 14, color: 'var(--crm-text-muted)', transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>
+          {'\u25BE'}
+        </span>
+      </div>
+
+      {expanded && (
+        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <p style={{ fontSize: 10, color: 'var(--crm-text-muted)' }}>{detail}</p>
+          <input
+            type="password"
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder={placeholder}
+            className="w-full rounded-lg px-3 py-2 text-xs outline-none font-mono"
+            style={{ background: 'var(--crm-surface-2)', border: '1px solid var(--crm-border)', color: 'var(--crm-text)' }}
+            onFocus={e => { e.currentTarget.style.borderColor = 'var(--crm-gold)' }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'var(--crm-border)' }}
+          />
+          <p style={{ fontSize: 9, color: 'var(--crm-text-muted)', lineHeight: 1.4 }}>
+            <span style={{ color: 'var(--crm-gold)', fontWeight: 600 }}>Como obter:</span>{' '}{howTo}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ━━━ Tab: IA ━━━
 
 function AiTab() {
@@ -2138,6 +2204,15 @@ function AiTab() {
   const [saving, setSaving] = useState(false)
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
 
+  // Cascade (fallback automático)
+  const [cascadeEnabled, setCascadeEnabled] = useState(false)
+  const [geminiKey, setGeminiKey] = useState('')
+  const [groqKey, setGroqKey] = useState('')
+  const [openrouterKey, setOpenrouterKey] = useState('')
+  const [togetherKey, setTogetherKey] = useState('')
+  const [openaiKey, setOpenaiKey] = useState('')
+  const [claudeKey, setClaudeKey] = useState('')
+
   // AI Agent (Recepcionista IA)
   const [agentEnabled, setAgentEnabled] = useState(false)
   const [agentName, setAgentName] = useState('Assistente Myka')
@@ -2156,6 +2231,7 @@ function AiTab() {
   const PROVIDERS = [
     { value: 'gemini', label: 'Google Gemini (Grátis)', hint: 'Gemini 2.0 Flash — 1500 req/dia grátis' },
     { value: 'groq', label: 'Groq (Grátis)', hint: 'Llama 3, Mixtral — rápido e grátis' },
+    { value: 'claude', label: 'Claude (Anthropic)', hint: 'Claude Sonnet, Haiku — alta qualidade' },
     { value: 'openai', label: 'OpenAI', hint: 'GPT-4o, GPT-4o-mini' },
     { value: 'openrouter', label: 'OpenRouter', hint: 'Múltiplos modelos, free tier' },
     { value: 'together', label: 'Together AI', hint: 'Llama 3.1, Mixtral — free tier' },
@@ -2168,6 +2244,11 @@ function AiTab() {
       { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite (grátis, mais rápido)' },
       { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (grátis)' },
       { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (grátis, mais inteligente)' },
+    ],
+    claude: [
+      { value: 'claude-sonnet-4-5-20250514', label: 'Claude Sonnet 4.5 (recomendado)' },
+      { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (rápido e barato)' },
+      { value: 'claude-opus-4-0-20250514', label: 'Claude Opus 4 (mais inteligente)' },
     ],
     openai: [
       { value: 'gpt-4o-mini', label: 'GPT-4o Mini (barato)' },
@@ -2197,6 +2278,7 @@ function AiTab() {
 
   const BASE_URLS: Record<string, string> = {
     gemini: 'https://generativelanguage.googleapis.com/v1beta',
+    claude: 'https://api.anthropic.com',
     openai: 'https://api.openai.com/v1',
     groq: 'https://api.groq.com/openai/v1',
     together: 'https://api.together.xyz/v1',
@@ -2227,6 +2309,13 @@ function AiTab() {
           if (s.confidence) setConfidence(Number(s.confidence))
           if (s.maxTokens) setMaxTokens(String(s.maxTokens))
           if (s.temperature !== undefined) setTemperature(Number(s.temperature))
+          if (s.cascadeEnabled) setCascadeEnabled(true)
+          if (s.geminiKey) setGeminiKey(s.geminiKey as string)
+          if (s.groqKey) setGroqKey(s.groqKey as string)
+          if (s.openrouterKey) setOpenrouterKey(s.openrouterKey as string)
+          if (s.togetherKey) setTogetherKey(s.togetherKey as string)
+          if (s.openaiKey) setOpenaiKey(s.openaiKey as string)
+          if (s.claudeKey) setClaudeKey(s.claudeKey as string)
           if (s.features) {
             try {
               const savedFeatures = s.features as Record<string, boolean>
@@ -2296,6 +2385,13 @@ function AiTab() {
           confidence,
           maxTokens: Number(maxTokens),
           temperature,
+          cascadeEnabled,
+          geminiKey: geminiKey || (provider === 'gemini' ? apiKey : ''),
+          groqKey: groqKey || (provider === 'groq' ? apiKey : ''),
+          openrouterKey: openrouterKey || (provider === 'openrouter' ? apiKey : ''),
+          togetherKey: togetherKey || (provider === 'together' ? apiKey : ''),
+          openaiKey: openaiKey || (provider === 'openai' ? apiKey : ''),
+          claudeKey: claudeKey || (provider === 'claude' ? apiKey : ''),
           features: Object.fromEntries(features.map(f => [f.id, f.enabled])),
         }),
       })
@@ -2360,13 +2456,20 @@ function AiTab() {
           confidence,
           maxTokens: Number(maxTokens),
           temperature,
+          cascadeEnabled,
+          geminiKey: geminiKey || (provider === 'gemini' ? apiKey : ''),
+          groqKey: groqKey || (provider === 'groq' ? apiKey : ''),
+          openrouterKey: openrouterKey || (provider === 'openrouter' ? apiKey : ''),
+          togetherKey: togetherKey || (provider === 'together' ? apiKey : ''),
+          openaiKey: openaiKey || (provider === 'openai' ? apiKey : ''),
+          claudeKey: claudeKey || (provider === 'claude' ? apiKey : ''),
           features: Object.fromEntries(features.map(f => [f.id, f.enabled])),
         }),
       }).catch(err => { console.error('[AiTab] save error:', err) })
     }
     window.addEventListener('crm-settings-save', handleGlobalSave)
     return () => window.removeEventListener('crm-settings-save', handleGlobalSave)
-  }, [TENANT_ID, PROVIDER_KEY, provider, model, apiKey, baseUrl, confidence, maxTokens, temperature, features])
+  }, [TENANT_ID, PROVIDER_KEY, provider, model, apiKey, baseUrl, confidence, maxTokens, temperature, features, cascadeEnabled, geminiKey, groqKey, openrouterKey, togetherKey, openaiKey, claudeKey])
 
   // Testar conexão — via server-side para evitar CORS/CSP
   const handleTestConnection = async () => {
@@ -2460,7 +2563,7 @@ function AiTab() {
                   type="password"
                   value={apiKey}
                   onChange={e => setApiKey(e.target.value)}
-                  placeholder={provider === 'gemini' ? 'AIzaSy...' : provider === 'groq' ? 'gsk_...' : provider === 'openai' ? 'sk-...' : 'Sua API key'}
+                  placeholder={provider === 'gemini' ? 'AIzaSy...' : provider === 'groq' ? 'gsk_...' : provider === 'openai' ? 'sk-...' : provider === 'claude' ? 'sk-ant-...' : 'Sua API key'}
                   className="flex-1 rounded-lg px-3 py-2.5 text-sm outline-none transition-all font-mono"
                   style={{
                     background: 'var(--crm-surface-2)',
@@ -2493,10 +2596,173 @@ function AiTab() {
                   Crie sua key grátis em <span style={{ color: 'var(--crm-gold)' }}>console.groq.com</span> — sem cartão de crédito
                 </p>
               )}
+              {provider === 'claude' && (
+                <p className="text-[10px] mt-1.5" style={{ color: 'var(--crm-text-muted)' }}>
+                  Crie sua key em <span style={{ color: 'var(--crm-gold)' }}>console.anthropic.com</span> — Haiku a partir de $0.25/1M tokens
+                </p>
+              )}
               {provider === 'openrouter' && (
                 <p className="text-[10px] mt-1.5" style={{ color: 'var(--crm-text-muted)' }}>
                   Crie sua key em <span style={{ color: 'var(--crm-gold)' }}>openrouter.ai</span> — modelos grátis disponíveis
                 </p>
+              )}
+            </div>
+
+            {/* Fallback Automático (Cascade) */}
+            <div style={{
+              background: cascadeEnabled ? 'rgba(212,175,55,0.04)' : 'var(--crm-surface)',
+              border: `1px solid ${cascadeEnabled ? 'rgba(212,175,55,0.2)' : 'var(--crm-border)'}`,
+              borderRadius: 12,
+              padding: 16,
+              transition: 'all 0.2s',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: cascadeEnabled ? 14 : 0 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--crm-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    Fallback automático
+                    {cascadeEnabled && (
+                      <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: 'rgba(46,204,138,0.12)', color: '#2ECC8A', fontWeight: 700 }}>ATIVO</span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: 10, color: 'var(--crm-text-muted)', marginTop: 3 }}>
+                    Se a cota esgotar, tenta o próximo automaticamente. Nunca fica sem IA.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setCascadeEnabled(!cascadeEnabled)}
+                  style={{
+                    width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                    background: cascadeEnabled ? 'var(--crm-gold)' : 'var(--crm-surface-2)',
+                    position: 'relative', transition: 'background 0.2s',
+                  }}
+                >
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 9,
+                    background: '#fff',
+                    position: 'absolute', top: 3,
+                    left: cascadeEnabled ? 23 : 3,
+                    transition: 'left 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                  }} />
+                </button>
+              </div>
+
+              {cascadeEnabled && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {/* Fluxo visual */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
+                    padding: '8px 10px', borderRadius: 8,
+                    background: 'var(--crm-surface-2)', marginBottom: 8,
+                    fontSize: 10, color: 'var(--crm-text-muted)',
+                  }}>
+                    <span style={{ color: (geminiKey || (provider === 'gemini' ? apiKey : '')) ? '#2ECC8A' : 'var(--crm-text-muted)' }}>Gemini</span>
+                    <span>{'>'}</span>
+                    <span style={{ color: groqKey ? '#2ECC8A' : 'var(--crm-text-muted)' }}>Groq</span>
+                    <span>{'>'}</span>
+                    <span style={{ color: openrouterKey ? '#2ECC8A' : 'var(--crm-text-muted)' }}>OpenRouter</span>
+                    <span>{'>'}</span>
+                    <span style={{ color: togetherKey ? '#2ECC8A' : 'var(--crm-text-muted)' }}>Together</span>
+                    <span>{'>'}</span>
+                    <span style={{ color: openaiKey ? '#F0A500' : 'var(--crm-text-muted)' }}>OpenAI</span>
+                    <span>{'>'}</span>
+                    <span style={{ color: claudeKey ? '#FF6B4A' : 'var(--crm-text-muted)' }}>Claude</span>
+                  </div>
+
+                  {/* ① Gemini */}
+                  <CascadeKeyInput
+                    step={1}
+                    name="Google Gemini"
+                    badge="GRÁTIS"
+                    badgeColor="#2ECC8A"
+                    detail="1.500 req/dia · Modelo: Gemini 2.0 Flash"
+                    howTo="aistudio.google.com/apikey — Clique em 'Create API Key', copie e cole aqui"
+                    placeholder="AIzaSy..."
+                    value={geminiKey || (provider === 'gemini' ? apiKey : '')}
+                    onChange={setGeminiKey}
+                  />
+
+                  {/* ② Groq */}
+                  <CascadeKeyInput
+                    step={2}
+                    name="Groq"
+                    badge="GRÁTIS"
+                    badgeColor="#2ECC8A"
+                    detail="14.400 req/dia · Modelo: Llama 3.3 70B"
+                    howTo="console.groq.com — Crie conta, vá em API Keys, gere uma key"
+                    placeholder="gsk_..."
+                    value={groqKey}
+                    onChange={setGroqKey}
+                  />
+
+                  {/* ③ OpenRouter */}
+                  <CascadeKeyInput
+                    step={3}
+                    name="OpenRouter"
+                    badge="GRÁTIS"
+                    badgeColor="#2ECC8A"
+                    detail="Modelos grátis disponíveis · Llama, Gemma, Mistral"
+                    howTo="openrouter.ai/keys — Crie conta, gere uma key (modelos :free são grátis)"
+                    placeholder="sk-or-..."
+                    value={openrouterKey}
+                    onChange={setOpenrouterKey}
+                  />
+
+                  {/* ④ Together AI */}
+                  <CascadeKeyInput
+                    step={4}
+                    name="Together AI"
+                    badge="FREE TIER"
+                    badgeColor="#4A7BFF"
+                    detail="Free tier generoso · Llama 3.1 8B"
+                    howTo="api.together.xyz/settings/api-keys — Crie conta, copie a key"
+                    placeholder="..."
+                    value={togetherKey}
+                    onChange={setTogetherKey}
+                  />
+
+                  {/* ⑤ OpenAI */}
+                  <CascadeKeyInput
+                    step={5}
+                    name="OpenAI (ChatGPT)"
+                    badge="PAGO"
+                    badgeColor="#F0A500"
+                    detail="A partir de $0.15/1M tokens · GPT-4o Mini"
+                    howTo="platform.openai.com/api-keys — Crie conta, adicione créditos, gere key"
+                    placeholder="sk-..."
+                    value={openaiKey}
+                    onChange={setOpenaiKey}
+                  />
+
+                  {/* ⑥ Claude */}
+                  <CascadeKeyInput
+                    step={6}
+                    name="Claude (Anthropic)"
+                    badge="ÚLTIMO RECURSO"
+                    badgeColor="#FF6B4A"
+                    detail="A partir de $0.25/1M tokens · Claude Haiku 4.5"
+                    howTo="console.anthropic.com/settings/keys — Crie conta, adicione créditos, gere key"
+                    placeholder="sk-ant-..."
+                    value={claudeKey}
+                    onChange={setClaudeKey}
+                  />
+
+                  {/* Dica final */}
+                  <div style={{
+                    marginTop: 6, padding: '10px 12px', borderRadius: 8,
+                    background: 'rgba(212,175,55,0.06)',
+                    border: '1px solid rgba(212,175,55,0.12)',
+                  }}>
+                    <p style={{ fontSize: 11, color: 'var(--crm-gold)', fontWeight: 600, marginBottom: 4 }}>
+                      Como funciona
+                    </p>
+                    <p style={{ fontSize: 10, color: 'var(--crm-text-muted)', lineHeight: 1.5 }}>
+                      O sistema tenta cada provedor na ordem acima. Se um falha (cota esgotada, erro), passa automaticamente para o próximo.
+                      Provedor que falha fica em cooldown de 5 min. Configure pelo menos <span style={{ color: 'var(--crm-text)', fontWeight: 600 }}>Gemini + Groq</span> (ambos grátis) para ter ~16.000 req/dia sem gastar nada.
+                      Provedores sem key são ignorados.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -2636,8 +2902,10 @@ function AiTab() {
                   value={agentModel}
                   onChange={setAgentModel}
                   options={[
-                    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (grátis, recomendado)' },
-                    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (grátis, mais inteligente)' },
+                    ...(MODEL_OPTIONS[provider] || []),
+                    ...(!MODEL_OPTIONS[provider]?.length ? [
+                      { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (grátis)' },
+                    ] : []),
                   ]}
                 />
 

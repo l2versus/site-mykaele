@@ -91,6 +91,15 @@ NOME DO PACIENTE: ${firstName}`
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[smart-replies] Error:', msg)
-    return NextResponse.json({ error: `Falha nas sugestões: ${msg}` }, { status: 500 })
+
+    // Quota do Gemini esgotada — retornar 503 com mensagem amigável
+    if (msg.includes('429') || msg.includes('quota') || msg.includes('rate-limit') || msg.includes('Too Many Requests') || msg.includes('RESOURCE_EXHAUSTED')) {
+      return NextResponse.json(
+        { error: 'IA temporariamente indisponível — cota do Gemini esgotada. Tente novamente em alguns minutos.', quotaExceeded: true },
+        { status: 503 }
+      )
+    }
+
+    return NextResponse.json({ error: 'Falha ao gerar sugestões. Tente novamente.' }, { status: 500 })
   }
 }
