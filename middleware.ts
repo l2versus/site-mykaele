@@ -17,15 +17,15 @@ const PUBLIC_PATHS = [
   '/api/services',
   '/api/booking/availability',
   '/api/payments/webhook',
-  '/api/webhooks/evolution',
   '/api/webhooks/instagram',
   '/api/webhooks/facebook',
   '/api/webhooks/telegram',
   '/api/webhooks/email',
 ]
 
-// Prefixos de rotas públicas
-const PUBLIC_PREFIXES = ['/check-in/', '/api/crm/stream', '/proposta/', '/api/public/proposals/', '/api/webhooks/crm/', '/convite/', '/api/crm/invite/']
+// Prefixos de rotas públicas (startsWith match)
+// /api/webhooks/evolution cobre: /evolution, /evolution/messages-upsert, /evolution/connection-update, etc.
+const PUBLIC_PREFIXES = ['/check-in/', '/api/crm/stream', '/proposta/', '/api/public/proposals/', '/api/webhooks/crm/', '/api/webhooks/evolution', '/convite/', '/api/crm/invite/']
 
 // Prefixos de rotas estáticas
 const STATIC_PREFIXES = ['/_next', '/favicon', '/media', '/images', '/icon', '/apple-icon', '/uploads']
