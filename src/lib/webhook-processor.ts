@@ -115,7 +115,7 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
 
   const { type, content, mediaMimeType, mediaUrl } = extractContent(data.message)
   const pushName = data.pushName ?? 'Contato'
-  const phone = key.remoteJid.replace('@s.whatsapp.net', '')
+  const phone = key.remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace('@lid', '')
 
   // Contexto capturado dentro da transaction para auto-reply e automações
   const autoReplyCtx: { leadId: string; leadName: string; channelId: string }[] = []

@@ -89,7 +89,8 @@ export async function POST(req: NextRequest) {
       chats = allChats
         .filter(c => {
           const jid = c.id ?? c.remoteJid ?? ''
-          return jid.endsWith('@s.whatsapp.net')
+          // Aceitar contatos pessoais: @s.whatsapp.net (tradicional) e @lid (Linked ID novo)
+          return jid.endsWith('@s.whatsapp.net') || jid.endsWith('@lid')
         })
         .sort((a, b) => (b.lastMsgTimestamp ?? 0) - (a.lastMsgTimestamp ?? 0))
         .slice(0, 20) // Top 20 chats mais recentes
@@ -147,7 +148,7 @@ export async function POST(req: NextRequest) {
           })
           if (existing) continue
 
-          const phone = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '')
+          const phone = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace('@lid', '')
           const pushName = msg.pushName ?? chat.name ?? 'Contato'
 
           // Buscar ou criar conversa + lead

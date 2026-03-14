@@ -70,8 +70,16 @@ async function request<T>(method: string, path: string, body?: unknown, timeoutM
  * Normaliza remoteJid para número puro com código do país.
  * Evolution API v2 exige número no formato internacional (ex: 5585998500344).
  * Números brasileiros sem o prefixo 55 recebem o código automaticamente.
+ *
+ * JIDs no formato @lid (Linked ID do WhatsApp) são mantidos intactos,
+ * pois não são números de telefone — a Evolution API resolve internamente.
  */
 function normalizeNumber(remoteJid: string): string {
+  // LID (Linked ID) — manter JID completo para Evolution API resolver
+  if (remoteJid.endsWith('@lid')) {
+    return remoteJid
+  }
+
   const digits = remoteJid
     .replace(/@s\.whatsapp\.net$/, '')
     .replace(/@c\.us$/, '')
@@ -87,14 +95,14 @@ function normalizeNumber(remoteJid: string): string {
 }
 
 export const evolutionApi = {
-  /** Envia mensagem de texto */
+  /** Envia mensagem de texto — suporta @s.whatsapp.net e @lid (Linked ID) */
   sendText: (instanceId: string, remoteJid: string, text: string) =>
     request<{ key: { id: string } }>('POST', `/message/sendText/${instanceId}`, {
       number: normalizeNumber(remoteJid),
       text,
       textMessage: { text },
       delay: 1200,
-    }, 8_000),
+    }, 12_000),
 
   /** Envia template (HSM) */
   sendTemplate: (instanceId: string, remoteJid: string, template: string, variables: string[]) =>

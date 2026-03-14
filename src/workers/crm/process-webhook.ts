@@ -160,7 +160,7 @@ export async function processWebhook(job: Job<WebhookPayload>): Promise<WebhookR
   // Buscar ou criar conversa + lead em transação
   const { type, content, mediaMimeType, mediaUrl } = extractContent(data.message)
   const pushName = data.pushName ?? 'Contato'
-  const phone = key.remoteJid.replace('@s.whatsapp.net', '')
+  const phone = key.remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace('@lid', '')
 
   const result = await prisma.$transaction(async (tx) => {
     // Buscar conversa existente
