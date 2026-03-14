@@ -34,15 +34,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const tenantId = process.env.DEFAULT_TENANT_ID
-    if (!tenantId) return NextResponse.json({ error: 'Tenant não configurado' }, { status: 500 })
+    const rawTenantId = process.env.DEFAULT_TENANT_ID
+    if (!rawTenantId) return NextResponse.json({ error: 'Tenant não configurado' }, { status: 500 })
+
+    // Resolver tenant: pode ser slug ou ID
+    let tenantId = rawTenantId
+    const tenantBySlug = await prisma.crmTenant.findUnique({ where: { slug: rawTenantId } })
+    if (tenantBySlug) {
+      tenantId = tenantBySlug.id
+    } else {
+      const tenantById = await prisma.crmTenant.findUnique({ where: { id: rawTenantId } })
+      if (!tenantById) return NextResponse.json({ error: 'Tenant não encontrado' }, { status: 500 })
+      tenantId = tenantById.id
+    }
 
     // Buscar canal WhatsApp ativo
     const channel = await prisma.crmChannel.findFirst({
       where: { tenantId, type: 'whatsapp', isActive: true },
     })
     if (!channel?.instanceId) {
-      return NextResponse.json({ error: 'WhatsApp não conectado' }, { status: 400 })
+      return NextResponse.json({ error: `WhatsApp não conectado (tenant: ${tenantId})`, debug: { rawTenantId, tenantId } }, { status: 400 })
     }
 
     const instanceName = channel.instanceId
