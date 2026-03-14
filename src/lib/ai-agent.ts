@@ -7,7 +7,7 @@
 import { prisma } from '@/lib/prisma'
 import { evolutionApi } from '@/lib/evolution-api'
 import { findSimilarChunks } from '@/lib/rag'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { createGeminiModel } from '@/lib/gemini'
 
 interface AiAgentConfig {
   enabled: boolean
@@ -169,9 +169,6 @@ async function generateAgentReply(params: {
 }): Promise<string> {
   const { tenantId, leadName, config, history, userMessage } = params
 
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY não configurada')
-
   // Buscar contexto relevante da base de conhecimento
   const chunks = await findSimilarChunks(tenantId, userMessage, 4, 0.5)
   const context = chunks.map(c => c.content).join('\n\n---\n\n')
@@ -212,14 +209,11 @@ ${context || 'Nenhum contexto específico encontrado.'}
 
 NOME DO PACIENTE: ${firstName}`
 
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({
+  const model = await createGeminiModel({
     model: config.model,
     systemInstruction: systemPrompt,
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 300,
-    },
+    temperature: 0.7,
+    maxOutputTokens: 300,
   })
 
   const prompt = history

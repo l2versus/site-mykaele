@@ -63,7 +63,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ reply })
   } catch (err) {
-    console.error('[concierge] POST error:', err instanceof Error ? err.message : err)
-    return NextResponse.json({ error: 'Falha ao gerar sugestão de resposta' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[concierge] POST error:', msg)
+    if (err instanceof Error && err.stack) {
+      console.error('[concierge] Stack:', err.stack)
+    }
+    return NextResponse.json({ error: `Falha no Concierge: ${msg}` }, { status: 500 })
   }
 }

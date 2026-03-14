@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { createGeminiModel } from '@/lib/gemini'
 
 export async function GET(req: NextRequest) {
   try {
@@ -68,11 +68,6 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY não configurada' }, { status: 500 })
-    }
-
     const leadName = conversation.lead.name
     const history = messages
       .map(m => {
@@ -82,9 +77,7 @@ export async function GET(req: NextRequest) {
       })
       .join('\n')
 
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+    const model = await createGeminiModel({
       systemInstruction: `Você é um analista de CRM. Analise a conversa WhatsApp entre uma clínica de estética e um paciente.
 
 Retorne um JSON com EXATAMENTE esta estrutura (sem markdown, sem \`\`\`):
@@ -103,7 +96,8 @@ REGRAS:
 - "nextAction": ação prática para a recepcionista
 - "buyingSignal": quão perto o paciente está de agendar
 - "sentiment": baseado no tom geral do paciente (não da clínica)`,
-      generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
+      temperature: 0.3,
+      maxOutputTokens: 300,
     })
 
     const result = await model.generateContent(`Conversa:\n${history}`)
@@ -145,7 +139,8 @@ REGRAS:
 
     return NextResponse.json(parsed)
   } catch (err) {
-    console.error('[conversation/summary] Error:', err instanceof Error ? err.message : err)
-    return NextResponse.json({ error: 'Falha ao gerar resumo' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[conversation/summary] Error:', msg)
+    return NextResponse.json({ error: `Falha no resumo: ${msg}` }, { status: 500 })
   }
 }

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { findSimilarChunks } from '@/lib/rag'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { createGeminiModel } from '@/lib/gemini'
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,11 +18,6 @@ export async function POST(req: NextRequest) {
     const { conversationId, tenantId } = await req.json()
     if (!conversationId || !tenantId) {
       return NextResponse.json({ error: 'Campos obrigatórios faltando' }, { status: 400 })
-    }
-
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY não configurada' }, { status: 500 })
     }
 
     const conversation = await prisma.conversation.findUnique({
@@ -72,11 +67,10 @@ REGRAS:
 ${context ? `CONTEXTO DA CLÍNICA:\n${context}\n` : ''}
 NOME DO PACIENTE: ${firstName}`
 
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+    const model = await createGeminiModel({
       systemInstruction: systemPrompt,
-      generationConfig: { temperature: 0.8, maxOutputTokens: 200 },
+      temperature: 0.8,
+      maxOutputTokens: 200,
     })
 
     const prompt = history
@@ -95,7 +89,8 @@ NOME DO PACIENTE: ${firstName}`
 
     return NextResponse.json({ suggestions })
   } catch (err) {
-    console.error('[smart-replies] Error:', err instanceof Error ? err.message : err)
-    return NextResponse.json({ error: 'Falha ao gerar sugestões' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[smart-replies] Error:', msg)
+    return NextResponse.json({ error: `Falha nas sugestões: ${msg}` }, { status: 500 })
   }
 }

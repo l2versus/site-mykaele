@@ -1375,8 +1375,11 @@ export default function InboxPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ conversationId: selectedId, tenantId: TENANT_ID }),
       })
-      if (!res.ok) throw new Error()
       const data = await res.json()
+      if (!res.ok) {
+        addToast(data.error || 'Concierge indisponível', 'error')
+        return
+      }
       setNewMessage(data.reply)
       // Auto-resize textarea e focar para edição
       setTimeout(() => {
@@ -1390,7 +1393,7 @@ export default function InboxPage() {
       playFeedback('click')
       addToast('Sugestão da IA pronta — revise e envie', 'info')
     } catch {
-      addToast('Concierge indisponível', 'error')
+      addToast('Concierge indisponível — erro de rede', 'error')
     } finally {
       setIsGenerating(false)
     }

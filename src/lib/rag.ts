@@ -2,19 +2,11 @@
 // Usa Google Gemini (grátis: 1500 req/dia embeddings, 15 req/min chat)
 import { prisma } from '@/lib/prisma'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-
-let _genAI: GoogleGenerativeAI | null = null
-function getGenAI(): GoogleGenerativeAI {
-  if (!_genAI) {
-    _genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-  }
-  return _genAI
-}
+import { getGeminiApiKey, createGeminiModel } from '@/lib/gemini'
 
 const CHUNK_SIZE = 1000
 const CHUNK_OVERLAP_RATIO = 0.1 // 10% overlap
 const EMBEDDING_MODEL = 'text-embedding-004'
-const CHAT_MODEL = 'gemini-2.0-flash'
 
 /**
  * Divide texto em chunks de ~1000 caracteres com 10% de overlap.
@@ -88,7 +80,10 @@ export function chunkText(text: string, chunkSize = CHUNK_SIZE): string[] {
  * Grátis: 1500 requisições/dia.
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const model = getGenAI().getGenerativeModel({ model: EMBEDDING_MODEL })
+  const apiKey = await getGeminiApiKey()
+  if (!apiKey) throw new Error('GEMINI_API_KEY não encontrada')
+  const genAI = new GoogleGenerativeAI(apiKey)
+  const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL })
   const result = await model.embedContent(text.slice(0, 8000))
   return result.embedding.values
 }
@@ -226,13 +221,10 @@ ${context || 'Nenhum contexto específico encontrado na base de conhecimento.'}
 
 NOME DA PACIENTE: ${leadName}`
 
-  const model = getGenAI().getGenerativeModel({
-    model: CHAT_MODEL,
+  const model = await createGeminiModel({
     systemInstruction: systemPrompt,
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 500,
-    },
+    temperature: 0.7,
+    maxOutputTokens: 500,
   })
 
   const result = await model.generateContent(
