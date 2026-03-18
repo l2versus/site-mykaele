@@ -11,6 +11,7 @@ import { redis, isRedisReady } from '@/lib/redis'
 import { tryBotReply } from '@/lib/bot-engine'
 import { tryAiAgentReply } from '@/lib/ai-agent'
 import { tryAutoReply } from '@/lib/auto-reply'
+import { executeWithGuarantee } from '@/lib/response-guarantee'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -284,42 +285,59 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Disparar bot/IA para mensagens recentes importadas (fire-and-forget)
+    // Disparar bot/IA para mensagens recentes com GARANTIA DE RESPOSTA
     for (const ctx of botTriggers.values()) {
       void (async () => {
         try {
-          // Cadeia: Bot Builder > Agente IA > Auto-Reply
-          const botHandled = await tryBotReply({
-            tenantId: ctx.tenantId,
-            leadId: ctx.leadId,
-            leadName: ctx.leadName,
-            channelId: ctx.channelId,
-            remoteJid: ctx.remoteJid,
-            messageContent: ctx.messageContent,
-            isNewLead: ctx.isNewLead,
-          })
-          if (botHandled) return
+          const result = await executeWithGuarantee(
+            {
+              tenantId: ctx.tenantId,
+              leadId: ctx.leadId,
+              leadName: ctx.leadName,
+              channelId: ctx.channelId,
+              remoteJid: ctx.remoteJid,
+              messageContent: ctx.messageContent,
+              waMessageId: `sync-${Date.now()}-${ctx.leadId}`,
+              isNewLead: ctx.isNewLead,
+            },
+            {
+              tryBot: () => tryBotReply({
+                tenantId: ctx.tenantId,
+                leadId: ctx.leadId,
+                leadName: ctx.leadName,
+                channelId: ctx.channelId,
+                remoteJid: ctx.remoteJid,
+                messageContent: ctx.messageContent,
+                isNewLead: ctx.isNewLead,
+              }),
+              tryAiAgent: () => tryAiAgentReply({
+                tenantId: ctx.tenantId,
+                leadId: ctx.leadId,
+                leadName: ctx.leadName,
+                channelId: ctx.channelId,
+                remoteJid: ctx.remoteJid,
+                messageContent: ctx.messageContent,
+              }),
+              tryAutoReply: async () => {
+                await tryAutoReply({
+                  tenantId: ctx.tenantId,
+                  leadId: ctx.leadId,
+                  leadName: ctx.leadName,
+                  channelId: ctx.channelId,
+                  remoteJid: ctx.remoteJid,
+                  fromMe: false,
+                })
+              },
+            },
+          )
 
-          const aiHandled = await tryAiAgentReply({
-            tenantId: ctx.tenantId,
-            leadId: ctx.leadId,
-            leadName: ctx.leadName,
-            channelId: ctx.channelId,
-            remoteJid: ctx.remoteJid,
-            messageContent: ctx.messageContent,
-          })
-          if (aiHandled) return
-
-          await tryAutoReply({
-            tenantId: ctx.tenantId,
-            leadId: ctx.leadId,
-            leadName: ctx.leadName,
-            channelId: ctx.channelId,
-            remoteJid: ctx.remoteJid,
-            fromMe: false,
-          })
+          if (result.success) {
+            console.error(`[sync] ✓ Resposta via ${result.handler} para lead=${ctx.leadId} (${result.durationMs}ms)`)
+          } else {
+            console.error(`[sync] ✗ FALHA para lead=${ctx.leadId}: ${result.error}`)
+          }
         } catch (err) {
-          console.error('[sync] Erro no fluxo bot/ia/auto-reply:', err instanceof Error ? err.message : err)
+          console.error('[sync] Erro crítico na cascade:', err instanceof Error ? err.message : err)
         }
       })()
     }

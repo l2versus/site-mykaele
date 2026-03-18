@@ -283,6 +283,7 @@ export async function tryAiAgentReply(params: {
     }
 
     // 2.5 Anti-loop: se IA respondeu há < 30s, ignorar (paciente mandando msgs em rajada)
+    // NOTA: SKIPs intencionais retornam true para o response-guarantee NÃO disparar safety net
     const lastAiReply = await prisma.leadActivity.findFirst({
       where: { leadId, type: 'AI_AGENT_REPLY' },
       orderBy: { createdAt: 'desc' },
@@ -292,32 +293,39 @@ export async function tryAiAgentReply(params: {
       const elapsedMs = Date.now() - lastAiReply.createdAt.getTime()
       // Mensagem trivial (ok, sim, obrigado) → ignora se IA respondeu < 2 min
       if (isLoopMessage(messageContent) && elapsedMs < 120_000) {
-        console.error(`[ai-agent] SKIP lead=${leadId}: msg trivial "${messageContent}" (IA respondeu ${Math.round(elapsedMs/1000)}s atrás)`)
-        return false
+        console.error(`[ai-agent] SKIP-OK lead=${leadId}: msg trivial "${messageContent}" (IA respondeu ${Math.round(elapsedMs/1000)}s atrás)`)
+        return true // Skip intencional — lead JÁ foi respondido recentemente
       }
       // Qualquer mensagem → espera pelo menos 30s entre respostas (agrupa rajadas)
       if (elapsedMs < 30_000) {
-        console.error(`[ai-agent] SKIP lead=${leadId}: rajada (${Math.round(elapsedMs/1000)}s desde última resposta)`)
-        return false
+        console.error(`[ai-agent] SKIP-OK lead=${leadId}: rajada (${Math.round(elapsedMs/1000)}s desde última resposta)`)
+        return true // Skip intencional — lead JÁ foi respondido recentemente
       }
     }
 
-    // 3. Verificar limite de interações (padrão: 10 por lead)
+    // 3. Verificar limite de interações
     const interactions = await countAiInteractions(leadId)
     if (interactions >= config.maxInteractions) {
-      console.error(`[ai-agent] SKIP lead=${leadId}: maxInteractions atingido (${interactions}/${config.maxInteractions})`)
-      await prisma.leadActivity.create({
-        data: {
-          leadId,
-          type: 'AI_AGENT_TRANSFERRED',
-          payload: {
-            reason: 'max_interactions_reached',
-            totalInteractions: interactions,
-            transferredAt: new Date().toISOString(),
-          },
-        },
+      console.error(`[ai-agent] SKIP-LIMIT lead=${leadId}: maxInteractions atingido (${interactions}/${config.maxInteractions})`)
+      // Só registra transferência uma vez
+      const alreadyTransferred = await prisma.leadActivity.findFirst({
+        where: { leadId, type: 'AI_AGENT_TRANSFERRED' },
+        select: { id: true },
       })
-      return false // Cai para auto-reply ou humano
+      if (!alreadyTransferred) {
+        await prisma.leadActivity.create({
+          data: {
+            leadId,
+            type: 'AI_AGENT_TRANSFERRED',
+            payload: {
+              reason: 'max_interactions_reached',
+              totalInteractions: interactions,
+              transferredAt: new Date().toISOString(),
+            },
+          },
+        })
+      }
+      return false // Cai para auto-reply ou safety net (lead precisa de humano)
     }
 
     // 4. Buscar histórico e gerar resposta

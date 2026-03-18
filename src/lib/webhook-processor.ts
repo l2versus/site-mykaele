@@ -1,11 +1,19 @@
 // src/lib/webhook-processor.ts — Processamento inline de webhooks (fallback sem Redis)
 // Usado quando o Redis está offline e a fila BullMQ não está disponível.
 // Garante que NENHUMA mensagem WhatsApp seja perdida.
+//
+// v2: Integrado com Response Guarantee System.
+// - Tracking de cada mensagem recebida
+// - Cascade Bot → IA → AutoReply com retry
+// - Safety net como última linha de defesa
+// - Logs estruturados para diagnóstico
+
 import { prisma } from '@/lib/prisma'
 import { tryAutoReply } from '@/lib/auto-reply'
 import { tryBotReply } from '@/lib/bot-engine'
 import { tryAiAgentReply } from '@/lib/ai-agent'
 import { fireAutomations } from '@/lib/automation-engine'
+import { executeWithGuarantee } from '@/lib/response-guarantee'
 
 interface WebhookMessageData {
   key?: { id: string; fromMe: boolean; remoteJid: string }
@@ -78,7 +86,8 @@ function extractContent(message: WebhookMessageData['message']): {
 /**
  * Processa webhook diretamente (sem fila BullMQ).
  * Fallback para quando Redis está offline.
- * Não faz: SSE, AI score, golden window — essas são enfileiradas quando Redis voltar.
+ *
+ * v2: Integrado com Response Guarantee System.
  */
 export async function processWebhookInline(payload: WebhookPayload): Promise<void> {
   const { event, instance } = payload
@@ -87,14 +96,26 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
   const normalizedEvent = event.toLowerCase().replace(/_/g, '.')
 
   // Só processa messages.upsert
-  if (normalizedEvent !== 'messages.upsert') return
+  if (normalizedEvent !== 'messages.upsert') {
+    // Logar eventos não-upsert para diagnóstico
+    if (normalizedEvent.includes('message')) {
+      console.error(`[webhook] Evento não-upsert ignorado: ${event} (instance=${instance})`)
+    }
+    return
+  }
 
   // Evolution API v2 pode enviar data como array — normalizar
   const data = Array.isArray(payload.data) ? payload.data[0] : payload.data
-  if (!data) return
+  if (!data) {
+    console.error(`[webhook] Payload sem data: event=${event} instance=${instance}`)
+    return
+  }
 
   const key = data.key
-  if (!key?.id || !key.remoteJid) return
+  if (!key?.id || !key.remoteJid) {
+    console.error(`[webhook] Key inválida: ${JSON.stringify(key)}`)
+    return
+  }
 
   // Ignorar grupos e status
   if (key.remoteJid.endsWith('@g.us') || key.remoteJid === 'status@broadcast') return
@@ -103,7 +124,10 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
   const channel = await prisma.crmChannel.findFirst({
     where: { instanceId: instance, isActive: true },
   })
-  if (!channel) return
+  if (!channel) {
+    console.error(`[webhook] Canal não encontrado para instance=${instance}. Mensagem de ${key.remoteJid} PERDIDA.`)
+    return
+  }
 
   const tenantId = channel.tenantId
 
@@ -117,8 +141,8 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
   const pushName = data.pushName ?? 'Contato'
   const phone = key.remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace('@lid', '')
 
-  // Contexto capturado dentro da transaction para auto-reply e automações
-  const autoReplyCtx: { leadId: string; leadName: string; channelId: string }[] = []
+  // Contexto para cascade de respostas
+  const leadCtxRef: { current: { leadId: string; leadName: string; channelId: string } | null } = { current: null }
   let isNewLead = false
 
   await prisma.$transaction(async (tx) => {
@@ -131,7 +155,10 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
         where: { tenantId, isDefault: true },
         include: { stages: { orderBy: { order: 'asc' }, take: 1 } },
       })
-      if (!pipeline || pipeline.stages.length === 0) return
+      if (!pipeline || pipeline.stages.length === 0) {
+        console.error(`[webhook] Pipeline padrão não encontrado para tenant=${tenantId}. Lead de ${phone} NÃO CRIADO.`)
+        return
+      }
 
       const firstStage = pipeline.stages[0]
 
@@ -179,27 +206,23 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
         },
       })
 
-      // Capturar contexto para auto-reply (lead + canal)
-      autoReplyCtx.push({ leadId: lead.id, leadName: lead.name, channelId: channel.id })
+      leadCtxRef.current = { leadId: lead.id, leadName: lead.name, channelId: channel.id }
     } else {
       await tx.conversation.update({
         where: { id: conversation.id },
         data: {
           lastMessageAt: new Date(),
-          unreadCount: key.fromMe
-            ? undefined
-            : { increment: 1 },
+          unreadCount: key.fromMe ? undefined : { increment: 1 },
           isClosed: false,
         },
       })
 
-      // Capturar contexto mesmo para conversas existentes (lead pode nunca ter recebido auto-reply)
       const lead = await tx.lead.findUnique({
         where: { id: conversation.leadId },
         select: { id: true, name: true },
       })
       if (lead) {
-        autoReplyCtx.push({ leadId: lead.id, leadName: lead.name, channelId: conversation.channelId })
+        leadCtx = { leadId: lead.id, leadName: lead.name, channelId: conversation.channelId }
       }
     }
 
@@ -224,50 +247,68 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
     })
   })
 
-  // Fire-and-forget: bot → auto-reply → automações (não bloqueia o webhook)
-  const ctx = autoReplyCtx[0]
-  if (ctx && !key.fromMe) {
-    // Cadeia de prioridade: Bot Builder > Agente IA > Auto-Reply
+  // Disparar cascade com GARANTIA DE RESPOSTA (não mais fire-and-forget)
+  const leadCtx = leadCtxRef.current
+  if (leadCtx && !key.fromMe) {
+    const ctx = leadCtx
+
+    // Cascade com tracking e safety net
     void (async () => {
       try {
-        // 1. Tentar bot visual primeiro
-        const botHandled = await tryBotReply({
-          tenantId,
-          leadId: ctx.leadId,
-          leadName: ctx.leadName,
-          channelId: ctx.channelId,
-          remoteJid: key.remoteJid,
-          messageContent: content,
-          isNewLead,
-        })
-        if (botHandled) return
+        const result = await executeWithGuarantee(
+          {
+            tenantId,
+            leadId: ctx.leadId,
+            leadName: ctx.leadName,
+            channelId: ctx.channelId,
+            remoteJid: key.remoteJid,
+            messageContent: content,
+            waMessageId: key.id,
+            isNewLead,
+          },
+          {
+            tryBot: () => tryBotReply({
+              tenantId,
+              leadId: ctx.leadId,
+              leadName: ctx.leadName,
+              channelId: ctx.channelId,
+              remoteJid: key.remoteJid,
+              messageContent: content,
+              isNewLead,
+            }),
+            tryAiAgent: () => tryAiAgentReply({
+              tenantId,
+              leadId: ctx.leadId,
+              leadName: ctx.leadName,
+              channelId: ctx.channelId,
+              remoteJid: key.remoteJid,
+              messageContent: content,
+            }),
+            tryAutoReply: async () => {
+              await tryAutoReply({
+                tenantId,
+                leadId: ctx.leadId,
+                leadName: ctx.leadName,
+                channelId: ctx.channelId,
+                remoteJid: key.remoteJid,
+                fromMe: key.fromMe,
+              })
+            },
+          },
+        )
 
-        // 2. Se bot não tratou, tentar agente IA (RAG + Gemini)
-        const aiHandled = await tryAiAgentReply({
-          tenantId,
-          leadId: ctx.leadId,
-          leadName: ctx.leadName,
-          channelId: ctx.channelId,
-          remoteJid: key.remoteJid,
-          messageContent: content,
-        })
-        if (aiHandled) return
-
-        // 3. Último fallback: auto-reply simples (uma vez por lead)
-        await tryAutoReply({
-          tenantId,
-          leadId: ctx.leadId,
-          leadName: ctx.leadName,
-          channelId: ctx.channelId,
-          remoteJid: key.remoteJid,
-          fromMe: key.fromMe,
-        })
+        // Log resultado para diagnóstico
+        if (result.success) {
+          console.error(`[webhook] ✓ Resposta enviada via ${result.handler} para lead=${ctx.leadId} (${result.durationMs}ms)`)
+        } else {
+          console.error(`[webhook] ✗ FALHA TOTAL para lead=${ctx.leadId}: ${result.error}`)
+        }
       } catch (err) {
-        console.error('[webhook] Erro no fluxo bot/ia/auto-reply:', err instanceof Error ? err.message : err)
+        console.error('[webhook] Erro crítico na cascade:', err instanceof Error ? err.message : err)
       }
     })()
 
-    // 3. Disparar automações por gatilho (non-blocking, independente do bot)
+    // Disparar automações (independente do cascade)
     void fireAutomations('NEW_MESSAGE_RECEIVED', {
       tenantId,
       leadId: ctx.leadId,
