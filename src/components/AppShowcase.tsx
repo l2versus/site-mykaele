@@ -164,10 +164,13 @@ export default function AppShowcase() {
     const v = videoRef.current
     if (!v) return
     const newSrc = APP_VIDEOS[activeVideo]
-    if (v.getAttribute('src') !== newSrc) {
-      v.src = newSrc
+    // Trocar via <source> para compatibilidade iOS
+    const source = v.querySelector('source')
+    if (source && source.src !== newSrc) {
+      source.src = newSrc
       v.load()
     }
+    v.muted = true // iOS: garantir muted antes de play
     v.play().catch(() => {})
   }, [activeVideo])
 
@@ -237,20 +240,25 @@ export default function AppShowcase() {
                       ref={el => {
                         videoRef.current = el
                         if (el) {
+                          // iOS exige: muted ANTES de play, via property E attribute
                           el.muted = true
+                          el.defaultMuted = true
                           el.setAttribute('muted', '')
                           el.setAttribute('playsinline', '')
                           el.setAttribute('webkit-playsinline', '')
+                          el.playsInline = true
+                          // Tentar play imediato (iOS permite se muted)
+                          el.play().catch(() => {})
                         }
                       }}
-                      src={APP_VIDEOS[0]}
                       muted
-                      autoPlay
                       playsInline
                       preload="auto"
                       onEnded={handleVideoEnd}
                       className="absolute inset-0 w-full h-full object-cover"
-                    />
+                    >
+                      <source src={APP_VIDEOS[0]} type="video/mp4" />
+                    </video>
                   )}
                   {/* Progress dots overlay */}
                   <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
@@ -373,19 +381,22 @@ export default function AppShowcase() {
                             videoRef.current = el
                             if (el) {
                               el.muted = true
+                              el.defaultMuted = true
                               el.setAttribute('muted', '')
                               el.setAttribute('playsinline', '')
                               el.setAttribute('webkit-playsinline', '')
+                              el.playsInline = true
+                              el.play().catch(() => {})
                             }
                           }}
-                          src={APP_VIDEOS[0]}
                           muted
-                          autoPlay
                           playsInline
                           preload="auto"
                           onEnded={handleVideoEnd}
                           className="absolute inset-0 w-full h-full object-cover"
-                        />
+                        >
+                          <source src={APP_VIDEOS[0]} type="video/mp4" />
+                        </video>
                       )}
 
                       {/* Story-style progress bars */}

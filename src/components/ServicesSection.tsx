@@ -93,20 +93,23 @@ export function ServicesSection() {
                 videoRef.current = el
                 if (el) {
                   el.muted = true
+                  el.defaultMuted = true
                   el.setAttribute('muted', '')
                   el.setAttribute('playsinline', '')
                   el.setAttribute('webkit-playsinline', '')
+                  el.playsInline = true
+                  el.play().catch(() => {})
                 }
               }}
               className="absolute inset-0 w-full h-full object-cover object-top"
               style={{ filter: 'saturate(1.1) contrast(1.05) brightness(0.85)' }}
-              src={METODO_VIDEO}
               muted
-              autoPlay
               loop
               playsInline
               preload="metadata"
-            />
+            >
+              <source src={METODO_VIDEO} type="video/mp4" />
+            </video>
           </div>
           
           {/* Overlay — mais suave na direita pra mostrar ela */}

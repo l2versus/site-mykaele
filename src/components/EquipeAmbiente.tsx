@@ -29,23 +29,25 @@ function VideoCard({ src, titulo, desc }: { src: string; titulo: string; desc: s
     <div className="group relative aspect-[16/10] overflow-hidden bg-[#1a1a1a]">
       <video
         ref={el => {
-          (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el
+          videoRef.current = el
           if (el) {
+            el.muted = true
+            el.defaultMuted = true
             el.setAttribute('muted', '')
             el.setAttribute('playsinline', '')
             el.setAttribute('webkit-playsinline', '')
-            el.muted = true
+            el.playsInline = true
+            el.play().catch(() => {})
           }
         }}
-        src={src}
         muted
-        autoPlay
         loop
         playsInline
         preload="auto"
-        onLoadedData={() => { videoRef.current?.play().catch(() => {}) }}
         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
-      />
+      >
+        <source src={src} type="video/mp4" />
+      </video>
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
       <div className="absolute bottom-0 left-0 right-0 p-8">
         <p className="text-base font-light text-white mb-1">{titulo}</p>

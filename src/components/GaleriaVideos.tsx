@@ -14,24 +14,89 @@ const VIDEOS = [
 
 function VideoThumb({ video, onClick }: { video: typeof VIDEOS[0]; onClick: () => void }) {
   const ref = useRef<HTMLVideoElement>(null)
-  const [hovered, setHovered] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [playing, setPlaying] = useState(false)
 
+  // iOS fix: set muted via JS property (React bug workaround)
   useEffect(() => {
-    if (!ref.current) return
-    if (hovered) ref.current.play().catch(() => {})
-    else { ref.current.pause(); ref.current.currentTime = 0 }
-  }, [hovered])
+    const el = ref.current
+    if (el) {
+      el.muted = true
+      el.setAttribute('muted', '')
+      el.setAttribute('playsinline', '')
+      el.setAttribute('webkit-playsinline', '')
+    }
+  }, [])
+
+  // IntersectionObserver: autoplay when visible on mobile (replaces hover)
+  useEffect(() => {
+    const video = ref.current
+    const container = containerRef.current
+    if (!video || !container) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.play().catch(() => {})
+          setPlaying(true)
+        } else {
+          video.pause()
+          video.currentTime = 0
+          setPlaying(false)
+        }
+      },
+      { threshold: 0.5 }
+    )
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [])
+
+  // Desktop: hover play/pause
+  const handleMouseEnter = () => {
+    ref.current?.play().catch(() => {})
+    setPlaying(true)
+  }
+  const handleMouseLeave = () => {
+    if (ref.current) {
+      ref.current.pause()
+      ref.current.currentTime = 0
+      setPlaying(false)
+    }
+  }
 
   return (
-    <div className="group cursor-pointer" onClick={onClick}
-      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+    <div
+      ref={containerRef}
+      className="group cursor-pointer"
+      onClick={onClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <div className="relative overflow-hidden bg-[#1a1a1a] aspect-[9/14] transition-all duration-700 group-hover:-translate-y-1">
-        <video ref={ref} src={video.src} muted loop playsInline preload="metadata"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
+        <video
+          ref={el => {
+            (ref as React.MutableRefObject<HTMLVideoElement | null>).current = el
+            if (el) {
+              el.muted = true
+              el.defaultMuted = true
+              el.setAttribute('muted', '')
+              el.setAttribute('playsinline', '')
+              el.setAttribute('webkit-playsinline', '')
+              el.playsInline = true
+            }
+          }}
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+        >
+          <source src={video.src} type="video/mp4" />
+        </video>
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
 
-        {/* Play */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity duration-300">
+        {/* Play icon — hidden when playing */}
+        <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${playing ? 'opacity-0' : 'opacity-100'}`}>
           <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 flex items-center justify-center">
             <svg className="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z" />
@@ -90,7 +155,25 @@ export default function GaleriaVideos() {
               </svg>
             </button>
             <div className="overflow-hidden bg-black">
-              <video src={videoAtual.src} controls autoPlay muted playsInline className="w-full aspect-video" />
+              <video
+                ref={el => {
+                  if (el) {
+                    el.muted = true
+                    el.defaultMuted = true
+                    el.setAttribute('muted', '')
+                    el.setAttribute('playsinline', '')
+                    el.setAttribute('webkit-playsinline', '')
+                    el.playsInline = true
+                    el.play().catch(() => {})
+                  }
+                }}
+                controls
+                muted
+                playsInline
+                className="w-full aspect-video"
+              >
+                <source src={videoAtual.src} type="video/mp4" />
+              </video>
             </div>
           </div>
         </div>
