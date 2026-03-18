@@ -476,9 +476,9 @@ export async function tryBotReply(params: {
     })
 
     if (activeSession) {
-      // Timeout check: se última atividade > 30 min, encerrar sessão
-      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000)
-      if (activeSession.lastActivityAt < thirtyMinAgo) {
+      // Timeout check: se última atividade > 15 min, encerrar sessão (era 30 min — muito longo)
+      const timeoutMs = 15 * 60 * 1000
+      if (activeSession.lastActivityAt < new Date(Date.now() - timeoutMs)) {
         await endSession(activeSession.id, 'timeout')
         // Continua abaixo para verificar novos gatilhos
       } else {

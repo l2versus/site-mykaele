@@ -60,7 +60,12 @@ function safeQueueProxy(getQueue: () => Queue, queueName: string) {
         console.error(`[queues] Redis offline — job descartado na fila "${queueName}":`, args[0])
         return null
       }
-      return getQueue().add(...args)
+      try {
+        return await getQueue().add(...args)
+      } catch (err) {
+        console.error(`[queues] Falha ao enfileirar em "${queueName}":`, (err as Error).message)
+        return null // Retorna null para que o fallback inline seja chamado
+      }
     },
     getJob: async (...args: Parameters<Queue['getJob']>) => {
       if (!isRedisReady()) return null

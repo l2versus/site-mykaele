@@ -234,7 +234,15 @@ export default function AppShowcase() {
                 <div className="relative aspect-[9/19.5] overflow-hidden bg-[#111]">
                   {isMobile && (
                     <video
-                      ref={videoRef}
+                      ref={el => {
+                        videoRef.current = el
+                        if (el) {
+                          el.muted = true
+                          el.setAttribute('muted', '')
+                          el.setAttribute('playsinline', '')
+                          el.setAttribute('webkit-playsinline', '')
+                        }
+                      }}
                       src={APP_VIDEOS[0]}
                       muted
                       autoPlay
@@ -361,7 +369,15 @@ export default function AppShowcase() {
                     <div className="relative aspect-[9/19.5] overflow-hidden bg-[#0a0a0a]">
                       {!isMobile && (
                         <video
-                          ref={videoRef}
+                          ref={el => {
+                            videoRef.current = el
+                            if (el) {
+                              el.muted = true
+                              el.setAttribute('muted', '')
+                              el.setAttribute('playsinline', '')
+                              el.setAttribute('webkit-playsinline', '')
+                            }
+                          }}
                           src={APP_VIDEOS[0]}
                           muted
                           autoPlay

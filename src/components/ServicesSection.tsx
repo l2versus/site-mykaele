@@ -89,7 +89,15 @@ export function ServicesSection() {
             style={{ transform: `translateY(${scrollY}px)` }}
           >
             <video
-              ref={videoRef}
+              ref={el => {
+                videoRef.current = el
+                if (el) {
+                  el.muted = true
+                  el.setAttribute('muted', '')
+                  el.setAttribute('playsinline', '')
+                  el.setAttribute('webkit-playsinline', '')
+                }
+              }}
               className="absolute inset-0 w-full h-full object-cover object-top"
               style={{ filter: 'saturate(1.1) contrast(1.05) brightness(0.85)' }}
               src={METODO_VIDEO}

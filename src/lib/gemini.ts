@@ -61,15 +61,23 @@ function readKeyFromCreds(creds: Record<string, unknown>, field: string): string
   return ''
 }
 
-export async function getAiConfig(): Promise<AiConfig | null> {
-  if (_configCache && Date.now() - _configCacheTime < CONFIG_CACHE_TTL) {
+let _configCacheTenantId = ''
+
+export async function getAiConfig(overrideTenantId?: string): Promise<AiConfig | null> {
+  // Cache só é válido se foi populado para o mesmo tenant (ou sem tenant)
+  const requestTenant = overrideTenantId ?? ''
+  if (_configCache && Date.now() - _configCacheTime < CONFIG_CACHE_TTL &&
+      (_configCacheTenantId === requestTenant || _configCacheTenantId === '')) {
     return _configCache
   }
 
   try {
-    const tenantSlug = process.env.DEFAULT_TENANT_ID || 'clinica-mykaele-procopio'
-    const tenant = await prisma.crmTenant.findUnique({ where: { slug: tenantSlug } })
-    const tenantId = tenant?.id ?? tenantSlug
+    let tenantId = overrideTenantId
+    if (!tenantId) {
+      const tenantSlug = process.env.DEFAULT_TENANT_ID || 'clinica-mykaele-procopio'
+      const tenant = await prisma.crmTenant.findUnique({ where: { slug: tenantSlug } })
+      tenantId = tenant?.id ?? tenantSlug
+    }
 
     const integration = await prisma.crmIntegration.findFirst({
       where: { tenantId, provider: 'ai-settings' },
@@ -104,6 +112,7 @@ export async function getAiConfig(): Promise<AiConfig | null> {
       }
 
       _configCacheTime = Date.now()
+      _configCacheTenantId = requestTenant
       return _configCache
     }
   } catch (err) {
@@ -120,6 +129,7 @@ export async function getAiConfig(): Promise<AiConfig | null> {
       groqKey: '', openrouterKey: '', togetherKey: '', openaiKey: '', claudeKey: '',
     }
     _configCacheTime = Date.now()
+    _configCacheTenantId = requestTenant
     return _configCache
   }
 
@@ -129,6 +139,7 @@ export async function getAiConfig(): Promise<AiConfig | null> {
 export function clearAiConfigCache() {
   _configCache = null
   _configCacheTime = 0
+  _configCacheTenantId = ''
 }
 
 export async function getGeminiApiKey(): Promise<string | null> {
@@ -157,9 +168,13 @@ function markProviderDown(provider: string) {
 
 function isQuotaOrServerError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err)
-  return msg.includes('429') || msg.includes('quota') || msg.includes('rate-limit') ||
-    msg.includes('Too Many Requests') || msg.includes('RESOURCE_EXHAUSTED') ||
-    msg.includes('500') || msg.includes('502') || msg.includes('503') || msg.includes('overloaded')
+  // Quota / rate-limit
+  if (msg.includes('429') || msg.includes('quota') || msg.includes('rate-limit') ||
+      msg.includes('Too Many Requests') || msg.includes('RESOURCE_EXHAUSTED')) return true
+  // Server errors — match "API 500:" or "status 503" patterns, not arbitrary "500" substrings
+  if (/\b5[0-9]{2}\b/.test(msg) && (msg.includes('API') || msg.includes('status') || msg.includes('Error'))) return true
+  if (msg.includes('overloaded') || msg.includes('timeout')) return true
+  return false
 }
 
 // ─── Chamadas por provedor ─────────────────────────────────────
@@ -174,7 +189,15 @@ async function callGemini(
     ...(systemInstruction ? { systemInstruction } : {}),
     generationConfig: { temperature, maxOutputTokens: maxTokens },
   })
-  const result = await geminiModel.generateContent(prompt)
+
+  // Gemini SDK não tem timeout nativo — forçar via Promise.race
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Gemini timeout (30s)')), 30_000)
+  )
+  const result = await Promise.race([
+    geminiModel.generateContent(prompt),
+    timeoutPromise,
+  ])
   return result.response.text() || ''
 }
 
@@ -257,8 +280,9 @@ export async function createGeminiModel(opts?: {
   systemInstruction?: string
   temperature?: number
   maxOutputTokens?: number
+  tenantId?: string
 }): Promise<AiModelWrapper & GenerativeModel> {
-  const config = await getAiConfig()
+  const config = await getAiConfig(opts?.tenantId)
   if (!config) {
     throw new Error('Nenhum provedor de IA configurado. Acesse Configurações > IA no CRM.')
   }

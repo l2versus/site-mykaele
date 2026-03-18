@@ -53,11 +53,11 @@ function isLoopMessage(content: string): boolean {
   const emojiOnly = /^[\p{Emoji}\s]+$/u.test(content.trim())
   if (emojiOnly) return true
 
-  // Palavras triviais comuns
+  // Palavras triviais que NÃO devem acionar a IA se já respondeu recentemente.
+  // NÃO inclui saudações (oi, bom dia, etc.) — paciente pode estar retomando conversa.
   const trivialPatterns = [
     'ok', 'okay', 'tá', 'ta', 'beleza', 'blz', 'certo', 'entendi',
     'obrigado', 'obrigada', 'obg', 'valeu', 'vlw', 'grato', 'grata',
-    'oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'eae', 'eai',
     'sim', 'não', 'nao', 'hmm', 'hm', 'uhum', 'aham', 'ss', 'nn',
     'show', 'top', 'legal', 'massa', 'perfeito', 'ótimo', 'otimo',
     'tudo bem', 'tudo bom', 'de boa', 'tranquilo', 'tranquila',
@@ -214,6 +214,7 @@ NOME DO PACIENTE: ${firstName}`
     systemInstruction: systemPrompt,
     temperature: 0.7,
     maxOutputTokens: 300,
+    tenantId,
   })
 
   const prompt = history
@@ -305,46 +306,55 @@ export async function tryAiAgentReply(params: {
     // 7. Enviar via Evolution API
     const result = await evolutionApi.sendText(channel.instanceId, remoteJid, reply)
 
-    // 8. Salvar mensagem enviada no banco
-    if (result?.key?.id) {
-      const conversation = await prisma.conversation.findUnique({
-        where: { tenantId_remoteJid: { tenantId, remoteJid } },
-        select: { id: true },
-      })
-
-      if (conversation) {
-        await prisma.message.create({
-          data: {
-            conversationId: conversation.id,
-            tenantId,
-            waMessageId: result.key.id,
-            fromMe: true,
-            type: 'TEXT',
-            content: reply,
-            status: 'SENT',
-            aiSummary: 'Resposta gerada pelo agente IA',
-          },
+    // A partir daqui, a mensagem JÁ FOI ENVIADA ao WhatsApp.
+    // Erros de persistência NÃO devem retornar false (evita auto-reply duplicado).
+    try {
+      // 8. Salvar mensagem enviada no banco
+      if (result?.key?.id) {
+        const conversation = await prisma.conversation.findUnique({
+          where: { tenantId_remoteJid: { tenantId, remoteJid } },
+          select: { id: true },
         })
-      }
-    }
 
-    // 9. Registrar atividade
-    await prisma.leadActivity.create({
-      data: {
-        leadId,
-        type: 'AI_AGENT_REPLY',
-        payload: {
-          message: reply,
-          model: config.model,
-          interactionNumber: interactions + 1,
-          sentAt: new Date().toISOString(),
+        if (conversation) {
+          await prisma.message.create({
+            data: {
+              conversationId: conversation.id,
+              tenantId,
+              waMessageId: result.key.id,
+              fromMe: true,
+              type: 'TEXT',
+              content: reply,
+              status: 'SENT',
+              aiSummary: 'Resposta gerada pelo agente IA',
+            },
+          })
+        }
+      }
+
+      // 9. Registrar atividade
+      await prisma.leadActivity.create({
+        data: {
+          leadId,
+          type: 'AI_AGENT_REPLY',
+          payload: {
+            message: reply,
+            model: config.model,
+            interactionNumber: interactions + 1,
+            sentAt: new Date().toISOString(),
+          },
         },
-      },
-    })
+      })
+    } catch (saveErr) {
+      // Mensagem já foi enviada — apenas logar erro de persistência
+      console.error('[ai-agent] Mensagem enviada mas falha ao salvar no banco:', saveErr instanceof Error ? saveErr.message : saveErr)
+    }
 
     return true
   } catch (err) {
-    console.error('[ai-agent] Erro ao gerar resposta:', err instanceof Error ? err.message : err)
+    const msg = err instanceof Error ? err.message : String(err)
+    const stack = err instanceof Error ? err.stack?.split('\n').slice(0, 3).join(' → ') : ''
+    console.error(`[ai-agent] FALHA ao gerar resposta para lead=${params.leadId}: ${msg}`, stack ? `| Stack: ${stack}` : '')
     return false
   }
 }
