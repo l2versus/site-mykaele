@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { MercadoPagoConfig, Payment } from 'mercadopago'
 import { createHmac } from 'crypto'
-import { sendPurchaseNotification } from '@/lib/whatsapp'
+import { activatePackagesAndRecord, validatePaymentAmount } from '@/lib/payments/credit'
 
 const mpClient = new MercadoPagoConfig({
   accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN || '',
@@ -17,7 +17,6 @@ const mpClient = new MercadoPagoConfig({
 function verifyWebhookSignature(request: NextRequest, dataId: string): boolean {
   const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET
   if (!secret) {
-    // Se não configurou secret, loga warning mas aceita (fallback - ainda valida via API do MP)
     console.warn('[Webhook] MERCADO_PAGO_WEBHOOK_SECRET não configurado. Usando validação via API apenas.')
     return true
   }
@@ -96,124 +95,56 @@ export async function POST(request: NextRequest) {
     // Extract user ID and package option IDs from external reference
     // Format: pkg_userId_optId1,optId2,optId3
     const externalRef = paymentData.external_reference || ''
-    const parts = externalRef.split('_')
-    const userId = parts[1]
-    const packageOptionIds = parts[2] ? parts[2].split(',') : []
+    const refParts = externalRef.split('_')
+    const userId = refParts[1]
+    const packageOptionIds = refParts[2] ? refParts[2].split(',') : []
 
     if (!userId || packageOptionIds.length === 0) {
       console.error('[Webhook] Referência inválida:', externalRef)
       return NextResponse.json({ status: 'error', message: 'Invalid payment reference' }, { status: 400 })
     }
 
-    // Verificar se o usuário existe
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (!user) {
-      console.error('[Webhook] Usuário não encontrado:', userId)
-      return NextResponse.json({ status: 'error', message: 'User not found' }, { status: 400 })
-    }
+    const paidAmount = paymentData.transaction_amount || 0
 
     // Verificar valor pago vs valor esperado dos pacotes
-    let expectedTotal = 0
-    for (const poId of packageOptionIds) {
-      const po = await prisma.packageOption.findUnique({ where: { id: poId } })
-      if (po) expectedTotal += po.price
-    }
-
-    const paidAmount = paymentData.transaction_amount || 0
-    const tolerance = 0.5 // Tolerância de R$0,50 para arredondamentos
-    if (Math.abs(paidAmount - expectedTotal) > tolerance) {
-      console.error(`[Webhook] ALERTA: Valor pago R$${paidAmount} ≠ esperado R$${expectedTotal}. PaymentId: ${paymentId}`)
-      // Registrar como suspeito mas NÃO ativar pacotes
+    const { valid, expected } = await validatePaymentAmount(packageOptionIds, paidAmount)
+    if (!valid) {
+      console.error(`[Webhook] ALERTA: Valor pago R$${paidAmount} ≠ esperado R$${expected}. PaymentId: ${paymentId}`)
       await prisma.payment.create({
         data: {
           userId,
           amount: paidAmount,
           method: 'MERCADO_PAGO',
+          gateway: 'MERCADO_PAGO',
           status: 'SUSPICIOUS',
-          description: `mpid:${paymentId} - VALOR DIVERGENTE: pago=${paidAmount} esperado=${expectedTotal}`,
+          description: `mpid:${paymentId} - VALOR DIVERGENTE: pago=${paidAmount} esperado=${expected}`,
           category: 'REVENUE',
         },
       })
       return NextResponse.json({ status: 'error', message: 'Amount mismatch' }, { status: 400 })
     }
 
-    // Processar cada packageOptionId
-    const created: string[] = []
-    for (const poId of packageOptionIds) {
-      // Verificar duplicata (evita ativação dupla por replay)
-      const existing = await prisma.package.findFirst({
-        where: { userId, packageOptionId: poId, status: 'ACTIVE' },
-      })
-      if (existing) {
-        created.push(existing.id)
-        continue
-      }
-
-      const packageOption = await prisma.packageOption.findUnique({
-        where: { id: poId },
-        select: { id: true, sessions: true, service: { select: { name: true } } },
-      })
-      if (!packageOption) continue
-
-      const pkg = await prisma.package.create({
-        data: {
-          userId,
-          packageOptionId: poId,
-          totalSessions: packageOption.sessions,
-          usedSessions: 0,
-          status: 'ACTIVE',
-        },
-      })
-      created.push(pkg.id)
-    }
-
-    // Registro de pagamento (verificar duplicata pelo paymentId do MP)
-    const paymentExists = await prisma.payment.findFirst({
-      where: { userId, description: { contains: `mpid:${paymentId}` } },
+    // Ativar pacotes + registrar pagamento + notificar WhatsApp
+    const result = await activatePackagesAndRecord({
+      userId,
+      packageOptionIds,
+      paidAmount,
+      paymentRef: `mpid:${paymentId}`,
+      method: 'MERCADO_PAGO',
+      gateway: 'MERCADO_PAGO',
     })
-    if (!paymentExists) {
-      await prisma.payment.create({
-        data: {
-          userId,
-          amount: paidAmount,
-          method: 'MERCADO_PAGO',
-          status: 'COMPLETED',
-          description: `mpid:${paymentId} - ${created.length} pacote(s) ativado(s)`,
-          category: 'REVENUE',
-        },
-      })
+
+    if (!result.success) {
+      console.error('[Webhook] Erro ao ativar pacotes:', result.error)
+      return NextResponse.json({ status: 'error', message: result.error }, { status: 400 })
     }
 
-    console.log(`[Webhook] Pagamento aprovado: R$${paidAmount} - ${created.length} pacote(s) para user ${userId}`)
-
-    // Notificar Mykaele via WhatsApp sobre a compra
-    const allOptions = []
-    for (const poId of packageOptionIds) {
-      const po = await prisma.packageOption.findUnique({
-        where: { id: poId },
-        include: { service: true },
-      })
-      if (po) allOptions.push(po)
-    }
-    sendPurchaseNotification({
-      clientName: user.name || 'Cliente',
-      clientPhone: user.phone,
-      clientEmail: user.email,
-      items: allOptions.map(po => ({
-        name: `${po.service.name} - ${po.sessions} sessões`,
-        sessions: po.sessions,
-        price: po.price,
-      })),
-      totalAmount: paidAmount,
-      paymentMethod: 'Mercado Pago',
-      paymentId: String(paymentId),
-      transactionDate: new Date().toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' }),
-    }).catch(() => {})
+    console.log(`[Webhook] Pagamento aprovado: R$${paidAmount} - ${result.packageIds.length} pacote(s) para user ${userId}`)
 
     return NextResponse.json({
       status: 'success',
-      message: `${created.length} package(s) activated via webhook`,
-      packageIds: created,
+      message: `${result.packageIds.length} package(s) activated via webhook`,
+      packageIds: result.packageIds,
     })
 
   } catch (error) {

@@ -109,7 +109,7 @@ const FEATURES = [
 ]
 
 export default function AppShowcase() {
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
+  const videoRef = useRef<HTMLVideoElement>(null)
   const sectionRef = useRef<HTMLDivElement>(null)
   const [isVisible, setIsVisible] = useState(false)
   const [activeVideo, setActiveVideo] = useState(0)
@@ -117,7 +117,7 @@ export default function AppShowcase() {
   const [modalIdx, setModalIdx] = useState<number | null>(null)
   const [isMobile, setIsMobile] = useState(true)
 
-  // Detect mobile vs desktop to render only one set of videos (avoids ref conflicts)
+  // Detect mobile vs desktop
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024)
     check()
@@ -148,44 +148,49 @@ export default function AppShowcase() {
       ([entry]) => {
         setIsVisible(entry.isIntersecting)
         if (entry.isIntersecting) {
-          videoRefs.current[activeVideo]?.play().catch(() => {})
+          videoRef.current?.play().catch(() => {})
         } else {
-          videoRefs.current.forEach(v => v?.pause())
+          videoRef.current?.pause()
         }
       },
       { threshold: 0.15 }
     )
     if (sectionRef.current) observer.observe(sectionRef.current)
     return () => observer.disconnect()
+  }, [])
+
+  // Trocar src do vídeo ao mudar activeVideo
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    const newSrc = APP_VIDEOS[activeVideo]
+    if (v.getAttribute('src') !== newSrc) {
+      v.src = newSrc
+      v.load()
+    }
+    v.play().catch(() => {})
   }, [activeVideo])
 
   // Autoplay carousel: troca de vídeo quando o atual termina
   const handleVideoEnd = useCallback(() => {
-    const next = (activeVideo + 1) % APP_VIDEOS.length
-    setActiveVideo(next)
+    setActiveVideo(prev => (prev + 1) % APP_VIDEOS.length)
     setProgress(0)
-    setTimeout(() => videoRefs.current[next]?.play().catch(() => {}), 100)
-  }, [activeVideo])
+  }, [])
 
   // Progress bar
   useEffect(() => {
-    const video = videoRefs.current[activeVideo]
+    const video = videoRef.current
     if (!video) return
     const update = () => {
       if (video.duration) setProgress((video.currentTime / video.duration) * 100)
     }
     video.addEventListener('timeupdate', update)
     return () => video.removeEventListener('timeupdate', update)
-  }, [activeVideo])
+  }, [])
 
   const goToVideo = (idx: number) => {
-    videoRefs.current[activeVideo]?.pause()
     setActiveVideo(idx)
     setProgress(0)
-    setTimeout(() => {
-      const v = videoRefs.current[idx]
-      if (v) { v.currentTime = 0; v.play().catch(() => {}) }
-    }, 100)
   }
 
   return (
@@ -227,18 +232,18 @@ export default function AppShowcase() {
               <div className="relative rounded-[2rem] overflow-hidden border-[5px] border-[#222] bg-black shadow-2xl shadow-[#b76e79]/10">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-4 bg-black rounded-b-xl z-20" />
                 <div className="relative aspect-[9/19.5] overflow-hidden bg-[#111]">
-                  {APP_VIDEOS.map((src, i) => (
+                  {isMobile && (
                     <video
-                      key={i}
-                      ref={el => { videoRefs.current[i] = el }}
-                      src={src}
+                      ref={videoRef}
+                      src={APP_VIDEOS[0]}
                       muted
+                      autoPlay
                       playsInline
-                      preload={i === 0 ? 'auto' : 'metadata'}
+                      preload="auto"
                       onEnded={handleVideoEnd}
-                      className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${i === activeVideo ? 'opacity-100' : 'opacity-0'}`}
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
-                  ))}
+                  )}
                   {/* Progress dots overlay */}
                   <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
                     {APP_VIDEOS.map((_, i) => (
@@ -354,18 +359,18 @@ export default function AppShowcase() {
                     <div className="absolute top-2 left-1/2 -translate-x-1/2 w-[90px] h-[26px] bg-black rounded-full z-20" />
 
                     <div className="relative aspect-[9/19.5] overflow-hidden bg-[#0a0a0a]">
-                      {APP_VIDEOS.map((src, i) => (
+                      {!isMobile && (
                         <video
-                          key={i}
-                          ref={el => { videoRefs.current[i] = el }}
-                          src={src}
+                          ref={videoRef}
+                          src={APP_VIDEOS[0]}
                           muted
+                          autoPlay
                           playsInline
-                          preload={i === 0 ? 'auto' : 'metadata'}
+                          preload="auto"
                           onEnded={handleVideoEnd}
-                          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${i === activeVideo ? 'opacity-100' : 'opacity-0'}`}
+                          className="absolute inset-0 w-full h-full object-cover"
                         />
-                      ))}
+                      )}
 
                       {/* Story-style progress bars */}
                       <div className="absolute top-6 left-4 right-4 flex gap-1 z-10">

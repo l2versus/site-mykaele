@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPaymentStatus } from '@/lib/mercadopago'
-import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
-import { sendPurchaseNotification } from '@/lib/whatsapp'
+import { activatePackagesAndRecord } from '@/lib/payments/credit'
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,11 +20,11 @@ export async function GET(request: NextRequest) {
 
     // Get payment status from Mercado Pago
     const result = await getPaymentStatus(preferenceId)
-    
+
     if (result.status !== 'approved') {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Pagamento não aprovado',
-        status: result.status 
+        status: result.status
       }, { status: 400 })
     }
 
@@ -38,86 +37,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Dados de pagamento inválidos' }, { status: 400 })
     }
 
-    // Processar cada packageOptionId
-    const createdPackages = []
-    for (const poId of packageOptionIds) {
-      // Verificar duplicata (evitar ativar 2x)
-      const existing = await prisma.package.findFirst({
-        where: { userId, packageOptionId: poId, status: 'ACTIVE' },
-      })
-      if (existing) {
-        createdPackages.push(existing)
-        continue
-      }
-
-      const packageOption = await prisma.packageOption.findUnique({
-        where: { id: poId },
-        select: { id: true, sessions: true, serviceId: true, service: { select: { id: true, name: true } } },
-      })
-
-      if (!packageOption) continue
-
-      const pkg = await prisma.package.create({
-        data: {
-          userId,
-          packageOptionId: poId,
-          totalSessions: packageOption.sessions,
-          usedSessions: 0,
-          status: 'ACTIVE',
-        },
-        include: { packageOption: { include: { service: true } } },
-      })
-      createdPackages.push(pkg)
-    }
-
-    // Criar registro de pagamento (verificar duplicata)
-    const paymentExists = await prisma.payment.findFirst({
-      where: { userId, description: { contains: preferenceId } },
+    // Ativar pacotes + registrar pagamento + notificar WhatsApp
+    const creditResult = await activatePackagesAndRecord({
+      userId,
+      packageOptionIds,
+      paidAmount: result.amount || 0,
+      paymentRef: `MP:${preferenceId}`,
+      method: 'MERCADO_PAGO',
+      gateway: 'MERCADO_PAGO',
     })
-    if (!paymentExists) {
-      await prisma.payment.create({
-        data: {
-          userId,
-          amount: result.amount || 0,
-          method: 'MERCADO_PAGO',
-          status: 'COMPLETED',
-          description: `MP:${preferenceId} - ${createdPackages.length} pacote(s)`,
-          category: 'REVENUE',
-        },
-      })
+
+    if (!creditResult.success) {
+      return NextResponse.json({ error: creditResult.error }, { status: 400 })
     }
 
-    // Notificar Mykaele via WhatsApp sobre a compra
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (user) {
-      const allOptions = []
-      for (const poId of packageOptionIds) {
-        const po = await prisma.packageOption.findUnique({
-          where: { id: poId },
-          include: { service: true },
-        })
-        if (po) allOptions.push(po)
-      }
-      sendPurchaseNotification({
-        clientName: user.name || 'Cliente',
-        clientPhone: user.phone,
-        clientEmail: user.email,
-        items: allOptions.map(po => ({
-          name: `${po.service.name} - ${po.sessions} sessões`,
-          sessions: po.sessions,
-          price: po.price,
-        })),
-        totalAmount: result.amount || 0,
-        paymentMethod: 'Mercado Pago',
-        paymentId: preferenceId,
-        transactionDate: new Date().toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' }),
-      }).catch(() => {})
-    }
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      packages: createdPackages,
-      count: createdPackages.length,
+      packages: creditResult.packageIds,
+      count: creditResult.packageIds.length,
       message: 'Pacote(s) ativado(s) com sucesso'
     })
 

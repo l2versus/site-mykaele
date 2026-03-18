@@ -90,7 +90,7 @@ export default function GaleriaVideos() {
               </svg>
             </button>
             <div className="overflow-hidden bg-black">
-              <video src={videoAtual.src} controls autoPlay className="w-full aspect-video" />
+              <video src={videoAtual.src} controls autoPlay muted playsInline className="w-full aspect-video" />
             </div>
           </div>
         </div>

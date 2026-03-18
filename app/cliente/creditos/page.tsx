@@ -7,35 +7,26 @@ import Link from 'next/link'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { SessionTicket } from '@/components/SessionTicket'
 
-// Serviços e pacotes disponíveis para compra de créditos
-const creditOptions = {
-  metodo: {
-    name: 'Método Mykaele Procópio',
-    description: 'Protocolo exclusivo de remodelação corporal',
-    avulso: { price: 330, sessions: 1 },
-    pacotes: [
-      { id: 'm5', name: 'Pacote 5 sessões', sessions: 5, price: 1500, economy: 150 },
-      { id: 'm10', name: 'Pacote 10 sessões', sessions: 10, price: 2800, economy: 500 },
-    ]
-  },
-  massagem: {
-    name: 'Massagem Relaxante',
-    description: 'Massagem terapêutica de relaxamento profundo',
-    avulso: { price: 280, sessions: 1 },
-    pacotes: [
-      { id: 'r5', name: 'Pacote 5 sessões', sessions: 5, price: 1300, economy: 100 },
-      { id: 'r10', name: 'Pacote 10 sessões', sessions: 10, price: 2500, economy: 300 },
-    ]
-  },
-  adicional: {
-    name: 'Manta Térmica (Adicional)',
-    description: 'Potencialize seu tratamento com 30 minutos de manta térmica',
-    avulso: { price: 80, sessions: 1 },
-    pacotes: []
-  }
+const fmtCur = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
+
+interface ServiceData {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  isAddon: boolean
+  packageOptions: PackageOptionData[]
 }
 
-interface Package {
+interface PackageOptionData {
+  id: string
+  name: string
+  sessions: number
+  price: number
+  serviceId: string
+}
+
+interface MyPackage {
   id: string
   totalSessions: number
   usedSessions: number
@@ -51,42 +42,34 @@ interface Package {
 
 export default function CreditosPage() {
   const { user, fetchWithAuth } = useClient()
-  const [packages, setPackages] = useState<Package[]>([])
+  const { addItem } = useCart()
+  const [services, setServices] = useState<ServiceData[]>([])
+  const [packages, setPackages] = useState<MyPackage[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedServiceId, setSelectedServiceId] = useState<string>('')
+  const [toast, setToast] = useState('')
   const [contactModal, setContactModal] = useState(false)
   const [contactType, setContactType] = useState<'whatsapp' | 'email'>('whatsapp')
   const [message, setMessage] = useState('')
-  const { addItem } = useCart()
-  const [selectedService, setSelectedService] = useState<'metodo' | 'massagem' | 'adicional'>('metodo')
-  const [toast, setToast] = useState('')
   const [clinicWhatsapp, setClinicWhatsapp] = useState('')
-
-  // Adiciona item ao carrinho global com feedback visual
-  const addToCart = (item: { name: string; price: number; sessions: number }) => {
-    const uid = `credit_${selectedService}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
-    addItem({
-      id: uid,
-      packageOptionId: uid,
-      name: item.name,
-      sessions: item.sessions,
-      price: item.price,
-      serviceId: selectedService,
-      serviceName: creditOptions[selectedService].name,
-    })
-    setToast(item.name)
-    setTimeout(() => setToast(''), 2500)
-  }
 
   useEffect(() => {
     (async () => {
       try {
-        const [pkgRes, settingsRes] = await Promise.all([
+        const [pkgRes, svcRes, settingsRes] = await Promise.all([
           fetchWithAuth('/api/patient/packages'),
+          fetch('/api/services'),
           fetch('/api/admin/settings'),
         ])
         if (pkgRes.ok) {
           const data = await pkgRes.json()
           setPackages(data.packages || data || [])
+        }
+        if (svcRes.ok) {
+          const raw = await svcRes.json()
+          const svcs: ServiceData[] = Array.isArray(raw) ? raw : (raw.services || [])
+          setServices(svcs)
+          if (svcs.length > 0) setSelectedServiceId(svcs[0].id)
         }
         if (settingsRes.ok) {
           const { settings } = await settingsRes.json()
@@ -100,7 +83,28 @@ export default function CreditosPage() {
     })()
   }, [fetchWithAuth])
 
+  const selectedService = services.find(s => s.id === selectedServiceId)
   const activePackages = packages.filter(p => p.status === 'ACTIVE')
+
+  // Calcula economia: preço avulso * sessions - preço pacote
+  const getEconomy = (opt: PackageOptionData) => {
+    if (!selectedService) return 0
+    return Math.max(0, (selectedService.price * opt.sessions) - opt.price)
+  }
+
+  const addToCart = (opt: { id: string; name: string; price: number; sessions: number; serviceId: string; serviceName: string }) => {
+    addItem({
+      id: opt.id,
+      packageOptionId: opt.id,
+      name: opt.name,
+      sessions: opt.sessions,
+      price: opt.price,
+      serviceId: opt.serviceId,
+      serviceName: opt.serviceName,
+    })
+    setToast(opt.name)
+    setTimeout(() => setToast(''), 2500)
+  }
 
   const handleContact = () => {
     if (contactType === 'whatsapp') {
@@ -120,86 +124,107 @@ export default function CreditosPage() {
 
   return (
     <div className="space-y-6 animate-[fadeIn_0.5s_ease-out]">
-      {/* NOVO: Seção de compra de créditos */}
+      {/* Seção de compra de créditos */}
       <div className="relative overflow-hidden rounded-3xl border border-white/10 p-6 mb-8 bg-white/[0.01]">
         <h2 className="text-white/90 text-xl font-bold mb-2">Comprar Créditos</h2>
         <p className="text-white/50 text-sm mb-4">Escolha o serviço e selecione sessão avulsa ou pacote com desconto.</p>
-        
-        {/* Tabs de serviços */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {Object.entries(creditOptions).map(([key, svc]) => (
-            <button
-              key={key}
-              onClick={() => setSelectedService(key as any)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                selectedService === key
-                  ? 'bg-gradient-to-r from-[#d4a0a7] to-[#b76e79] text-white'
-                  : 'bg-white/[0.05] text-white/60 hover:text-white/90 border border-white/10'
-              }`}
-            >
-              {svc.name}
-            </button>
-          ))}
-        </div>
-        
-        {/* Serviço selecionado */}
-        <div className="space-y-4">
-          <p className="text-white/40 text-xs">{creditOptions[selectedService].description}</p>
-          
-          {/* Sessão Avulsa */}
-          <div className="border border-white/10 rounded-xl p-4 bg-white/[0.03]">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-white/90 font-semibold">Sessão Avulsa</h3>
-                <p className="text-white/50 text-sm">1 sessão</p>
-              </div>
-              <div className="text-right">
-                <p className="text-white/90 text-xl font-bold">R$ {creditOptions[selectedService].avulso.price.toFixed(2)}</p>
-                <button 
-                  onClick={() => addToCart({ 
-                    name: `${creditOptions[selectedService].name} - Avulso`, 
-                    price: creditOptions[selectedService].avulso.price,
-                    sessions: 1 
-                  })} 
-                  className="mt-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#d4a0a7] to-[#b76e79] text-white text-sm font-bold shadow hover:opacity-90 transition-all"
-                >
-                  Adicionar
-                </button>
-              </div>
-            </div>
+
+        {services.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-white/25 text-sm">Nenhum serviço disponível no momento</p>
           </div>
-          
-          {/* Pacotes */}
-          {creditOptions[selectedService].pacotes.length > 0 && (
-            <div className="grid md:grid-cols-2 gap-4">
-              {creditOptions[selectedService].pacotes.map((pkg) => (
-                <div key={pkg.id} className="border border-emerald-500/20 rounded-xl p-4 bg-emerald-500/[0.03] relative overflow-hidden">
-                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
-                    Economia R$ {pkg.economy}
-                  </div>
-                  <h3 className="text-white/90 font-semibold">{pkg.name}</h3>
-                  <p className="text-white/50 text-sm mb-2">{pkg.sessions} sessões</p>
-                  <p className="text-emerald-400 text-xl font-bold">R$ {pkg.price.toFixed(2)}</p>
-                  <p className="text-white/40 text-xs">R$ {(pkg.price / pkg.sessions).toFixed(0)}/sessão</p>
-                  <button 
-                    onClick={() => addToCart({ 
-                      name: `${creditOptions[selectedService].name} - ${pkg.name}`, 
-                      price: pkg.price,
-                      sessions: pkg.sessions 
-                    })} 
-                    className="mt-3 w-full px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold shadow hover:bg-emerald-700 transition-all"
-                  >
-                    Adicionar ao carrinho
-                  </button>
-                </div>
+        ) : (
+          <>
+            {/* Tabs de serviços */}
+            <div className="flex gap-2 mb-6 flex-wrap">
+              {services.map(svc => (
+                <button
+                  key={svc.id}
+                  onClick={() => setSelectedServiceId(svc.id)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    selectedServiceId === svc.id
+                      ? 'bg-gradient-to-r from-[#d4a0a7] to-[#b76e79] text-white'
+                      : 'bg-white/[0.05] text-white/60 hover:text-white/90 border border-white/10'
+                  }`}
+                >
+                  {svc.name}
+                </button>
               ))}
             </div>
-          )}
-        </div>
-        
+
+            {selectedService && (
+              <div className="space-y-4">
+                {selectedService.description && (
+                  <p className="text-white/40 text-xs">{selectedService.description}</p>
+                )}
+
+                {/* Sessão Avulsa (preço unitário do serviço = 1 sessão) */}
+                <div className="border border-white/10 rounded-xl p-4 bg-white/[0.03]">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-white/90 font-semibold">Sessão Avulsa</h3>
+                      <p className="text-white/50 text-sm">1 sessão</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white/90 text-xl font-bold">{fmtCur(selectedService.price)}</p>
+                      <button
+                        onClick={() => addToCart({
+                          id: `avulso_${selectedService.id}`,
+                          name: `${selectedService.name} - Avulso`,
+                          price: selectedService.price,
+                          sessions: 1,
+                          serviceId: selectedService.id,
+                          serviceName: selectedService.name,
+                        })}
+                        className="mt-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#d4a0a7] to-[#b76e79] text-white text-sm font-bold shadow hover:opacity-90 transition-all"
+                      >
+                        Adicionar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pacotes do banco */}
+                {selectedService.packageOptions.length > 0 && (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {selectedService.packageOptions.map(opt => {
+                      const economy = getEconomy(opt)
+                      return (
+                        <div key={opt.id} className="border border-emerald-500/20 rounded-xl p-4 bg-emerald-500/[0.03] relative overflow-hidden">
+                          {economy > 0 && (
+                            <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                              Economia {fmtCur(economy)}
+                            </div>
+                          )}
+                          <h3 className="text-white/90 font-semibold">{opt.name}</h3>
+                          <p className="text-white/50 text-sm mb-2">{opt.sessions} sessões</p>
+                          <p className="text-emerald-400 text-xl font-bold">{fmtCur(opt.price)}</p>
+                          <p className="text-white/40 text-xs">{fmtCur(opt.price / opt.sessions)}/sessão</p>
+                          <button
+                            onClick={() => addToCart({
+                              id: opt.id,
+                              name: `${selectedService.name} - ${opt.name}`,
+                              price: opt.price,
+                              sessions: opt.sessions,
+                              serviceId: selectedService.id,
+                              serviceName: selectedService.name,
+                            })}
+                            className="mt-3 w-full px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold shadow hover:bg-emerald-700 transition-all"
+                          >
+                            Adicionar ao carrinho
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
-      {/* ═══ Toast de feedback ═══ */}
+      {/* Toast de feedback */}
       {toast && (
         <div className="fixed bottom-36 right-4 z-50 animate-[slideUp_0.3s_ease-out] flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-600/95 backdrop-blur-sm shadow-xl shadow-emerald-900/30 border border-emerald-500/30">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-white flex-shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
@@ -209,6 +234,7 @@ export default function CreditosPage() {
           </div>
         </div>
       )}
+
       {/* Meus Créditos Ativos */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">

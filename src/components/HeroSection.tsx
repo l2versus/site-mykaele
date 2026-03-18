@@ -111,11 +111,18 @@ export function HeroSection() {
       {/* ═══ DESKTOP: Video background com crossfade ═══ */}
       <div className="hidden md:block absolute inset-0">
         <div className="absolute inset-0">
-          <video ref={videoARef}
+          <video ref={el => {
+              (videoARef as React.MutableRefObject<HTMLVideoElement | null>).current = el
+              if (el) { el.setAttribute('muted', ''); el.setAttribute('playsinline', ''); el.setAttribute('webkit-playsinline', ''); el.muted = true }
+            }}
             className="absolute inset-0 w-full h-full object-cover"
             style={{ filter: 'blur(2px) saturate(1.2) contrast(1.1) brightness(0.92)', opacity: opacityA, transition: `opacity ${FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)` }}
-            muted autoPlay loop playsInline preload="auto" />
-          <video ref={videoBRef}
+            muted autoPlay loop playsInline preload="auto"
+            onLoadedData={() => { videoARef.current?.play().catch(() => {}) }} />
+          <video ref={el => {
+              (videoBRef as React.MutableRefObject<HTMLVideoElement | null>).current = el
+              if (el) { el.setAttribute('muted', ''); el.setAttribute('playsinline', ''); el.setAttribute('webkit-playsinline', ''); el.muted = true }
+            }}
             className="absolute inset-0 w-full h-full object-cover"
             style={{ filter: 'blur(2px) saturate(1.2) contrast(1.1) brightness(0.92)', opacity: opacityB, transition: `opacity ${FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)` }}
             muted autoPlay loop playsInline preload="none" />
