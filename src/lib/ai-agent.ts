@@ -27,7 +27,7 @@ const DEFAULT_CONFIG: AiAgentConfig = {
   agentName: 'Assistente Myka',
   tone: 'profissional',
   extraInstructions: '',
-  maxInteractions: 10,
+  maxInteractions: 50,
   schedule: 'always',
   businessHoursStart: '08:00',
   businessHoursEnd: '18:00',
@@ -252,28 +252,41 @@ export async function tryAiAgentReply(params: {
   try {
     // 1. Buscar config do agente
     const config = await getAiAgentConfig(tenantId)
-    if (!config) return false
+    if (!config) {
+      console.error(`[ai-agent] SKIP lead=${leadId}: config não encontrada ou desabilitada`)
+      return false
+    }
 
     // 2. Verificar horário
-    if (!isWithinSchedule(config)) return false
+    if (!isWithinSchedule(config)) {
+      console.error(`[ai-agent] SKIP lead=${leadId}: fora do horário (schedule=${config.schedule})`)
+      return false
+    }
 
-    // 2.5 Anti-loop: ignorar mensagens triviais se IA respondeu há < 1 min
-    if (isLoopMessage(messageContent)) {
-      const lastAiReply = await prisma.leadActivity.findFirst({
-        where: { leadId, type: 'AI_AGENT_REPLY' },
-        orderBy: { createdAt: 'desc' },
-        select: { createdAt: true },
-      })
-      if (lastAiReply) {
-        const elapsedMs = Date.now() - lastAiReply.createdAt.getTime()
-        if (elapsedMs < 60_000) return false // Ignora para evitar loop
+    // 2.5 Anti-loop: se IA respondeu há < 30s, ignorar (paciente mandando msgs em rajada)
+    const lastAiReply = await prisma.leadActivity.findFirst({
+      where: { leadId, type: 'AI_AGENT_REPLY' },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    })
+    if (lastAiReply) {
+      const elapsedMs = Date.now() - lastAiReply.createdAt.getTime()
+      // Mensagem trivial (ok, sim, obrigado) → ignora se IA respondeu < 2 min
+      if (isLoopMessage(messageContent) && elapsedMs < 120_000) {
+        console.error(`[ai-agent] SKIP lead=${leadId}: msg trivial "${messageContent}" (IA respondeu ${Math.round(elapsedMs/1000)}s atrás)`)
+        return false
+      }
+      // Qualquer mensagem → espera pelo menos 30s entre respostas (agrupa rajadas)
+      if (elapsedMs < 30_000) {
+        console.error(`[ai-agent] SKIP lead=${leadId}: rajada (${Math.round(elapsedMs/1000)}s desde última resposta)`)
+        return false
       }
     }
 
-    // 3. Verificar limite de interações
+    // 3. Verificar limite de interações (padrão: 10 por lead)
     const interactions = await countAiInteractions(leadId)
     if (interactions >= config.maxInteractions) {
-      // Transferir para humano: marcar como transferido
+      console.error(`[ai-agent] SKIP lead=${leadId}: maxInteractions atingido (${interactions}/${config.maxInteractions})`)
       await prisma.leadActivity.create({
         data: {
           leadId,
