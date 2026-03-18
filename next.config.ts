@@ -115,6 +115,7 @@ const nextConfig: NextConfig = {
         source: '/media/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=86400' },
+          { key: 'Accept-Ranges', value: 'bytes' },
         ],
       },
       {
@@ -123,6 +124,17 @@ const nextConfig: NextConfig = {
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=86400' },
         ],
+      },
+    ]
+  },
+  async rewrites() {
+    return [
+      {
+        // iOS Safari exige HTTP Range Requests (206) para vídeos.
+        // Next.js standalone NÃO suporta 206 em arquivos estáticos.
+        // Redireciona vídeos para API route que implementa range requests.
+        source: '/media/videos/:path*',
+        destination: '/api/media/videos/:path*',
       },
     ]
   },

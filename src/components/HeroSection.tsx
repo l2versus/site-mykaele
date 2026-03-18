@@ -112,7 +112,7 @@ export function HeroSection() {
       <div className="hidden md:block absolute inset-0">
         <div className="absolute inset-0">
           <video ref={el => {
-              (videoARef as React.MutableRefObject<HTMLVideoElement | null>).current = el
+              videoARef.current = el
               if (el) { el.setAttribute('muted', ''); el.setAttribute('playsinline', ''); el.setAttribute('webkit-playsinline', ''); el.muted = true }
             }}
             className="absolute inset-0 w-full h-full object-cover"
@@ -120,7 +120,7 @@ export function HeroSection() {
             muted autoPlay loop playsInline preload="auto"
             onLoadedData={() => { videoARef.current?.play().catch(() => {}) }} />
           <video ref={el => {
-              (videoBRef as React.MutableRefObject<HTMLVideoElement | null>).current = el
+              videoBRef.current = el
               if (el) { el.setAttribute('muted', ''); el.setAttribute('playsinline', ''); el.setAttribute('webkit-playsinline', ''); el.muted = true }
             }}
             className="absolute inset-0 w-full h-full object-cover"
