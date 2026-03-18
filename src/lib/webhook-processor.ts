@@ -222,7 +222,7 @@ export async function processWebhookInline(payload: WebhookPayload): Promise<voi
         select: { id: true, name: true },
       })
       if (lead) {
-        leadCtx = { leadId: lead.id, leadName: lead.name, channelId: conversation.channelId }
+        leadCtxRef.current = { leadId: lead.id, leadName: lead.name, channelId: conversation.channelId }
       }
     }
 

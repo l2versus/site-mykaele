@@ -164,14 +164,23 @@ export default function AppShowcase() {
     const v = videoRef.current
     if (!v) return
     const newSrc = APP_VIDEOS[activeVideo]
-    // Trocar via <source> para compatibilidade iOS
-    const source = v.querySelector('source')
-    if (source && source.src !== newSrc) {
-      source.src = newSrc
+    // Comparar apenas o pathname (source.src retorna URL absoluta)
+    const currentPath = v.currentSrc ? new URL(v.currentSrc, window.location.origin).pathname : ''
+    if (currentPath !== newSrc) {
+      v.src = newSrc // Setar direto no elemento (mais confiável que <source> no iOS)
       v.load()
     }
     v.muted = true // iOS: garantir muted antes de play
-    v.play().catch(() => {})
+    const playWhenReady = () => {
+      v.play().catch(() => {})
+      v.removeEventListener('canplay', playWhenReady)
+    }
+    if (v.readyState >= 3) {
+      v.play().catch(() => {})
+    } else {
+      v.addEventListener('canplay', playWhenReady)
+    }
+    return () => v.removeEventListener('canplay', playWhenReady)
   }, [activeVideo])
 
   // Autoplay carousel: troca de vídeo quando o atual termina
@@ -240,25 +249,26 @@ export default function AppShowcase() {
                       ref={el => {
                         videoRef.current = el
                         if (el) {
-                          // iOS exige: muted ANTES de play, via property E attribute
                           el.muted = true
                           el.defaultMuted = true
                           el.setAttribute('muted', '')
                           el.setAttribute('playsinline', '')
                           el.setAttribute('webkit-playsinline', '')
                           el.playsInline = true
-                          // Tentar play imediato (iOS permite se muted)
-                          el.play().catch(() => {})
+                          // iOS: play quando pronto
+                          const tryPlay = () => { el.play().catch(() => {}) }
+                          if (el.readyState >= 3) tryPlay()
+                          else el.addEventListener('canplay', tryPlay, { once: true })
                         }
                       }}
+                      src={APP_VIDEOS[0]}
                       muted
+                      autoPlay
                       playsInline
                       preload="auto"
                       onEnded={handleVideoEnd}
                       className="absolute inset-0 w-full h-full object-cover"
-                    >
-                      <source src={APP_VIDEOS[0]} type="video/mp4" />
-                    </video>
+                    />
                   )}
                   {/* Progress dots overlay */}
                   <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
@@ -386,17 +396,19 @@ export default function AppShowcase() {
                               el.setAttribute('playsinline', '')
                               el.setAttribute('webkit-playsinline', '')
                               el.playsInline = true
-                              el.play().catch(() => {})
+                              const tryPlay = () => { el.play().catch(() => {}) }
+                              if (el.readyState >= 3) tryPlay()
+                              else el.addEventListener('canplay', tryPlay, { once: true })
                             }
                           }}
+                          src={APP_VIDEOS[0]}
                           muted
+                          autoPlay
                           playsInline
                           preload="auto"
                           onEnded={handleVideoEnd}
                           className="absolute inset-0 w-full h-full object-cover"
-                        >
-                          <source src={APP_VIDEOS[0]} type="video/mp4" />
-                        </video>
+                        />
                       )}
 
                       {/* Story-style progress bars */}
