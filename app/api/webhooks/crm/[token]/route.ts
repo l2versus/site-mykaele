@@ -95,58 +95,113 @@ async function handleCreateLead(
   const email = String(body[fieldMap.email ?? 'email'] ?? body.customer_email ?? body.email ?? '') || undefined
   const source = String(body[fieldMap.source ?? 'source'] ?? config?.defaultSource ?? 'webhook')
   const value = Number(body[fieldMap.value ?? 'value'] ?? body.price ?? body.valor ?? 0) || undefined
+  // Mensagem opcional (ManyChat): se vier texto, também cai no inbox — SEM acionar a Luna (Opção A)
+  const messageText = String(body[fieldMap.message ?? 'message'] ?? body.text ?? body.last_input_text ?? '').trim()
+  const channelKind = String(body[fieldMap.channel ?? 'channel'] ?? '') || source
 
   if (!phone && !email) return // Sem dados de contato, ignorar
 
-  // Verificar se lead já existe pelo telefone
-  if (phone) {
-    const existing = await prisma.lead.findFirst({
-      where: { tenantId, phone, deletedAt: null },
-    })
-    if (existing) return // Lead já existe, não duplicar
+  // Lead já existe? (telefone, depois email) — find-or-create (não duplica)
+  let lead = phone
+    ? await prisma.lead.findFirst({ where: { tenantId, phone, deletedAt: null } })
+    : null
+  if (!lead && email) {
+    lead = await prisma.lead.findFirst({ where: { tenantId, email, deletedAt: null } })
   }
 
-  // Buscar pipeline default e primeiro estágio
-  const pipeline = await prisma.pipeline.findFirst({
-    where: { tenantId, isDefault: true },
-    include: { stages: { orderBy: { order: 'asc' }, take: 1 } },
+  // Criar lead se ainda não existe
+  if (!lead) {
+    const pipeline = await prisma.pipeline.findFirst({
+      where: { tenantId, isDefault: true },
+      include: { stages: { orderBy: { order: 'asc' }, take: 1 } },
+    })
+    if (!pipeline || pipeline.stages.length === 0) return
+    const firstStage = pipeline.stages[0]!
+    const lastLead = await prisma.lead.findFirst({
+      where: { tenantId, stageId: firstStage.id, deletedAt: null },
+      orderBy: { position: 'desc' },
+      select: { position: true },
+    })
+    const created = await prisma.$transaction([
+      prisma.lead.create({
+        data: {
+          tenantId,
+          pipelineId: pipeline.id,
+          stageId: firstStage.id,
+          name,
+          phone,
+          email,
+          source,
+          status: 'WARM',
+          position: lastLead ? lastLead.position + 1.0 : 1.0,
+          expectedValue: value,
+          tags: config?.defaultTags ? (config.defaultTags as string[]) : [],
+        },
+      }),
+      prisma.stage.update({
+        where: { id: firstStage.id },
+        data: {
+          cachedLeadCount: { increment: 1 },
+          cachedTotalValue: value ? { increment: value } : undefined,
+          cacheUpdatedAt: new Date(),
+        },
+      }),
+    ])
+    lead = created[0]
+  }
+
+  // Mensagem → inbox (sem bot)
+  if (messageText && lead) {
+    await ingestInboxMessage(tenantId, lead.id, messageText, channelKind)
+  }
+}
+
+// Ingere uma mensagem recebida (ManyChat etc.) no inbox — SEM acionar o bot (Opção A: CRM só recebe).
+async function ingestInboxMessage(
+  tenantId: string,
+  leadId: string,
+  text: string,
+  channelKind: string,
+): Promise<void> {
+  // Canal "ManyChat" (find-or-create) para o inbox
+  let channel = await prisma.crmChannel.findFirst({ where: { tenantId, type: 'manychat' } })
+  if (!channel) {
+    channel = await prisma.crmChannel.create({
+      data: { tenantId, type: 'manychat', name: 'ManyChat', isActive: true },
+    })
+  }
+
+  const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { phone: true, email: true } })
+  const remoteJid = `manychat:${lead?.phone || lead?.email || leadId}`
+
+  let conversation = await prisma.conversation.findUnique({
+    where: { tenantId_remoteJid: { tenantId, remoteJid } },
   })
-  if (!pipeline || pipeline.stages.length === 0) return
+  if (!conversation) {
+    conversation = await prisma.conversation.create({
+      data: { tenantId, leadId, channelId: channel.id, remoteJid, lastMessageAt: new Date(), unreadCount: 1 },
+    })
+  } else {
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { lastMessageAt: new Date(), unreadCount: { increment: 1 }, isClosed: false },
+    })
+  }
 
-  const firstStage = pipeline.stages[0]!
-
-  // Buscar última posição
-  const lastLead = await prisma.lead.findFirst({
-    where: { tenantId, stageId: firstStage.id, deletedAt: null },
-    orderBy: { position: 'desc' },
-    select: { position: true },
+  await prisma.message.create({
+    data: {
+      conversationId: conversation.id,
+      tenantId,
+      waMessageId: `mc-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      fromMe: false,
+      type: 'TEXT',
+      content: text,
+      channel: channelKind || 'manychat',
+      status: 'RECEIVED',
+    },
   })
 
-  await prisma.$transaction([
-    prisma.lead.create({
-      data: {
-        tenantId,
-        pipelineId: pipeline.id,
-        stageId: firstStage.id,
-        name,
-        phone,
-        email,
-        source,
-        status: 'WARM',
-        position: lastLead ? lastLead.position + 1.0 : 1.0,
-        expectedValue: value,
-        tags: config?.defaultTags ? (config.defaultTags as string[]) : [],
-      },
-    }),
-    prisma.stage.update({
-      where: { id: firstStage.id },
-      data: {
-        cachedLeadCount: { increment: 1 },
-        cachedTotalValue: value ? { increment: value } : undefined,
-        cacheUpdatedAt: new Date(),
-      },
-    }),
-  ])
+  await prisma.lead.update({ where: { id: leadId }, data: { lastInteractionAt: new Date() } })
 }
 
 async function handleUpdateLead(
