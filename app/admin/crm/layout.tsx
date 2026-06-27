@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -202,9 +202,21 @@ const CRM_NAV = [
   },
 ]
 
+// Nav primária (uso diário) + "Mais" agrupado — reduz a sobrecarga das 18 abas SEM perder nada
+const PRIMARY_HREFS = ['/admin/crm/dashboard', '/admin/crm/pipeline', '/admin/crm/inbox', '/admin/crm/contacts', '/admin/crm/reports']
+const MORE_GROUPS: { title: string; hrefs: string[] }[] = [
+  { title: 'Mensagens & Automação', hrefs: ['/admin/crm/automations', '/admin/crm/automations/bots', '/admin/crm/templates', '/admin/crm/broadcast', '/admin/crm/knowledge'] },
+  { title: 'Análise & Vendas', hrefs: ['/admin/crm/intelligence', '/admin/crm/nps', '/admin/crm/proposals'] },
+  { title: 'Configurações', hrefs: ['/admin/crm/team', '/admin/crm/integrations', '/admin/crm/webhooks', '/admin/crm/settings', '/admin/crm/system/dlq'] },
+]
+const NAV_BY_HREF: Record<string, (typeof CRM_NAV)[number]> = Object.fromEntries(CRM_NAV.map((i) => [i.href, i]))
+const MORE_HREFS = MORE_GROUPS.flatMap((g) => g.hrefs)
+
 export default function CrmLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const { onlineUsers } = usePresence(TENANT_ID, pathname)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const moreActive = MORE_HREFS.some((h) => pathname === h || pathname.startsWith(h + '/'))
 
   return (
     <div className="-m-4 lg:-m-6 min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)]" style={{ background: 'var(--crm-bg)' }}>
@@ -220,8 +232,7 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
           className="px-2 lg:px-5 flex items-center gap-0.5 overflow-x-auto scrollbar-none"
           style={{ minHeight: '44px' }}
         >
-          {CRM_NAV.map((item) => {
-            // Exact match for all items except /reports which has sub-pages
+          {PRIMARY_HREFS.map((href) => NAV_BY_HREF[href]).filter(Boolean).map((item) => {
             const active = item.href === '/admin/crm/reports'
               ? pathname === item.href || pathname.startsWith(item.href + '/')
               : pathname === item.href
@@ -232,29 +243,66 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="relative flex items-center gap-1.5 px-2.5 lg:px-3.5 py-2.5 lg:py-3 text-[11px] lg:text-[13px] font-medium whitespace-nowrap transition-all duration-200 rounded-lg my-0.5"
+                className="relative flex items-center gap-1.5 px-2.5 lg:px-3.5 py-2.5 lg:py-3 text-[12px] lg:text-[13px] font-medium whitespace-nowrap transition-all duration-200 rounded-lg my-0.5"
                 style={{
                   color: active ? activeColor : 'var(--crm-text-muted)',
                   background: active ? activeBg : 'transparent',
                 }}
-                onMouseEnter={(e) => {
-                  if (!active) e.currentTarget.style.color = 'var(--crm-text)'
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) e.currentTarget.style.color = 'var(--crm-text-muted)'
-                }}
+                onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = 'var(--crm-text)' }}
+                onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = 'var(--crm-text-muted)' }}
               >
                 <span className="opacity-80 hidden sm:inline" style={active ? { opacity: 1 } : undefined}>{item.icon}</span>
                 {item.label}
                 {active && (
-                  <span
-                    className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full"
-                    style={{ background: activeColor }}
-                  />
+                  <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full" style={{ background: activeColor }} />
                 )}
               </Link>
             )
           })}
+
+          {/* "Mais" — agrupa o resto (NADA é removido, só organizado) */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setMoreOpen((o) => !o)}
+              className="relative flex items-center gap-1.5 px-2.5 lg:px-3.5 py-2.5 lg:py-3 text-[12px] lg:text-[13px] font-medium whitespace-nowrap rounded-lg my-0.5 transition-all duration-200"
+              style={{
+                color: (moreActive || moreOpen) ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
+                background: (moreActive || moreOpen) ? 'var(--crm-gold-subtle)' : 'transparent',
+              }}
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" viewBox="0 0 24 24" className="hidden sm:inline"><circle cx="5" cy="12" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="19" cy="12" r="1.4" /></svg>
+              Mais
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" style={{ transform: moreOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><polyline points="6 9 12 15 18 9" /></svg>
+              {moreActive && <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full" style={{ background: 'var(--crm-gold)' }} />}
+            </button>
+            {moreOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
+                <div className="absolute left-0 top-full mt-1 z-50 w-[260px] rounded-xl border p-2 shadow-2xl" style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)' }}>
+                  {MORE_GROUPS.map((group) => (
+                    <div key={group.title} className="mb-1.5 last:mb-0">
+                      <p className="px-2 pt-1.5 pb-1 text-[10px] uppercase tracking-wider font-semibold" style={{ color: 'var(--crm-text-muted)', opacity: 0.7 }}>{group.title}</p>
+                      {group.hrefs.map((href) => NAV_BY_HREF[href]).filter(Boolean).map((item) => {
+                        const active = pathname === item.href || pathname.startsWith(item.href + '/')
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setMoreOpen(false)}
+                            className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-[13px] transition-colors"
+                            style={{ color: active ? 'var(--crm-gold)' : 'var(--crm-text)', background: active ? 'var(--crm-gold-subtle)' : 'transparent' }}
+                          >
+                            <span className="opacity-70 [&>svg]:w-4 [&>svg]:h-4">{item.icon}</span>
+                            {item.label}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           {/* Online users indicator */}
           {onlineUsers.length > 0 && (
             <div className="ml-auto flex items-center gap-1.5 px-3 shrink-0">

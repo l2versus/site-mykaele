@@ -127,6 +127,40 @@ async function countAiInteractions(leadId: string): Promise<number> {
 }
 
 /**
+ * Já é cliente? (User role PATIENT) — checa por vínculo patientId, depois email, depois telefone.
+ * Regra de negócio: o bot só VENDE pra clientes NOVOS. Pra cliente existente vira recepcionista
+ * (reagenda/avisa a Myka), sem oferecer pacotes.
+ */
+async function leadIsExistingClient(tenantId: string, leadId: string): Promise<boolean> {
+  const lead = await prisma.lead.findFirst({
+    where: { id: leadId, tenantId },
+    select: { patientId: true, email: true, phone: true },
+  })
+  if (!lead) return false
+  if (lead.patientId) return true
+
+  if (lead.email) {
+    const byEmail = await prisma.user.findFirst({
+      where: { role: 'PATIENT', email: lead.email },
+      select: { id: true },
+    })
+    if (byEmail) return true
+  }
+
+  // Telefone: compara os últimos 8 dígitos (cobre telefones salvos sem formatação)
+  const last8 = (lead.phone || '').replace(/\D/g, '').slice(-8)
+  if (last8.length === 8) {
+    const byPhone = await prisma.user.findFirst({
+      where: { role: 'PATIENT', phone: { contains: last8 } },
+      select: { id: true },
+    })
+    if (byPhone) return true
+  }
+
+  return false
+}
+
+/**
  * Busca histórico recente da conversa para contexto.
  */
 async function getConversationHistory(
@@ -167,8 +201,9 @@ async function generateAgentReply(params: {
   config: AiAgentConfig
   history: string
   userMessage: string
+  isExistingClient: boolean
 }): Promise<string> {
-  const { tenantId, leadName, config, history, userMessage } = params
+  const { tenantId, leadName, config, history, userMessage, isExistingClient } = params
 
   // Buscar contexto relevante da base de conhecimento
   const chunks = await findSimilarChunks(tenantId, userMessage, 4, 0.5)
@@ -189,6 +224,18 @@ async function generateAgentReply(params: {
   const firstName = leadName.split(' ')[0] || 'cliente'
   const toneDesc = TONE_DESCRIPTIONS[config.tone] ?? TONE_DESCRIPTIONS.profissional
 
+  // Modo de atendimento: cliente novo (vende/converte) vs cliente atual (só recepção)
+  const modoBlock = isExistingClient
+    ? `MODO ATUAL — RECEPCIONISTA (esta pessoa JÁ É CLIENTE da Myka):
+- Seu papel agora é SÓ recepção: reagendar/remarcar sessão, tirar dúvidas simples, confirmar horários e avisar a Myka.
+- PROIBIDO oferecer ou vender pacotes, promoções ou novos serviços. NÃO empurre venda de jeito nenhum.
+- Se ela quiser remarcar ou desmarcar, ajude com carinho e, se precisar, avise a Myka.
+- Se for algo que vc não tem certeza, NÃO invente — escale pra Myka (regra abaixo).`
+    : `MODO ATUAL — RECEPÇÃO + VENDAS (esta pessoa é uma POSSÍVEL NOVA CLIENTE):
+- Seu papel é acolher, despertar o interesse e CONVERTER: levar ela a marcar a primeira avaliação.
+- Pode apresentar serviços, valores e pacotes (use os preços do conhecimento).
+- Foco total em marcar o primeiro atendimento.`
+
   const systemPrompt = `Você é ${config.agentName}, concierge da Mykaele Procópio no WhatsApp. Você é uma pessoa real que trabalha na clínica — calorosa, atenciosa e que adora ajudar.
 
 QUEM VOCÊ É:
@@ -197,6 +244,8 @@ QUEM VOCÊ É:
 - Você conhece TUDO sobre a clínica porque trabalha lá todo dia
 - Mykaele é a dona e fisioterapeuta — você chama ela de "Myka" ou "a Myka"
 - Você é ${toneDesc}
+
+${modoBlock}
 
 COMO VOCÊ FALA (OBRIGATÓRIO — quebrar essas regras é proibido):
 - Você é uma PESSOA conversando no WhatsApp, NÃO um chatbot
@@ -340,8 +389,9 @@ export async function tryAiAgentReply(params: {
       return false // Cai para auto-reply ou safety net (lead precisa de humano)
     }
 
-    // 4. Buscar histórico e gerar resposta
+    // 4. Buscar histórico, detectar se é cliente atual, e gerar resposta
     const { history } = await getConversationHistory(tenantId, remoteJid, 8)
+    const isExistingClient = await leadIsExistingClient(tenantId, leadId)
 
     const reply = await generateAgentReply({
       tenantId,
@@ -349,6 +399,7 @@ export async function tryAiAgentReply(params: {
       config,
       history,
       userMessage: messageContent,
+      isExistingClient,
     })
 
     // Detecta pedido de escalonamento da IA e limpa a tag antes de enviar à cliente
