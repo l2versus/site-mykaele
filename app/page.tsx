@@ -14,8 +14,9 @@ const AgendamentoSection = dynamic(() => import('@/components/AgendamentoSection
 const FAQ = dynamic(() => import('@/components/FAQ'))
 
 export const metadata: Metadata = {
-  title: 'Mykaele Procópio | Estética Avançada & Arquitetura Corporal em Fortaleza',
-  description: 'Fisioterapeuta Dermatofuncional especializada em Arquitetura Corporal. Atendimento premium a domicílio (Home Spa) em Fortaleza-CE. Massagem relaxante, método Fluir, despertar sensorial. Resultados reais, protocolos personalizados. Agende online.',
+  // `absolute` evita o sufixo do template do layout (título limpo e keyword-rich)
+  title: { absolute: 'Fisioterapeuta Dermatofuncional em Fortaleza | Home Spa de Luxo a Domicílio — Mykaele Procópio' },
+  description: 'Estética avançada e arquitetura corporal a domicílio em Fortaleza — Aldeota, Meireles, Cocó e região. Massagem modeladora, drenagem linfática e protocolos personalizados no conforto da sua casa, com privacidade absoluta. Resultados desde a 1ª sessão. Agende online.',
   alternates: {
     canonical: 'https://mykaprocopio.com.br',
   },
