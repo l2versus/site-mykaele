@@ -161,10 +161,11 @@ export async function DELETE(
       // Fallback: deletar via SQL direto
       console.error('Prisma delete failed, trying raw SQL:', prismaErr)
       try {
-        await prisma.$executeRawUnsafe(`DELETE FROM "Appointment" WHERE "userId" = '${id}'`)
-        await prisma.$executeRawUnsafe(`DELETE FROM "Package" WHERE "userId" = '${id}'`)
-        await prisma.$executeRawUnsafe(`DELETE FROM "Payment" WHERE "userId" = '${id}'`)
-        await prisma.$executeRawUnsafe(`DELETE FROM "User" WHERE "id" = '${id}'`)
+        // Parametrizado ($1) — elimina SQL injection (antes interpolava ${id} direto)
+        await prisma.$executeRawUnsafe('DELETE FROM "Appointment" WHERE "userId" = $1', id)
+        await prisma.$executeRawUnsafe('DELETE FROM "Package" WHERE "userId" = $1', id)
+        await prisma.$executeRawUnsafe('DELETE FROM "Payment" WHERE "userId" = $1', id)
+        await prisma.$executeRawUnsafe('DELETE FROM "User" WHERE "id" = $1', id)
       } catch (rawErr) {
         const msg = rawErr instanceof Error ? rawErr.message : String(rawErr)
         console.error('Raw SQL delete also failed:', msg)

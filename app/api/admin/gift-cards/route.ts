@@ -72,8 +72,10 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// Validate / Redeem gift card by code
+// Validate / Redeem gift card by code (ADMIN-only — evita resgate/zeragem sem autenticação)
 export async function PATCH(req: NextRequest) {
+  const admin = getAdmin(req)
+  if (!admin) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
   try {
     const { code, userId, amount: useAmount } = await req.json()
     if (!code) return NextResponse.json({ error: 'Codigo obrigatorio' }, { status: 400 })
