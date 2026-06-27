@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma'
 import { evolutionApi } from '@/lib/evolution-api'
 import { findSimilarChunks } from '@/lib/rag'
 import { createGeminiModel } from '@/lib/gemini'
+import { sendHandoffNotification } from '@/lib/whatsapp'
 
 interface AiAgentConfig {
   enabled: boolean
@@ -227,6 +228,7 @@ REGRA ABSOLUTA — NÃO DELIRAR:
 - NUNCA invente preços, horários, procedimentos ou informações
 - NUNCA diga "não fazemos" ou "não atendemos" — diga "vou verificar"
 - Preços estão no conhecimento — use eles. Se não tiver o preço específico: "os valores variam, posso te passar certinho"
+- IMPORTANTE: quando precisar da Myka (algo que vc não tem certeza ou não está no conhecimento acima), responda à cliente de forma natural ("vou confirmar com a Myka e já te falo, tá?") e acrescente NO FINAL da mensagem a tag literal [[ESCALAR]]. Essa tag é removida automaticamente antes de enviar — a cliente NUNCA vê. Use SÓ quando realmente precisar chamar a Myka.
 
 AGENDAMENTO (quando pedirem):
 - Pergunte: "Qual procedimento vc tá querendo?" e "Tem preferência de dia e horário?"
@@ -280,6 +282,16 @@ export async function tryAiAgentReply(params: {
     if (!isWithinSchedule(config)) {
       console.error(`[ai-agent] SKIP lead=${leadId}: fora do horário (schedule=${config.schedule})`)
       return false
+    }
+
+    // 2.1 Handoff: se um humano assumiu a conversa, a IA NÃO responde (bot pausado)
+    const conv = await prisma.conversation.findUnique({
+      where: { tenantId_remoteJid: { tenantId, remoteJid } },
+      select: { id: true, assignedToUserId: true },
+    })
+    if (conv?.assignedToUserId) {
+      console.error(`[ai-agent] SKIP-OK lead=${leadId}: conversa assumida por humano`)
+      return true
     }
 
     // 2.5 Anti-loop: se IA respondeu há < 30s, ignorar (paciente mandando msgs em rajada)
@@ -339,7 +351,10 @@ export async function tryAiAgentReply(params: {
       userMessage: messageContent,
     })
 
-    if (!reply.trim()) return false
+    // Detecta pedido de escalonamento da IA e limpa a tag antes de enviar à cliente
+    const needsHuman = /\[\[\s*escalar\s*\]\]/i.test(reply)
+    const cleanReply = reply.replace(/\[\[\s*escalar\s*\]\]/gi, '').trim()
+    if (!cleanReply) return false
 
     // 5. Buscar instanceId do canal
     const channel = await prisma.crmChannel.findUnique({
@@ -352,7 +367,7 @@ export async function tryAiAgentReply(params: {
     await new Promise(resolve => setTimeout(resolve, config.delayMs))
 
     // 7. Enviar via Evolution API
-    const result = await evolutionApi.sendText(channel.instanceId, remoteJid, reply)
+    const result = await evolutionApi.sendText(channel.instanceId, remoteJid, cleanReply)
 
     // A partir daqui, a mensagem JÁ FOI ENVIADA ao WhatsApp.
     // Erros de persistência NÃO devem retornar false (evita auto-reply duplicado).
@@ -372,7 +387,7 @@ export async function tryAiAgentReply(params: {
               waMessageId: result.key.id,
               fromMe: true,
               type: 'TEXT',
-              content: reply,
+              content: cleanReply,
               status: 'SENT',
               aiSummary: 'Resposta gerada pelo agente IA',
             },
@@ -386,7 +401,7 @@ export async function tryAiAgentReply(params: {
           leadId,
           type: 'AI_AGENT_REPLY',
           payload: {
-            message: reply,
+            message: cleanReply,
             model: config.model,
             interactionNumber: interactions + 1,
             sentAt: new Date().toISOString(),
@@ -396,6 +411,34 @@ export async function tryAiAgentReply(params: {
     } catch (saveErr) {
       // Mensagem já foi enviada — apenas logar erro de persistência
       console.error('[ai-agent] Mensagem enviada mas falha ao salvar no banco:', saveErr instanceof Error ? saveErr.message : saveErr)
+    }
+
+    // 10. Escalonamento — a IA não soube: avisa a Mykaele NA HORA + pausa o bot nessa conversa
+    if (needsHuman) {
+      try {
+        // Atribui a conversa à Mykaele (admin) → IA/auto-reply/bot pulam a partir de agora
+        const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' }, select: { id: true } })
+        if (conv?.id && admin?.id) {
+          await prisma.conversation.update({ where: { id: conv.id }, data: { assignedToUserId: admin.id } })
+        }
+        await prisma.leadActivity.create({
+          data: {
+            leadId,
+            type: 'AI_AGENT_TRANSFERRED',
+            payload: { reason: 'nao_soube_responder', question: messageContent, at: new Date().toISOString() },
+          },
+        })
+        const lead = await prisma.lead.findFirst({ where: { id: leadId }, select: { name: true, phone: true } })
+        await sendHandoffNotification({
+          leadName: lead?.name || leadName,
+          leadPhone: lead?.phone,
+          lastMessage: messageContent,
+          agentName: config.agentName,
+        })
+        console.error(`[ai-agent] ESCALADO lead=${leadId}: Mykaele notificada (CallMeBot) + bot pausado`)
+      } catch (escErr) {
+        console.error('[ai-agent] Falha ao escalar pra Mykaele:', escErr instanceof Error ? escErr.message : escErr)
+      }
     }
 
     return true

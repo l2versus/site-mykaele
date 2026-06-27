@@ -2,7 +2,38 @@
   "permissions": {
     "allow": [
       "Bash(node -e \":*)",
-      "Bash(find 'c:\\\\Users\\\\admin\\\\Desktop\\\\site myka\\\\site-mykaele\\\\app\\\\api\\\\admin' -name *.ts -type f)"
+      "Bash(find 'c:\\\\Users\\\\admin\\\\Desktop\\\\site myka\\\\site-mykaele\\\\app\\\\api\\\\admin' -name *.ts -type f)",
+      "Bash(base64 -w0 \"/c/Users/admin/Desktop/site myka/site-mykaele/public/media/logo-branding/logocorreta.png\")",
+      "Bash(node -e ':*)",
+      "Bash(npx -y serve -l 3847 .)",
+      "Bash(npx -y http-server -p 3848 --cors -s)",
+      "Bash(npx -y http-server -p 3849 --cors -s)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3849/contrato_prestacao.html)",
+      "Bash(npx puppeteer:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/guardian.mjs"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/post-review.mjs"
+          }
+        ]
+      }
     ]
   }
 }

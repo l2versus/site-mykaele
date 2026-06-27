@@ -19,8 +19,8 @@ const FUNDAMENTOS = [
   },
   {
     numero: '03',
-    titulo: 'Flexibilidade e Exclusividade',
-    corpo: 'A excelência do protocolo disponível em instalações de alto padrão ou através do formato Home Spa — a infraestrutura clínica transposta para a privacidade da sua residência.',
+    titulo: 'Exclusividade e Conveniência',
+    corpo: 'A excelência do protocolo levada até você — toda a estrutura profissional transposta para a privacidade e o conforto da sua casa, sem deslocamento e sem abrir mão de nada.',
   },
 ]
 
@@ -264,10 +264,10 @@ export function ServicesSection() {
         <div className="max-w-[1400px] mx-auto px-6 md:px-10 py-20 md:py-24">
           <div className="text-center mb-14 reveal-blur">
             <span className="text-[10px] font-medium tracking-[0.4em] uppercase text-[#b76e79]/60 block mb-5">
-              Flexibilidade
+              Onde você quiser
             </span>
             <h3 className="text-[clamp(1.4rem,2.5vw,2rem)] font-extralight text-[#2d2d2d] leading-tight tracking-[-0.02em]">
-              Escolha o formato <span className="text-[#b76e79] font-light">ideal</span>
+              Atendimento onde <span className="text-[#b76e79] font-light">você</span> estiver
             </h3>
           </div>
 
@@ -275,16 +275,16 @@ export function ServicesSection() {
             <div className="group relative overflow-hidden border border-[#e8dfd6]/60 hover:border-[#b76e79]/30 transition-all duration-700 hover:shadow-lg hover:shadow-[#b76e79]/5">
               <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#b76e79]/40 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-700" />
               <div className="p-10">
-                <span className="text-xs font-medium tracking-[0.25em] uppercase text-[#8a8580] block mb-6">Formato I</span>
-                <h4 className="text-lg font-light text-[#2d2d2d] mb-2">Atendimento em Clínica</h4>
+                <span className="text-xs font-medium tracking-[0.25em] uppercase text-[#8a8580] block mb-6">Na sua casa</span>
+                <h4 className="text-lg font-light text-[#2d2d2d] mb-2">Sua residência</h4>
                 <div className="mb-4"><IFoodRatingBadge rating={ratingSummary.averageRating} count={ratingSummary.totalReviews || undefined} variant="light" /></div>
                 <p className="text-sm text-[#6a6560] font-light leading-relaxed mb-5">
-                  Instalações de alto padrão projetadas para o conforto
-                  e privacidade absoluta durante cada protocolo.
+                  Todo o protocolo no conforto e na privacidade absoluta
+                  da sua casa, no horário que for melhor para você.
                 </p>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#2d2d2d] rounded-full">
                   <span className="w-1 h-1 rounded-full bg-[#b76e79] animate-pulse" />
-                  <span className="text-[8px] font-medium tracking-[0.2em] uppercase text-white/60">Agenda limitada</span>
+                  <span className="text-[8px] font-medium tracking-[0.2em] uppercase text-white/60">Mais procurado</span>
                 </span>
               </div>
             </div>
@@ -292,14 +292,14 @@ export function ServicesSection() {
               <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#b76e79]/40 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-700" />
               <div className="p-10">
                 <div className="flex items-center justify-between mb-6">
-                  <span className="text-xs font-medium tracking-[0.25em] uppercase text-[#8a8580]">Formato II</span>
+                  <span className="text-xs font-medium tracking-[0.25em] uppercase text-[#8a8580]">Hotel & temporada</span>
                   <span className="text-[8px] font-medium tracking-[0.15em] uppercase text-[#b76e79] border border-[#b76e79]/20 px-2 py-0.5 rounded-sm">Exclusivo</span>
                 </div>
-                <h4 className="text-lg font-light text-[#2d2d2d] mb-2">Serviço Home Spa</h4>
+                <h4 className="text-lg font-light text-[#2d2d2d] mb-2">Hotel, pousada ou temporada</h4>
                 <div className="mb-4"><IFoodRatingBadge rating={ratingSummary.averageRating} count={ratingSummary.totalReviews || undefined} variant="light" /></div>
                 <p className="text-sm text-[#6a6560] font-light leading-relaxed mb-5">
-                  A infraestrutura clínica transposta para a privacidade
-                  e o conforto da sua residência em Fortaleza.
+                  Está hospedada ou de viagem em Fortaleza? A Mykaele leva
+                  o spa completo até o seu quarto, com toda a estrutura.
                 </p>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#2d2d2d] rounded-full">
                   <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />

@@ -10,7 +10,7 @@ const SECTIONS = [
   { id: 'sobre', label: 'Sobre' },
   { id: 'app', label: 'App' },
   { id: 'depoimentos', label: 'Depoimentos' },
-  { id: 'equipe', label: 'Equipe' },
+  { id: 'equipe', label: 'A Domicílio' },
   { id: 'galeria', label: 'Galeria' },
   { id: 'tecnologias', label: 'Tecnologias' },
   { id: 'faq', label: 'FAQ' },

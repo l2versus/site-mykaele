@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400..600&family=Outfit:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
@@ -12,6 +13,17 @@
   --color-charcoal: #2d2d2d;
   --color-charcoal-light: #4a4a4a;
   --color-warm-gray: #8a8580;
+  /* ── Design "Nude & Champagne" (home spa v2) — aditivo, não substitui rose-gold ── */
+  --color-nude: #efe8df;
+  --color-porcelain: #f7f3ee;
+  --color-espresso: #2a2521;
+  --color-taupe: #6b5d4f;
+  --color-champagne: #a98c5f;
+  --color-champagne-lt: #c2a878;
+  --color-gold-glow: #e8d4a8;
+  --color-blush: #e7d6cb;
+  --font-display: "Bodoni Moda", serif;
+  --font-body: "Outfit", sans-serif;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   /* Animations */
@@ -713,4 +725,15 @@ body {
 }
 .leaflet-container {
   z-index: 0;
+}
+
+/* ═══ Stacking de dobras (Apple-style) — cada dobra empilha sobre a anterior ═══ */
+.stack-panel {
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+  will-change: transform, opacity, filter;
+}
+@media (max-width: 920px) {
+  .stack-panel { position: relative; }
 }

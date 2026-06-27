@@ -21,7 +21,7 @@ export function TechnologiesSection() {
               { titulo: 'Fisioterapia Dermato-Funcional', texto: 'Formação especializada que garante o entendimento profundo da anatomia, fisiologia da pele e tecidos subcutâneos para intervenções precisas.' },
               { titulo: 'Protocolo Autoral Exclusivo', texto: 'Metodologia 100% proprietária, desenvolvida e refinada ao longo de 7 anos de prática clínica intensiva em remodelação corporal e redução de medidas.' },
               { titulo: 'Estimulação Metabólica', texto: 'Técnicas manuais de alta performance que ativam o metabolismo celular, promovendo lipólise e drenagem por até 48 horas contínuas.' },
-              { titulo: 'Personalização Clínica', texto: 'Cada protocolo é desenhado individualmente, respeitando a fisiologia, o biotipo e os objetivos específicos de cada paciente.' },
+              { titulo: 'Personalização Total', texto: 'Cada protocolo é desenhado individualmente, respeitando a fisiologia, o biotipo e os objetivos específicos de cada paciente.' },
             ].map((item, idx) => (
               <div key={idx}
                 className={`grid grid-cols-1 md:grid-cols-12 gap-6 py-10 md:py-12 ${

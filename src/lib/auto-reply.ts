@@ -129,6 +129,13 @@ export async function tryAutoReply(params: {
     const config = await getAutoReplyConfig(tenantId)
     if (!config) return false
 
+    // 1.5 Se um humano assumiu a conversa, não auto-responder (handoff)
+    const convHandoff = await prisma.conversation.findUnique({
+      where: { tenantId_remoteJid: { tenantId, remoteJid } },
+      select: { assignedToUserId: true },
+    })
+    if (convHandoff?.assignedToUserId) return false
+
     // 2. Lock otimista — previne duplicação entre webhook e polling
     const lockId = await acquireAutoReplyLock(leadId)
     if (!lockId) return false // Já enviou ou outro processo está enviando

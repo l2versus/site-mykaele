@@ -37,11 +37,18 @@ export function Footer() {
         <div className="stagger-children grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
           {/* Brand */}
           <div className="md:col-span-2">
+            <Image
+              src="/media/logo-branding/logo-rose-light.png"
+              alt="Mykaele Procópio"
+              width={36}
+              height={40}
+              className="h-10 w-auto object-contain mb-5 opacity-90"
+            />
             <p className="text-base font-normal text-white/90 mb-3 tracking-wide">Mykaele Procópio Home Spa</p>
             <p className="text-sm text-white/50 font-light leading-relaxed max-w-sm">
               Fisioterapia e Estética de Alta Performance.
               Criadora do Método Exclusivo Mykaele Procópio.
-              Atendimento em Clínica e Serviço Home Spa.
+              Atendimento exclusivo a domicílio em Fortaleza e região.
             </p>
           </div>
 

@@ -63,6 +63,16 @@ const NAV_ITEMS: { id: string; href: string; label: string; icon: React.ReactNod
 const DEFAULT_ORDER = NAV_ITEMS.map(i => i.id)
 const NAV_MAP = Object.fromEntries(NAV_ITEMS.map(i => [i.id, i]))
 
+// Sidebar dividida por categorias (substitui o reordenar por drag)
+const NAV_GROUPS: { title: string; ids: string[] }[] = [
+  { title: 'Visão Geral', ids: ['dashboard', 'relatorios'] },
+  { title: 'Atendimento', ids: ['agenda', 'clientes', 'servicos', 'protocolos', 'lista-espera'] },
+  { title: 'Relacionamento', ids: ['crm', 'mensagens', 'indicacoes', 'fidelidade', 'gift-cards'] },
+  { title: 'Financeiro', ids: ['financeiro', 'comissoes', 'pro-labore'] },
+  { title: 'Operação', ids: ['estoque', 'importar'] },
+  { title: 'Site & Ajustes', ids: ['editar-site', 'galeria', 'configuracoes'] },
+]
+
 function getStoredOrder(): string[] {
   try {
     const stored = localStorage.getItem('myka_nav_order')
@@ -381,66 +391,39 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <span className={!sb ? 'lg:hidden' : ''}>Voltar para Site</span>
             </a>
 
-            {/* Botão editar ordem */}
-            <div className={`flex items-center justify-between px-3 py-1.5 mb-1 ${!sb ? 'lg:hidden' : ''}`}>
-              <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--admin-text-muted)' }}>Menu</span>
-              <button
-                onClick={() => setEditingNav(!editingNav)}
-                className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-all"
-                style={{
-                  color: editingNav ? 'var(--admin-accent)' : 'var(--admin-text-muted)',
-                  background: editingNav ? 'var(--admin-accent-bg)' : 'transparent',
-                }}
-                title={editingNav ? 'Concluir' : 'Reordenar menu'}
-              >
-                {editingNav ? <>{I.check} <span>OK</span></> : <>{I.reorder}</>}
-              </button>
-            </div>
-
-            {orderedNav.map((item, index) => {
-              const active = pathname === item.href
-              return (
-                <div
-                  key={item.id}
-                  draggable={editingNav}
-                  onDragStart={() => handleDragStart(index)}
-                  onDragEnter={() => handleDragEnter(index)}
-                  onDragEnd={handleDragEnd}
-                  onDragOver={e => e.preventDefault()}
-                  className={editingNav ? 'cursor-grab active:cursor-grabbing' : ''}
+            {/* Nav agrupado por categoria */}
+            {NAV_GROUPS.map((group) => (
+              <div key={group.title} className="mb-1.5">
+                <p
+                  className={`px-3 pt-2.5 pb-1 text-[10px] uppercase tracking-wider font-semibold ${!sb ? 'lg:hidden' : ''}`}
+                  style={{ color: 'var(--admin-text-muted)', opacity: 0.55 }}
                 >
-                  <Link href={item.href}
-                    className={`admin-nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-all ${editingNav ? 'pointer-events-none' : ''}`}
-                    style={{
-                      color: active ? 'var(--admin-accent)' : 'var(--admin-text-muted)',
-                      background: active ? 'var(--admin-accent-bg)' : 'transparent',
-                      fontWeight: active ? 600 : 400,
-                      boxShadow: active ? '0 1px 3px var(--admin-accent-shadow)' : 'none',
-                    }}
-                    onClick={() => setMobileOpen(false)}
-                    tabIndex={editingNav ? -1 : 0}
-                  >
-                    {editingNav && (
-                      <span className="flex-shrink-0 opacity-50" style={{ color: 'var(--admin-text-muted)' }}>{I.grip}</span>
-                    )}
-                    <span className="flex-shrink-0 [&>svg]:stroke-current">{item.icon}</span>
-                    <span className={!sb ? 'lg:hidden' : ''}>{item.label}</span>
-                  </Link>
-                </div>
-              )
-            })}
-
-            {/* Resetar ordem */}
-            {editingNav && (
-              <button
-                onClick={resetNavOrder}
-                className="flex items-center gap-2 px-3 py-2 mt-2 w-full rounded-xl text-[11px] transition-all border border-dashed hover:opacity-80"
-                style={{ color: 'var(--admin-text-muted)', borderColor: 'var(--admin-border)' }}
-              >
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                <span>Restaurar ordem padrão</span>
-              </button>
-            )}
+                  {group.title}
+                </p>
+                {group.ids.map((id) => {
+                  const item = NAV_MAP[id]
+                  if (!item) return null
+                  const active = pathname === item.href
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      className="admin-nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-all"
+                      style={{
+                        color: active ? 'var(--admin-accent)' : 'var(--admin-text-muted)',
+                        background: active ? 'var(--admin-accent-bg)' : 'transparent',
+                        fontWeight: active ? 600 : 400,
+                        boxShadow: active ? '0 1px 3px var(--admin-accent-shadow)' : 'none',
+                      }}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <span className="flex-shrink-0 [&>svg]:stroke-current">{item.icon}</span>
+                      <span className={!sb ? 'lg:hidden' : ''}>{item.label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            ))}
           </nav>
 
           {/* Sidebar bottom — Mini profile */}

@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mykaele Procópio — Home Spa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400..600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --nude:#efe8df;--porcelain:#f7f3ee;--espresso:#2a2521;--taupe:#6b5d4f;
+    --champagne:#a98c5f;--champagne-lt:#c2a878;--gold-glow:#e8d4a8;--blush:#e7d6cb;
+    --line:rgba(169,140,95,.30);--ease:cubic-bezier(.22,.61,.36,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:var(--nude);color:var(--espresso);font-family:'Outfit',system-ui,sans-serif;font-weight:300;-webkit-font-smoothing:antialiased;overflow-x:hidden;cursor:none}
+  @media (pointer:coarse){body{cursor:auto}}
+  ::selection{background:var(--champagne);color:var(--porcelain)}
+  a{color:inherit;text-decoration:none}
+
+  /* ════ preloader ════ */
+  .loader{position:fixed;inset:0;z-index:200;background:var(--espresso);color:var(--porcelain);display:grid;place-items:center}
+  .loader .lwrap{text-align:center}
+  .loader .lbrand{font-family:'Bodoni Moda',serif;font-size:clamp(1.6rem,4vw,2.6rem);letter-spacing:.04em;opacity:0}
+  .loader .lbrand em{font-style:italic;color:var(--champagne-lt)}
+  .loader .lnum{font-family:'Outfit';font-size:12px;letter-spacing:.4em;color:var(--champagne-lt);margin-top:20px;font-weight:500}
+  .loader .lbar{width:min(260px,60vw);height:1px;background:rgba(247,243,238,.2);margin:18px auto 0;overflow:hidden}
+  .loader .lbar i{display:block;height:100%;width:0;background:var(--champagne-lt)}
+
+  /* ════ atmospheric bg ════ */
+  .bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .bg-mesh{position:absolute;inset:-20%;background:
+      radial-gradient(40% 50% at 72% 30%,rgba(232,212,168,.55),transparent 60%),
+      radial-gradient(35% 45% at 20% 70%,rgba(231,214,203,.45),transparent 62%),
+      radial-gradient(50% 60% at 85% 85%,rgba(199,168,120,.28),transparent 60%),
+      radial-gradient(45% 55% at 10% 15%,rgba(247,243,238,.7),transparent 55%);
+    filter:blur(10px);animation:meshDrift 26s ease-in-out infinite alternate}
+  @keyframes meshDrift{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-3%,2%) scale(1.06)}}
+  .speck{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(232,212,168,.9),transparent 70%);filter:blur(1px);opacity:.5;animation:float 18s ease-in-out infinite}
+  .speck:nth-child(1){width:8px;height:8px;left:18%;top:30%}
+  .speck:nth-child(2){width:5px;height:5px;left:62%;top:22%;animation-delay:-4s}
+  .speck:nth-child(3){width:11px;height:11px;left:80%;top:60%;animation-delay:-8s}
+  .speck:nth-child(4){width:6px;height:6px;left:40%;top:78%;animation-delay:-12s}
+  .speck:nth-child(5){width:4px;height:4px;left:30%;top:50%;animation-delay:-2s}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-26px)}}
+  .grain{position:fixed;inset:0;z-index:80;pointer-events:none;mix-blend-mode:multiply;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(120% 95% at 50% 12%,transparent 52%,rgba(106,93,79,.12) 100%)}
+
+  .cursor{position:fixed;top:0;left:0;z-index:150;pointer-events:none;width:7px;height:7px;border-radius:50%;background:var(--espresso);transform:translate(-50%,-50%);mix-blend-mode:multiply;transition:width .35s var(--ease),height .35s var(--ease),background .35s,border .35s}
+  .cursor.ring{width:48px;height:48px;background:transparent;border:1px solid var(--champagne);mix-blend-mode:normal}
+  @media (pointer:coarse){.cursor{display:none}}
+
+  /* ════ header ════ */
+  header{position:fixed;top:0;left:0;right:0;z-index:90;display:flex;align-items:center;justify-content:space-between;padding:20px clamp(20px,4vw,56px);transition:padding .5s var(--ease),background .5s,border-color .5s;border-bottom:1px solid transparent}
+  header.shrunk{padding:12px clamp(20px,4vw,56px);background:rgba(239,232,223,.8);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:11px}
+  .brand .mark{width:31px;height:31px;border:1px solid var(--champagne);border-radius:50%;display:grid;place-items:center;font-family:'Bodoni Moda',serif;font-style:italic;font-size:15px;color:var(--champagne);flex:none;transition:background .4s,color .4s}
+  .brand .mark-img{width:40px;height:40px;object-fit:contain;flex:none}
+  .brand:hover .mark{background:var(--champagne);color:var(--porcelain)}
+  .brand .bname{font-family:'Bodoni Moda',serif;font-size:14px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;line-height:1}
+  nav.links{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:34px}
+  nav.links a{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--taupe);position:relative;padding:4px 0;transition:color .4s}
+  nav.links a::after{content:'';position:absolute;left:0;bottom:0;height:1px;width:0;background:var(--champagne);transition:width .45s var(--ease)}
+  nav.links a:hover{color:var(--espresso)}nav.links a:hover::after{width:100%}
+  .head-right{display:flex;align-items:center;gap:20px}
+  .seal{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--taupe)}
+  .seal .dot{width:6px;height:6px;border-radius:50%;background:var(--champagne);animation:pulse 2.6s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(169,140,95,.45)}70%{box-shadow:0 0 0 7px rgba(169,140,95,0)}100%{box-shadow:0 0 0 0 rgba(169,140,95,0)}}
+  .btn{font-family:'Outfit';font-size:10px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;display:inline-flex;align-items:center;gap:10px;padding:13px 22px;border:0;cursor:none;background:var(--espresso);color:var(--porcelain);border-radius:3px;transition:background .45s var(--ease),color .45s,box-shadow .45s}
+  .btn:hover{background:var(--champagne);box-shadow:0 14px 30px -14px rgba(169,140,95,.85)}
+  .btn .arr{transition:transform .45s var(--ease)}.btn:hover .arr{transform:translate(4px,-4px)}
+  .btn.ghost{background:transparent;color:var(--taupe);border:1px solid var(--line)}
+  .btn.ghost:hover{background:transparent;color:var(--espresso);border-color:var(--champagne);box-shadow:none}
+  .btn.lg{padding:18px 32px;font-size:11px}
+  .btn.light{background:var(--porcelain);color:var(--espresso)}.btn.light:hover{background:var(--champagne);color:var(--porcelain)}
+  .hlogin{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--taupe);font-weight:500;transition:color .4s}.hlogin:hover{color:var(--espresso)}
+  @media (max-width:920px){nav.links,.seal{display:none}}
+
+  /* ════ STACKING PANELS ════ */
+  main{position:relative;z-index:3}
+  .panel{position:relative;min-height:auto;display:flex;align-items:flex-start;overflow:hidden}
+  .panel.p-center{align-items:center}
+  .panel.p-band{min-height:auto;align-items:center}
+  .panel-inner{width:100%;max-width:1560px;margin:0 auto;padding:120px clamp(20px,4vw,56px) 80px;will-change:transform,opacity,filter}
+  .p-nude{background:linear-gradient(180deg,var(--nude),var(--porcelain))}
+  .p-porc{background:var(--porcelain)}
+  .p-blush{background:radial-gradient(120% 120% at 50% 40%,var(--blush),var(--nude) 70%)}
+  .p-espresso{background:var(--espresso);color:var(--porcelain)}
+  @media (max-width:920px){
+    .panel{position:relative;min-height:auto}
+    .panel-inner{padding:96px 22px 80px}
+  }
+
+  /* hero */
+  .hero-inner{max-width:none!important;padding:0!important;position:relative;min-height:100svh;display:flex;align-items:center}
+  .hero-inner .copy{position:relative;z-index:2;max-width:600px;margin-left:clamp(20px,5.5vw,96px);padding:120px 0 80px}
+  .kicker{display:inline-flex;align-items:center;gap:14px;font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--champagne);font-weight:500;margin-bottom:26px}
+  .kicker .rule{display:inline-block;height:1px;width:0;background:var(--champagne)}
+  .title{font-family:'Bodoni Moda',serif;font-weight:600;line-height:.98;letter-spacing:-.025em;font-size:clamp(2.9rem,7vw,6.6rem)}
+  .title .ln{display:block;overflow:hidden;padding:.02em 0}.title .ln>span{display:block;transform:translateY(105%)}
+  .title em{font-style:italic;color:var(--champagne);font-weight:600}
+  .lede{margin-top:30px;max-width:440px;font-size:16px;line-height:1.85;color:var(--taupe)}
+  .actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:36px}
+  .trust{display:flex;align-items:center;gap:14px;margin-top:32px}
+  .stars{display:flex;gap:3px;color:var(--champagne)}.stars svg{width:14px;height:14px}
+  .trust .meta{font-size:12px;color:var(--taupe)}.trust .meta b{color:var(--espresso);font-weight:600}
+  .reveal{opacity:0;transform:translateY(20px)}
+  .hero-photo{position:absolute;top:0;right:0;bottom:0;width:50%;z-index:1;overflow:hidden}
+  .hero-photo img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;transform:scale(1.06);filter:sepia(.14) saturate(1.05) contrast(1.02) brightness(1.02)}
+  .hero-photo::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--nude),rgba(239,232,223,0) 32%),linear-gradient(0deg,rgba(42,37,33,.20),transparent 26%),radial-gradient(80% 60% at 78% 22%,rgba(232,212,168,.15),transparent 60%)}
+  .badge{position:absolute;left:calc(50% - 60px);bottom:48px;z-index:4;width:120px;height:120px;display:grid;place-items:center;background:rgba(247,243,238,.8);backdrop-filter:blur(6px);border-radius:50%;box-shadow:0 16px 44px -22px rgba(42,37,33,.55)}
+  .badge .ring{position:absolute;inset:0}
+  .badge text{font-family:'Outfit';font-size:10.4px;letter-spacing:.32em;fill:var(--espresso);text-transform:uppercase;font-weight:500}
+  .badge .home{width:24px;height:24px;color:var(--champagne)}
+  @media(max-width:920px){
+    .hero-inner{flex-direction:column;min-height:auto}
+    .hero-inner .copy{margin-left:0;padding:14px 22px 36px;max-width:none;order:1}
+    .hero-photo{position:relative;width:100%;height:52vh;order:0}
+    .hero-photo::after{background:linear-gradient(0deg,var(--nude),rgba(239,232,223,0) 30%),linear-gradient(0deg,rgba(42,37,33,.18),transparent 30%)}
+    .badge{left:auto;right:16px;bottom:auto;top:calc(52vh - 52px);width:90px;height:90px}
+    .title{font-size:clamp(2.8rem,13vw,4rem)}
+  }
+
+  /* eyebrow + h2 */
+  .eyebrow{font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--champagne);font-weight:500}
+  .h2{font-family:'Bodoni Moda',serif;font-weight:500;font-size:clamp(2.3rem,5.6vw,4.8rem);line-height:1.04;letter-spacing:-.022em;margin-top:18px}
+  .h2 em{font-style:italic;color:var(--champagne)}
+  .head{max-width:780px;margin-bottom:56px}
+
+  /* método */
+  .steps{display:grid;gap:38px}@media(min-width:760px){.steps{grid-template-columns:repeat(3,1fr);gap:50px}}
+  .step{border-top:1px solid var(--line);padding-top:24px}
+  .step .n{font-family:'Bodoni Moda',serif;font-style:italic;color:var(--champagne);font-size:15px;display:block;margin-bottom:16px}
+  .step h4{font-family:'Bodoni Moda',serif;font-weight:500;font-size:23px;margin-bottom:10px}
+  .step p{font-size:14.5px;line-height:1.75;color:var(--taupe)}
+
+  /* serviços */
+  .svc-list{border-top:1px solid var(--line)}
+  .svc{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:clamp(16px,3vw,48px);padding:18px 8px;border-bottom:1px solid var(--line);position:relative;overflow:hidden;transition:padding-left .5s var(--ease)}
+  .svc::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--blush),transparent 60%);opacity:0;transition:opacity .5s var(--ease);z-index:-1}
+  .svc:hover{padding-left:26px}.svc:hover::before{opacity:.55}
+  .svc .idx{font-family:'Bodoni Moda',serif;font-style:italic;color:var(--champagne);font-size:14px;min-width:34px}
+  .svc .nm{font-family:'Bodoni Moda',serif;font-weight:500;font-size:clamp(1.2rem,2.3vw,1.9rem);letter-spacing:-.01em}
+  .svc .ds{font-size:13.5px;color:var(--taupe);max-width:320px;line-height:1.6}
+  @media(max-width:760px){.svc{grid-template-columns:auto 1fr;gap:14px}.svc .ds,.svc .pr{display:none}}
+  .svc .pr{font-size:13px;color:var(--espresso);font-weight:500;white-space:nowrap}
+  .svc .pr small{display:block;color:var(--taupe);font-weight:300;font-size:11px}
+  .svc .go{width:40px;height:40px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;color:var(--champagne);transition:all .4s var(--ease)}
+  .svc:hover .go{background:var(--espresso);color:var(--porcelain);border-color:var(--espresso);transform:rotate(-45deg)}
+  .seemore{display:inline-flex;align-items:center;gap:10px;margin-top:40px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--espresso);border-bottom:1px solid var(--champagne);padding-bottom:6px}
+
+  /* statement — traveling typography */
+  .statement-inner{padding:clamp(70px,13vh,150px) clamp(20px,4vw,56px)!important;max-width:1560px;margin:0 auto;overflow:hidden}
+  .travel{white-space:nowrap;font-family:'Bodoni Moda',serif;font-weight:400;font-size:clamp(1.6rem,4.8vw,4.2rem);line-height:1.05;letter-spacing:-.02em;will-change:transform}
+  .travel em{font-style:italic;color:var(--champagne)}
+  .travel.two{margin-top:.1em;text-align:right}
+
+  /* resultados */
+  .res-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}@media(min-width:760px){.res-grid{grid-template-columns:repeat(4,1fr);gap:20px}}
+  .res{position:relative;border-radius:6px;overflow:hidden;aspect-ratio:3/4;background:var(--blush)}
+  .res img{width:100%;height:100%;object-fit:cover;filter:sepia(.12) saturate(1.04)}
+  .res .tag{position:absolute;left:12px;bottom:12px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--porcelain);background:rgba(42,37,33,.55);backdrop-filter:blur(4px);padding:6px 10px;border-radius:3px}
+  .stats{display:flex;flex-wrap:wrap;gap:clamp(28px,6vw,80px);margin-top:46px;border-top:1px solid var(--line);padding-top:40px}
+  .stat .num{font-family:'Bodoni Moda',serif;font-weight:500;font-size:clamp(2.4rem,5vw,3.8rem);line-height:1}
+  .stat .lb{font-size:12px;color:var(--taupe);margin-top:8px}
+
+  /* before/after sanfona (VERTICAL — arrasta ↕) */
+  .ba-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}@media(max-width:760px){.ba-grid{grid-template-columns:1fr 1fr;gap:12px}}
+  .ba{position:relative;aspect-ratio:3/4;overflow:hidden;border-radius:8px;cursor:grab;--pos:62%;background:#1a1a1a;user-select:none;touch-action:none;box-shadow:0 24px 60px -45px rgba(42,37,33,.55)}
+  .ba.drag{cursor:grabbing}
+  .ba .lay{position:absolute;inset:0;overflow:hidden}
+  .ba .lay img{position:absolute;left:0;width:100%;height:200%;object-fit:cover;-webkit-user-drag:none;pointer-events:none}
+  .ba .depois img{bottom:0;object-position:center bottom}
+  .ba .antes{z-index:2;clip-path:inset(0 0 calc(100% - var(--pos)) 0)}
+  .ba .antes img{top:0;object-position:center top}
+  .ba-line{position:absolute;left:0;right:0;top:var(--pos);transform:translateY(-50%);z-index:5;pointer-events:none}
+  .ba-line .bar{height:2px;background:rgba(255,255,255,.85);box-shadow:0 1px 6px rgba(0,0,0,.45)}
+  .ba-grip{position:absolute;left:50%;top:0;transform:translate(-50%,-50%);width:38px;height:38px;border-radius:50%;background:#fff;color:#2d2d2d;display:grid;place-items:center;font-size:15px;box-shadow:0 6px 18px -4px rgba(0,0,0,.5)}
+  .ba-tag{position:absolute;left:12px;z-index:6;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#fff;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);padding:5px 9px;border-radius:3px;pointer-events:none}
+  .ba-tag.tg-b{top:12px}.ba-tag.tg-a{bottom:60px}
+  .ba-cap{position:absolute;left:0;right:0;bottom:0;z-index:6;padding:13px 14px;background:linear-gradient(to top,rgba(0,0,0,.82),rgba(0,0,0,.3),transparent);pointer-events:none}
+  .ba-cap b{display:block;font-family:'Bodoni Moda',serif;font-weight:400;font-size:14px;color:#fff;letter-spacing:.01em}
+  .ba-cap span{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--champagne-lt)}
+
+  /* testimonial */
+  .quote{margin-top:46px;max-width:760px}
+  .quote blockquote{font-family:'Bodoni Moda',serif;font-style:italic;font-size:clamp(1.3rem,2.6vw,2rem);line-height:1.4;color:var(--espresso)}
+  .quote figcaption{margin-top:14px;font-size:12px;letter-spacing:.05em;color:var(--taupe)}
+
+  /* sobre */
+  .about{display:grid;gap:46px;align-items:center}@media(min-width:900px){.about{grid-template-columns:.9fr 1.1fr;gap:76px}}
+  .about-photo{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:4/5;box-shadow:0 40px 90px -55px rgba(42,37,33,.55)}
+  .about-photo img{width:100%;height:100%;object-fit:cover;filter:sepia(.18) saturate(1.05);transform:scale(1.05)}
+  .about p.body{font-size:16px;line-height:1.9;color:var(--taupe);margin-top:22px;max-width:520px}
+  .creds{display:flex;flex-wrap:wrap;gap:34px;margin-top:32px}
+  .cred b{font-family:'Bodoni Moda',serif;font-style:italic;color:var(--champagne);font-size:26px;display:block}
+  .cred span{font-size:12px;color:var(--taupe)}
+
+  /* agenda */
+  .agenda{display:grid;gap:44px}@media(min-width:900px){.agenda{grid-template-columns:.82fr 1.18fr;gap:70px;align-items:start}}
+  .rail-list{list-style:none;margin-top:26px;display:grid;gap:16px}
+  .rail-list li{display:flex;gap:12px;align-items:flex-start;font-size:14px;color:var(--taupe);line-height:1.5}
+  .rail-list svg{width:18px;height:18px;color:var(--champagne);flex:none;margin-top:1px}
+  .bcard{background:var(--porcelain);border:1px solid var(--line);border-radius:12px;padding:clamp(22px,3vw,38px);box-shadow:0 34px 80px -55px rgba(42,37,33,.5)}
+  .bstep{margin-bottom:24px}
+  .bstep .lbl{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--taupe);margin-bottom:12px;display:flex;align-items:center;gap:10px}
+  .bstep .lbl b{font-family:'Bodoni Moda',serif;font-style:italic;color:var(--champagne);font-weight:400;font-size:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px}
+  .chip{font-family:'Outfit';font-size:13px;padding:10px 16px;border:1px solid var(--line);border-radius:999px;cursor:none;transition:all .3s var(--ease);background:transparent;color:var(--espresso)}
+  .chip:hover{border-color:var(--champagne)}
+  .chip.sel{background:var(--espresso);color:var(--porcelain);border-color:var(--espresso)}
+  .chip.time{min-width:72px;text-align:center}
+  .bfields{display:grid;gap:12px;margin-top:6px}@media(min-width:560px){.bfields{grid-template-columns:1fr 1fr}}
+  .bfields input{width:100%;padding:13px 16px;border:1px solid var(--line);border-radius:6px;background:var(--nude);font-family:'Outfit';font-size:14px;color:var(--espresso);outline:none;transition:border .3s}
+  .bfields input::placeholder{color:#a89a87}.bfields input:focus{border-color:var(--champagne)}
+  .bfields .full{grid-column:1/-1}
+  .bconfirm{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-top:24px}
+  .bconfirm .lnk{font-size:12px;color:var(--taupe)}.bconfirm .lnk a{color:var(--champagne);border-bottom:1px solid var(--champagne);padding-bottom:2px}
+
+  /* closer (CTA + footer combinados) */
+  .closer{position:relative;z-index:3;background:var(--espresso);color:rgba(247,243,238,.62);overflow:hidden}
+  .closer-cta{position:relative;text-align:center;padding:clamp(70px,12vw,150px) clamp(20px,4vw,56px) clamp(48px,7vw,84px)}
+  .closer-cta::before{content:'';position:absolute;inset:0;background:radial-gradient(55% 90% at 50% 0%,rgba(199,168,120,.26),transparent 62%)}
+  .closer-cta h2{position:relative;font-family:'Bodoni Moda',serif;font-weight:400;font-size:clamp(2rem,5.4vw,4.4rem);line-height:1.05;letter-spacing:-.02em;color:var(--porcelain);max-width:17ch;margin:0 auto}
+  .closer-cta h2 em{font-style:italic;color:var(--champagne-lt)}
+  .closer-cta .row{position:relative;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+  .closer-cta .scarce{position:relative;margin-top:20px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--champagne-lt)}
+  .closer-grid{position:relative;display:grid;grid-template-columns:1.6fr 1fr 1.3fr .8fr;gap:40px;padding:clamp(40px,5vw,68px) clamp(20px,4vw,56px);border-top:1px solid rgba(247,243,238,.12)}
+  @media(max-width:760px){.closer-grid{grid-template-columns:1fr 1fr;gap:30px}}
+  .closer-grid .col{display:flex;flex-direction:column;gap:9px}
+  .closer-grid h5{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--champagne);margin-bottom:5px;font-weight:500}
+  .closer-grid a{font-size:13px;color:rgba(247,243,238,.7);transition:color .3s}.closer-grid a:hover{color:var(--porcelain)}
+  .closer-grid .col>span{font-size:13px;color:rgba(247,243,238,.5)}
+  .brandcol .fbrand{display:flex;align-items:center;gap:10px;font-family:'Bodoni Moda',serif;font-size:16px;letter-spacing:.04em;color:var(--porcelain);margin-bottom:8px}
+  .brandcol .fbrand .mark{width:28px;height:28px;border:1px solid var(--champagne);border-radius:50%;display:grid;place-items:center;font-style:italic;color:var(--champagne);font-size:14px;flex:none}
+  .brandcol .fbrand .mark-img{width:34px;height:34px;object-fit:contain;flex:none}
+  .brandcol p{font-size:13px;line-height:1.7;color:rgba(247,243,238,.6);max-width:320px}
+  .closer-bottom{position:relative;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:22px clamp(20px,4vw,56px);border-top:1px solid rgba(247,243,238,.12);font-size:11px;letter-spacing:.04em;color:rgba(247,243,238,.45)}
+
+  /* (footer antigo virou .closer acima) */
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+    .title .ln>span{transform:none}.reveal{opacity:1;transform:none}.photo img,.about-photo img{transform:scale(1)}
+    .loader{display:none}
+  }
+</style>
+</head>
+<body>
+  <div class="loader" id="loader"><div class="lwrap">
+    <div class="lbrand" id="lbrand">Mykaele <em>Procópio</em></div>
+    <div class="lbar"><i id="lbar"></i></div>
+    <div class="lnum"><span id="lnum">0</span>%</div>
+  </div></div>
+
+  <div class="bg">
+    <div class="bg-mesh"></div>
+    <span class="speck"></span><span class="speck"></span><span class="speck"></span><span class="speck"></span><span class="speck"></span>
+  </div>
+  <div class="grain"></div><div class="vignette"></div>
+  <div class="cursor" id="cursor"></div>
+
+  <header id="hdr">
+    <a class="brand" href="#hero" data-fade><img class="mark-img" src="/media/logo-branding/logo-rosegold.png" alt="Mykaele Procópio" /><span class="bname">Mykaele Procópio</span></a>
+    <nav class="links" data-fade><a href="#metodo">Método</a><a href="#servicos">Serviços</a><a href="#resultados">Resultados</a><a href="#sobre">Sobre</a><a href="#agenda">Agenda</a></nav>
+    <div class="head-right" data-fade>
+      <span class="seal"><span class="dot"></span>Atende a domicílio · Fortaleza</span>
+      <a class="hlogin" href="/admin">Admin</a>
+      <a class="hlogin" href="/login">Entrar</a>
+      <a class="btn" href="#agenda">Agendar <span class="arr">↗</span></a>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="panel" id="hero"><div class="panel-inner hero-inner">
+      <div class="copy">
+        <span class="kicker" data-kicker><span class="rule"></span>Fisioterapia Dermatofuncional</span>
+        <h1 class="title"><span class="ln"><span>Seu spa particular,</span></span><span class="ln"><span>onde <em>você</em> estiver.</span></span></h1>
+        <p class="lede reveal" data-reveal>O spa de luxo vai até você. Resultados reais no conforto e na privacidade da sua casa — sem trânsito, sem sala de espera, sem exposição.</p>
+        <div class="actions reveal" data-reveal>
+          <a class="btn" href="#agenda">Agendar minha avaliação <span class="arr">↗</span></a>
+          <a class="btn ghost" href="https://wa.me/5585999086924">Falar no WhatsApp</a>
+        </div>
+        <p class="reveal" data-reveal style="margin-top:16px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--champagne)">● Agenda exclusiva — poucas vagas por semana</p>
+        <div class="trust reveal" data-reveal>
+          <span class="stars" aria-label="4,9">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 17.3 5.8 20.9l1.6-6.8L2.2 8.9l6.9-.6z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 17.3 5.8 20.9l1.6-6.8L2.2 8.9l6.9-.6z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 17.3 5.8 20.9l1.6-6.8L2.2 8.9l6.9-.6z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 17.3 5.8 20.9l1.6-6.8L2.2 8.9l6.9-.6z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 17.3 5.8 20.9l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+          </span><span class="meta"><b>4,9</b> · +120 clientes atendidas em casa</span>
+        </div>
+      </div>
+      <div class="hero-photo" data-stage>
+        <img src="/media/profissionais/mykaele-principal.png" alt="Mykaele Procópio" />
+        <div class="badge" data-badge aria-hidden="true">
+          <svg class="ring" viewBox="0 0 124 124"><defs><path id="circ" d="M62,62 m-45,0 a45,45 0 1,1 90,0 a45,45 0 1,1 -90,0"/></defs><text><textPath href="#circ" startOffset="0">HOME SPA · EXCLUSIVO · PRIVATIVO · </textPath></text></svg>
+          <svg class="home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></svg>
+        </div>
+      </div>
+    </div></section>
+
+    <!-- MÉTODO -->
+    <section class="panel p-nude" id="metodo"><div class="panel-inner">
+      <div class="head"><span class="eyebrow" data-r>O Método</span><h2 class="h2" data-r>Seu bem-estar não deve exigir <em>deslocamento.</em></h2></div>
+      <div class="steps">
+        <div class="step" data-r><span class="n">01</span><h4>Agende online</h4><p>Escolha o serviço, o dia e o horário. Confirmação direta no seu WhatsApp.</p></div>
+        <div class="step" data-r><span class="n">02</span><h4>O spa vai até você</h4><p>A Mykaele chega com toda a estrutura portátil de alto padrão, com discrição total.</p></div>
+        <div class="step" data-r><span class="n">03</span><h4>Seu ritual, em casa</h4><p>Protocolo de precisão no conforto do seu lar. Resultado desde a 1ª sessão.</p></div>
+      </div>
+    </div></section>
+
+    <!-- SERVIÇOS -->
+    <section class="panel p-porc" id="servicos"><div class="panel-inner">
+      <div class="head"><span class="eyebrow" data-r>Serviços a domicílio</span><h2 class="h2" data-r>Cada sessão, um <em>ritual</em> de precisão.</h2></div>
+      <div class="svc-list">
+        <a class="svc" href="#agenda" data-svc><span class="idx">01</span><span class="nm">Massagem Relaxante</span><span class="ds">Imersão de 90 min com pressão lenta e firme — desconexão profunda para quem vive intensamente.</span><span class="pr">R$ 280<small>90 min · na sua casa</small></span><span class="go">↗</span></a>
+        <a class="svc" href="#agenda" data-svc><span class="idx">02</span><span class="nm">Método Fluir by Mykaele</span><span class="ds">Mais que contorno, um reencontro com sua leveza. Protocolo exclusivo de 90 min.</span><span class="pr">R$ 280<small>90 min · na sua casa</small></span><span class="go">↗</span></a>
+        <a class="svc" href="#agenda" data-svc><span class="idx">03</span><span class="nm">Despertar Sensorial</span><span class="ds">Especializado em lipedema — cada corpo carrega uma história; cada curva merece respeito.</span><span class="pr">R$ 300<small>90 min · na sua casa</small></span><span class="go">↗</span></a>
+      </div>
+      <a class="seemore" href="/servicos" data-r>Ver todos os serviços →</a>
+    </div></section>
+
+    <!-- STATEMENT (traveling typography) -->
+    <section class="panel p-blush p-band"><div class="panel-inner statement-inner">
+      <div class="travel" data-travel="-5">O luxo é não precisar <em>sair de casa</em> —</div>
+      <div class="travel two" data-travel="5">o spa que <em>vem até você.</em></div>
+    </div></section>
+
+    <!-- RESULTADOS -->
+    <section class="panel p-nude" id="resultados"><div class="panel-inner">
+      <div class="head"><span class="eyebrow" data-r>Resultados reais</span><h2 class="h2" data-r>A diferença que se vê <em>e se sente.</em></h2></div>
+      <p class="ba-hint" data-r style="font-size:12px;letter-spacing:.04em;color:var(--taupe);margin-bottom:20px">↕ Arraste para comparar antes e depois</p>
+      <div class="ba-grid">
+        <div class="ba" data-res data-ba>
+          <div class="lay depois"><img src="/media/antes-depois/compostos/resultado-1.jpg" alt="Depois" /></div>
+          <div class="lay antes"><img src="/media/antes-depois/compostos/resultado-1.jpg" alt="Antes" /></div>
+          <span class="ba-tag tg-b">Antes</span><span class="ba-tag tg-a">Depois</span>
+          <div class="ba-line"><div class="bar"></div><div class="ba-grip">↕</div></div>
+          <div class="ba-cap"><b>Remodelação Abdominal</b><span>Método Mykaele Procópio</span></div>
+        </div>
+        <div class="ba" data-res data-ba>
+          <div class="lay depois"><img src="/media/antes-depois/compostos/resultado-2.jpg" alt="Depois" /></div>
+          <div class="lay antes"><img src="/media/antes-depois/compostos/resultado-2.jpg" alt="Antes" /></div>
+          <span class="ba-tag tg-b">Antes</span><span class="ba-tag tg-a">Depois</span>
+          <div class="ba-line"><div class="bar"></div><div class="ba-grip">↕</div></div>
+          <div class="ba-cap"><b>Escultura Corporal</b><span>Arquitetura Corporal</span></div>
+        </div>
+        <div class="ba" data-res data-ba>
+          <div class="lay depois"><img src="/media/antes-depois/compostos/resultado-3.jpg" alt="Depois" /></div>
+          <div class="lay antes"><img src="/media/antes-depois/compostos/resultado-3.jpg" alt="Antes" /></div>
+          <span class="ba-tag tg-b">Antes</span><span class="ba-tag tg-a">Depois</span>
+          <div class="ba-line"><div class="bar"></div><div class="ba-grip">↕</div></div>
+          <div class="ba-cap"><b>Contorno Corporal</b><span>Método Mykaele Procópio</span></div>
+        </div>
+        <div class="ba" data-res data-ba>
+          <div class="lay depois"><img src="/media/antes-depois/compostos/resultado-4.jpg" alt="Depois" /></div>
+          <div class="lay antes"><img src="/media/antes-depois/compostos/resultado-4.jpg" alt="Antes" /></div>
+          <span class="ba-tag tg-b">Antes</span><span class="ba-tag tg-a">Depois</span>
+          <div class="ba-line"><div class="bar"></div><div class="ba-grip">↕</div></div>
+          <div class="ba-cap"><b>Definição Abdominal</b><span>Alta Performance</span></div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat" data-r><div class="num"><span data-count="120">0</span>+</div><div class="lb">clientes atendidas em casa</div></div>
+        <div class="stat" data-r><div class="num"><span data-count="4.9" data-dec="1">0</span></div><div class="lb">avaliação média</div></div>
+        <div class="stat" data-r><div class="num"><span data-count="100">0</span>%</div><div class="lb">a domicílio · Fortaleza</div></div>
+      </div>
+      <figure class="quote" data-r>
+        <blockquote>"Em poucas sessões meu corpo mudou — e eu nunca precisei sair de casa. Atendimento impecável, do início ao fim."</blockquote>
+        <figcaption>Marina L. · Aldeota, Fortaleza · ★★★★★</figcaption>
+      </figure>
+      <a class="seemore" href="/resultados" data-r>Ver todos os resultados →</a>
+    </div></section>
+
+    <!-- SOBRE -->
+    <section class="panel p-porc" id="sobre"><div class="panel-inner"><div class="about">
+      <div class="about-photo" data-r><img src="/media/profissionais/mykaele-principal.png" alt="Mykaele Procópio" /></div>
+      <div>
+        <span class="eyebrow" data-r>Sobre</span>
+        <h2 class="h2" data-r>A ciência do corpo, com o cuidado de quem <em>vai até você.</em></h2>
+        <p class="body" data-r>Fisioterapeuta dermatofuncional especialista em arquitetura corporal e estética avançada. A Mykaele leva a estrutura de um spa de alto padrão para dentro da sua casa — privacidade absoluta, biossegurança e protocolos de precisão.</p>
+        <div class="creds">
+          <div class="cred" data-r><b>+5</b><span>anos de experiência</span></div>
+          <div class="cred" data-r><b>+120</b><span>clientes atendidas</span></div>
+          <div class="cred" data-r><b>100%</b><span>a domicílio</span></div>
+        </div>
+        <a class="seemore" href="/sobre" data-r>Conhecer a Mykaele →</a>
+      </div>
+    </div></div></section>
+
+    <!-- AGENDA -->
+    <section class="panel p-nude" id="agenda"><div class="panel-inner"><div class="agenda">
+      <div class="rail">
+        <span class="eyebrow" data-r>Agendamento</span>
+        <h2 class="h2" data-r>Reserve seu <em>spa</em> particular.</h2>
+        <ul class="rail-list" data-r>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9h14v-9"/></svg>Atendimento a domicílio em Fortaleza e região.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-3.4-6.5L20 4"/><path d="M8 12l3 3 5-6"/></svg>Confirmação imediata pelo seu WhatsApp.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Privacidade absoluta — só você e a profissional.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>Sem compromisso — você confirma tudo no WhatsApp.</li>
+        </ul>
+      </div>
+      <div class="bcard" data-r>
+        <div class="bstep"><div class="lbl"><b>01</b> Escolha o serviço</div>
+          <div class="chips" data-group="svc"><button class="chip sel">Massagem Relaxante</button><button class="chip">Método Fluir by Mykaele</button><button class="chip">Despertar Sensorial</button></div></div>
+        <div class="bstep"><div class="lbl"><b>02</b> Escolha o dia</div>
+          <div class="chips" data-group="day" id="dayChips"></div></div>
+        <div class="bstep"><div class="lbl"><b>03</b> Horário</div>
+          <div class="chips" data-group="time"><button class="chip time sel">09:00</button><button class="chip time">11:00</button><button class="chip time">14:00</button><button class="chip time">16:00</button><button class="chip time">18:00</button></div></div>
+        <div class="bfields"><input placeholder="Seu nome" /><input placeholder="WhatsApp" /><input class="full" placeholder="Bairro / endereço de atendimento" /></div>
+        <div class="bconfirm">
+          <span class="lnk">Já é cliente? <a href="/login">Entrar</a></span>
+          <a class="btn lg" href="/agendar">Garantir meu horário <span class="arr">↗</span></a>
+        </div>
+      </div>
+    </div></div></section>
+
+  </main>
+
+  <footer class="closer">
+    <div class="closer-cta">
+      <h2 data-r>Sua próxima sessão pode ser em casa, <em>ainda esta semana.</em></h2>
+      <div class="row">
+        <a class="btn lg light" href="#agenda">Quero agendar agora <span class="arr">↗</span></a>
+        <a class="btn lg ghost" href="https://wa.me/5585999086924" style="color:var(--porcelain);border-color:rgba(247,243,238,.3)">Tirar dúvidas no WhatsApp</a>
+      </div>
+      <p class="scarce" data-r>Vagas limitadas · resposta em minutos no WhatsApp</p>
+    </div>
+    <div class="closer-grid">
+      <div class="col brandcol">
+        <div class="fbrand"><img class="mark-img" src="/media/logo-branding/logo-rose-light.png" alt="" />Mykaele Procópio</div>
+        <p>Arquitetura corporal &amp; estética avançada que vai até você. Atendimento exclusivo a domicílio em Fortaleza-CE.</p>
+      </div>
+      <div class="col">
+        <h5>Navegação</h5>
+        <a href="#metodo">Método</a><a href="#servicos">Serviços</a><a href="#resultados">Resultados</a><a href="#sobre">Sobre</a><a href="#agenda">Agenda</a>
+      </div>
+      <div class="col">
+        <h5>Contato</h5>
+        <a href="https://wa.me/5585999086924">WhatsApp · (85) 99908-6924</a>
+        <a href="https://instagram.com/mykaeleprocopio" target="_blank" rel="noopener">@mykaeleprocopio</a>
+        <span>Fortaleza · Ceará</span>
+        <span>Seg–Sáb · 08h às 20h</span>
+      </div>
+      <div class="col">
+        <h5>Cliente</h5>
+        <a href="/login">Entrar</a>
+        <a href="#agenda">Agendar</a>
+      </div>
+    </div>
+    <div class="closer-bottom">
+      <span>© Mykaele Procópio — Arquitetura Corporal &amp; Estética Avançada</span>
+      <span>Fortaleza-CE · Atende a domicílio</span>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+  <script>
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isDesk = matchMedia('(min-width:921px)').matches;
+    gsap.registerPlugin(ScrollTrigger);
+
+    let lenis;
+    function initScrollFX(){
+      if(!reduce && window.Lenis){
+        lenis = new Lenis({ lerp:0.09, smoothWheel:true });
+        lenis.on('scroll', ScrollTrigger.update);
+        gsap.ticker.add(t => lenis.raf(t*1000));
+        gsap.ticker.lagSmoothing(0);
+      }
+      ScrollTrigger.create({start:'top -80',onUpdate:s=>document.getElementById('hdr').classList.toggle('shrunk',s.scroll()>80)});
+
+      /* hero intro */
+      if(!reduce){
+        gsap.set('[data-fade]',{opacity:0,y:-10});
+        const tl=gsap.timeline({defaults:{ease:'power3.out'}});
+        tl.to('[data-fade]',{opacity:1,y:0,duration:1,stagger:.08},0)
+          .to('[data-kicker] .rule',{width:46,duration:.9,ease:'power2.inOut'},.1)
+          .from('[data-kicker]',{opacity:0,duration:.8},.1)
+          .to('.title .ln>span',{y:'0%',duration:1.2,stagger:.12,ease:'power4.out'},.3)
+          .from('.hero-photo',{clipPath:'inset(0 0 0 100%)',duration:1.3,ease:'power4.out'},.35)
+          .from('.hero-photo img',{scale:1.22,duration:1.9,ease:'power2.out'},.35)
+          .to('.reveal',{opacity:1,y:0,duration:1,stagger:.14},.85)
+          .from('[data-badge]',{opacity:0,scale:.7,duration:1,ease:'back.out(1.7)'},1.15);
+        gsap.to('.badge .ring',{rotation:360,repeat:-1,duration:26,ease:'none'});
+      } else {
+        gsap.set('[data-fade],.reveal,[data-r],[data-svc]',{opacity:1,y:0});
+        gsap.set('.title .ln>span',{y:'0%'});
+        return;
+      }
+
+      /* ░░ TRANSIÇÕES VARIADAS POR DOBRA (nem todas sobem) ░░ */
+      /* SERVIÇOS — "abrindo" (clip revela a lista de cima pra baixo) */
+      gsap.from('#servicos .svc-list',{clipPath:'inset(0 0 100% 0)',duration:1.3,ease:'power4.out',scrollTrigger:{trigger:'#servicos .svc-list',start:'top 84%'}});
+      /* RESULTADOS — "aprofundando" (zoom-in da galeria) */
+      gsap.from('.ba-grid',{scale:.86,opacity:0,duration:1.2,ease:'power3.out',scrollTrigger:{trigger:'.ba-grid',start:'top 84%'}});
+      /* PARALLAX de profundidade: título do hero + cabeçalhos das seções */
+      gsap.to('.title',{yPercent:-14,ease:'none',scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:true}});
+      gsap.utils.toArray('.head').forEach(function(h){ var pn=h.closest('.panel'); if(pn) gsap.to(h,{yPercent:-8,ease:'none',scrollTrigger:{trigger:pn,start:'top bottom',end:'bottom top',scrub:true}}); });
+
+      /* traveling typography (scrub both ways) */
+      gsap.utils.toArray('[data-travel]').forEach(el=>{
+        const amt=parseFloat(el.dataset.travel);
+        gsap.fromTo(el,{xPercent:-amt},{xPercent:amt,ease:'none',
+          scrollTrigger:{trigger:el.closest('.panel'),start:'top bottom',end:'bottom top',scrub:true}});
+      });
+
+      /* generic reveals */
+      gsap.utils.toArray('[data-r]').forEach(el=>{
+        gsap.from(el,{opacity:0,y:34,filter:'blur(6px)',duration:1.1,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%'}});
+      });
+      gsap.utils.toArray('[data-svc]').forEach(el=>{
+        gsap.fromTo(el,{opacity:0,x:-50},{opacity:1,x:0,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 92%',end:'top 62%',scrub:1}});
+      });
+      /* (galeria revelada via .ba-grid "aprofundando" acima) */
+
+      /* counters */
+      gsap.utils.toArray('[data-count]').forEach(el=>{
+        const end=parseFloat(el.dataset.count),dec=+(el.dataset.dec||0),o={v:0};
+        ScrollTrigger.create({trigger:el,start:'top 90%',once:true,onEnter:()=>{
+          gsap.to(o,{v:end,duration:1.8,ease:'power2.out',onUpdate:()=>{el.textContent=dec?o.v.toFixed(1).replace('.',','):Math.round(o.v);}});
+        }});
+      });
+
+      /* parallax de imagens — mobile + desktop */
+      /* (parallax de [data-res] img removido — colidia com o slider antes/depois) */
+      var _ap=document.querySelector('.about-photo img'); if(_ap) gsap.fromTo(_ap,{yPercent:-14},{yPercent:14,ease:'none',scrollTrigger:{trigger:_ap.closest('.about-photo'),start:'top bottom',end:'bottom top',scrub:true}});
+      var _hp=document.querySelector('.hero-photo img'); if(_hp) gsap.to(_hp,{yPercent:10,ease:'none',scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:true}});
+
+      /* (motion roda em todos os tamanhos via data-r + efeitos por seção) */
+
+      ScrollTrigger.refresh();
+    }
+
+    /* preloader → then init */
+    (function loader(){
+      const L=document.getElementById('loader');
+      if(reduce){ L.style.display='none'; initScrollFX(); return; }
+      const num=document.getElementById('lnum'),bar=document.getElementById('lbar'),brand=document.getElementById('lbrand');
+      gsap.to(brand,{opacity:1,duration:.8,ease:'power2.out'});
+      const o={v:0};
+      gsap.to(o,{v:100,duration:1.7,ease:'power1.inOut',onUpdate:()=>{num.textContent=Math.round(o.v);bar.style.width=o.v+'%';},
+        onComplete:()=>{
+          gsap.to(L,{yPercent:-100,duration:1.0,ease:'power4.inOut',delay:.2,onComplete:()=>{L.style.display='none';ScrollTrigger.refresh();}});
+          initScrollFX();
+        }});
+    })();
+
+    /* agenda chip selection */
+    document.querySelectorAll('.chips[data-group]').forEach(g=>{
+      g.addEventListener('click',e=>{const c=e.target.closest('.chip');if(!c)return;e.preventDefault();g.querySelectorAll('.chip').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');});
+    });
+
+    /* calendário real — próximos dias úteis (Seg–Sáb) a partir de hoje (DOM seguro) */
+    (function(){
+      var el=document.getElementById('dayChips'); if(!el) return;
+      var dias=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']; var today=new Date(); var n=0; var i=0;
+      while(n<5 && i<14){
+        var dd=new Date(today); dd.setDate(today.getDate()+i);
+        if(dd.getDay()!==0){
+          var b=document.createElement('button');
+          b.className='chip'+(n===0?' sel':'');
+          b.textContent=dias[dd.getDay()]+' '+String(dd.getDate()).padStart(2,'0');
+          el.appendChild(b); n++;
+        }
+        i++;
+      }
+    })();
+
+    /* before/after "sanfona" VERTICAL — arrasta ↕ pra revelar (ANTES em cima → DEPOIS embaixo) */
+    document.querySelectorAll('[data-ba]').forEach(function(ba){
+      var drag=false;
+      function move(y){var r=ba.getBoundingClientRect();var p=(y-r.top)/r.height*100;p=Math.max(4,Math.min(96,p));ba.style.setProperty('--pos',p+'%');}
+      ba.addEventListener('pointerdown',function(e){drag=true;ba.classList.add('drag');try{ba.setPointerCapture(e.pointerId);}catch(_){}move(e.clientY);e.preventDefault();});
+      ba.addEventListener('pointermove',function(e){if(drag)move(e.clientY);});
+      window.addEventListener('pointerup',function(){if(drag){drag=false;ba.classList.remove('drag');}});
+    });
+
+    /* cursor + magnetic */
+    (function(){
+      const c=document.getElementById('cursor');
+      if(!c||matchMedia('(pointer:coarse)').matches) return;
+      let x=innerWidth/2,y=innerHeight/2,tx=x,ty=y;
+      addEventListener('pointermove',e=>{tx=e.clientX;ty=e.clientY},{passive:true});
+      (function r(){x+=(tx-x)*.2;y+=(ty-y)*.2;c.style.transform=`translate(${x}px,${y}px) translate(-50%,-50%)`;requestAnimationFrame(r)})();
+      document.querySelectorAll('a,button,.badge,.svc').forEach(el=>{el.addEventListener('pointerenter',()=>c.classList.add('ring'));el.addEventListener('pointerleave',()=>c.classList.remove('ring'))});
+      document.querySelectorAll('.btn').forEach(b=>{
+        b.addEventListener('pointermove',e=>{const r=b.getBoundingClientRect();gsap.to(b,{x:(e.clientX-r.left-r.width/2)*.3,y:(e.clientY-r.top-r.height/2)*.4,duration:.4})});
+        b.addEventListener('pointerleave',()=>gsap.to(b,{x:0,y:0,duration:.5,ease:'elastic.out(1,.4)'}));
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -37,7 +37,7 @@ export default function GaleriaDinamica() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-end">
             <div className="reveal-blur">
               <span className="text-[10px] font-medium tracking-[0.35em] uppercase text-[#b76e79]/60 block mb-6">
-                Nosso Espaço & Resultados
+                Bastidores & Resultados
               </span>
               <h2 className="text-[clamp(1.6rem,3vw,2.6rem)] font-extralight leading-[1.15] tracking-[-0.02em] text-[#2d2d2d]">
                 Registros que traduzem

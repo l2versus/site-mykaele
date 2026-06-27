@@ -20,8 +20,8 @@ const FEATURES = [
     desc: 'Escolha serviço, dia e horário em segundos',
     details: [
       'Veja todos os horários disponíveis em tempo real',
-      'Escolha o serviço, profissional e horário com poucos toques',
-      'Confirmação instantânea por notificação e e-mail',
+      'Escolha o serviço, o dia e o horário com poucos toques',
+      'Confirmação instantânea com data, horário e endereço do atendimento',
       'Reagende ou cancele direto pelo app sem ligar',
       'Histórico completo de todos os seus agendamentos',
     ],
@@ -55,7 +55,7 @@ const FEATURES = [
       'Inclui todas as medidas atualizadas e comparativo',
       'Gráficos de evolução embutidos no documento',
       'Baixe ou compartilhe direto pelo WhatsApp',
-      'Registro profissional de cada atendimento',
+      'Um histórico completo de toda a sua jornada',
     ],
   },
   {
@@ -338,8 +338,8 @@ export default function AppShowcase() {
                     <span className="font-normal text-[#d4a0a7]">na palma da mão.</span>
                   </h2>
                   <p className="mt-5 text-[15px] text-[#777] font-light max-w-lg leading-relaxed">
-                    Agende, acompanhe sua evolução e ganhe recompensas —
-                    tudo em um aplicativo elegante que funciona direto do navegador.
+                    Agende o seu atendimento em casa, acompanhe cada medida da sua
+                    evolução e ganhe recompensas — tudo em um só lugar, sem baixar nada.
                   </p>
                 </div>
 

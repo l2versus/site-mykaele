@@ -162,6 +162,11 @@ export default function AgendamentoSection() {
   }
 
   // ===== RENDER =====
+  // Leva a seleção (serviço/data/hora) pro fluxo REAL de agendamento.
+  // Se deslogada, /cliente mostra o login na mesma URL e, após autenticar,
+  // /cliente/agendar renderiza já com estes parâmetros — o agendamento criado
+  // lá nasce PENDING, dispara WhatsApp pra Mykaele e entra na agenda dela.
+  const bookingHref = `/cliente/agendar?serviceId=${encodeURIComponent(selectedService?.id || '')}&date=${encodeURIComponent(selectedDate || '')}&time=${encodeURIComponent(selectedTime || '')}`
   return (
     <section id="agendamento" className="relative py-32 md:py-40 bg-[#faf9f7] overflow-hidden">
       {/* Background */}
@@ -181,7 +186,7 @@ export default function AgendamentoSection() {
             <span className="font-medium text-[#b76e79]">horário</span>
           </h2>
           <p className="mt-6 text-[#8a8580] text-lg font-light max-w-lg mx-auto">
-            Escolha o procedimento, data e horário. Disponibilidade atualizada em tempo real.
+            Escolha o procedimento, a data e o horário. O spa vai até você — disponibilidade atualizada em tempo real.
           </p>
           {/* Scarcity badge — Apple desire */}
           <div className="flex justify-center mt-5">
@@ -238,7 +243,7 @@ export default function AgendamentoSection() {
             {step === 'service' && (
               <div className="p-8 md:p-12">
                 <h3 className="text-xl font-medium text-[#2d2d2d] mb-2">Escolha o procedimento</h3>
-                <p className="text-sm text-[#8a8580] mb-8">Selecione o serviço desejado para ver a disponibilidade</p>
+                <p className="text-sm text-[#8a8580] mb-8">Selecione o procedimento que deseja receber no conforto da sua casa</p>
                 <div className="grid gap-3">
                   {services.map(service => (
                     <button
@@ -479,14 +484,14 @@ export default function AgendamentoSection() {
                   <div>
                     <h4 className="text-lg font-medium text-[#2d2d2d] mb-2">Acesse sua conta para agendar</h4>
                     <p className="text-sm text-[#8a8580] max-w-md mx-auto">
-                      Para sua segurança e melhor experiência, o agendamento é feito através da sua área de cliente. 
-                      Cadastre-se rápido com Google, Instagram ou e-mail.
+                      Sua área exclusiva guarda seus horários e prepara o atendimento que chega até sua casa.
+                      Acesse em segundos com Google, Instagram ou e-mail.
                     </p>
                   </div>
 
                   <div className="space-y-3 max-w-sm mx-auto">
                     <Link
-                      href="/cliente/agendar"
+                      href={bookingHref}
                       className="w-full py-4 px-6 bg-[#b76e79] text-white text-[13px] font-semibold tracking-[0.1em] uppercase rounded-full hover:bg-[#8c4f58] transition-all duration-500 flex items-center justify-center gap-2"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -495,7 +500,7 @@ export default function AgendamentoSection() {
                       Entrar e Agendar
                     </Link>
                     <Link
-                      href="/cliente"
+                      href={bookingHref}
                       className="w-full py-3.5 px-6 bg-white text-[#b76e79] text-[12px] font-semibold tracking-[0.1em] uppercase rounded-full border-2 border-[#b76e79]/30 hover:border-[#b76e79] hover:bg-[#b76e79]/5 transition-all duration-400 flex items-center justify-center gap-2"
                     >
                       Criar Conta Grátis
@@ -509,7 +514,7 @@ export default function AgendamentoSection() {
                     </div>
                     <div className="flex items-center gap-1.5">
                       <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      Acompanhe seus agendamentos
+                      O spa vai até você
                     </div>
                   </div>
                 </div>

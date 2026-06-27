@@ -454,9 +454,11 @@ export async function tryBotReply(params: {
     // Buscar conversa
     const conversation = await prisma.conversation.findUnique({
       where: { tenantId_remoteJid: { tenantId, remoteJid } },
-      select: { id: true },
+      select: { id: true, assignedToUserId: true },
     })
     if (!conversation) return false
+    // Humano assumiu a conversa → bot não interfere (handoff)
+    if (conversation.assignedToUserId) return false
 
     const ctx = {
       tenantId,

@@ -155,30 +155,30 @@ export default function ResultadosReais() {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   return (
-    <section id="resultados" className="relative bg-[#0f0f0f] overflow-hidden">
+    <section id="resultados" className="relative bg-nude overflow-hidden">
       {/* Header */}
-      <div className="py-24 md:py-32 border-b border-white/[0.06]">
+      <div className="pt-28 pb-8 md:pt-32 md:pb-10 border-b border-champagne/15">
         <div className="max-w-[1400px] mx-auto px-6 md:px-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <div className="reveal-blur">
-              <span className="text-xs font-medium tracking-[0.3em] uppercase text-[#d4a0a7] block mb-8">
-                Resultados Documentados
+              <span className="text-xs font-medium tracking-[0.3em] uppercase text-champagne block mb-8">
+                Antes & Depois
               </span>
-              <h2 className="text-[clamp(2rem,4vw,3rem)] font-extralight leading-[1.12] text-white">
+              <h2 className="text-[clamp(2rem,4.4vw,3.4rem)] font-[family-name:var(--font-display)] font-medium leading-[1.08] tracking-[-0.02em] text-espresso">
                 Transformações que
                 <br />falam por si.
               </h2>
               <div className="flex items-center gap-2 mt-6">
                 <svg className="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                <span className="text-[10px] font-medium tracking-[0.15em] uppercase text-white/30">Resultados reais verificados</span>
+                <span className="text-[11px] font-semibold tracking-[0.15em] uppercase text-taupe">Clientes atendidas em casa</span>
               </div>
             </div>
             <div className="reveal-blur delay-300 flex items-end">
-              <p className="text-sm text-white/50 font-light leading-[1.9] max-w-md">
-                Cada resultado documenta a precisão do Método Mykaele Procópio.
-                Redução de medidas mensurável desde a primeira sessão.
+              <p className="text-[16px] text-taupe leading-[1.85] max-w-md">
+                Cada transformação nasceu no conforto da casa da cliente — o Método Mykaele Procópio levado até você, com privacidade absoluta.
+                Redução de medidas perceptível desde a primeira sessão.
                 <br />
-                <span className="text-xs text-white/35 mt-2 block">↕ Arraste para comparar antes e depois</span>
+                <span className="text-[13px] font-medium text-champagne mt-2.5 block">↕ Arraste para comparar antes e depois</span>
               </p>
             </div>
           </div>
@@ -229,10 +229,10 @@ export default function ResultadosReais() {
             </div>
 
             <div className="flex items-center justify-between mt-8">
-              <p className="text-xs text-white/40 tracking-[0.15em] uppercase">
-                {RESULTADOS.length} resultados documentados
+              <p className="text-xs text-taupe tracking-[0.15em] uppercase">
+                {RESULTADOS.length} transformações reais
               </p>
-              <p className="text-xs text-white/40 font-light">
+              <p className="text-xs text-taupe font-light">
                 Arraste ↕ para comparar · Duplo clique para ampliar
               </p>
             </div>
@@ -241,11 +241,11 @@ export default function ResultadosReais() {
       </div>
 
       {/* CTA */}
-      <div className="border-t border-white/[0.06] py-16">
+      <div className="border-t border-champagne/15 py-16">
         <div className="max-w-[1400px] mx-auto px-6 md:px-10 text-center">
           <a href="#agendamento"
-            className="reveal-blur glow-pulse inline-flex items-center gap-4 px-8 py-4 border border-white/20 text-xs font-medium tracking-[0.2em] uppercase text-white/70 hover:bg-white hover:text-[#1a1a1a] transition-all duration-500 rounded-sm">
-            Agendar minha avaliação
+            className="reveal-blur inline-flex items-center gap-4 px-8 py-4 bg-espresso text-porcelain text-xs font-medium tracking-[0.2em] uppercase hover:bg-champagne transition-all duration-500 rounded-sm">
+            Agendar minha avaliação em casa
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
             </svg>

@@ -10,8 +10,8 @@ const FAQ_ITEMS = [
     answer: 'Aceitamos PIX (com desconto), cartão de crédito em até 12x, cartão de débito e dinheiro. O pagamento pode ser realizado na hora do atendimento ou antecipadamente pelo site.',
   },
   {
-    question: 'Qual a diferença entre atendimento na clínica e Home Spa?',
-    answer: 'No Home Spa, a Mykaele vai até você com todos os equipamentos necessários para realizar o procedimento no conforto da sua casa. O atendimento na clínica oferece toda a infraestrutura do espaço em Sapiranga, Fortaleza.',
+    question: 'Como funciona o atendimento a domicílio?',
+    answer: 'A Mykaele vai até você com toda a estrutura portátil — maca profissional, aparelhos e materiais esterilizados — e realiza o protocolo completo no conforto e na privacidade da sua casa, hotel ou local de preferência, em Fortaleza e região. Sem deslocamento e sem sala de espera.',
   },
   {
     question: 'Quantas sessões são necessárias para ver resultados?',

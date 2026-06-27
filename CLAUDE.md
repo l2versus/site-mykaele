@@ -1282,5 +1282,66 @@ Com Gemini + Groq grátis = ~16.000 req/dia de folga.
 
 ---
 
-*CLAUDE.md v8.1 (Multi-Provedor IA + Cascade + Lições de Quota) — Março 2026*
-*Inclui: Protocolo de auditoria, padrão de design, fases de implementação, protocolo de entrega, cascade IA*
+---
+
+## 26. GUARDIAN — SISTEMA DE PROTEÇÃO AUTOMÁTICA
+
+> Este projeto possui um **sistema de proteção automático** via hooks do Claude Code.
+> Ele age como um QA Senior / Engenheiro de Software que monitora tudo que você faz.
+
+### 26.1 — O que é
+
+Dois hooks que rodam automaticamente em TODAS as conversas:
+- **PreToolUse (guardian.mjs)**: Analisa ANTES de editar/escrever/executar
+- **PostToolUse (post-review.mjs)**: Faz code review DEPOIS de cada edição
+
+### 26.2 — O que ele faz
+
+- **Bloqueia** edições em 7 arquivos críticos (auth, pagamentos, layout raiz)
+- **Bloqueia** comandos perigosos (rm -rf, DROP TABLE, npm run dev)
+- **Orienta** em arquivos sensíveis (middleware, schema, package.json)
+- **Detecta** padrões proibidos no código (any, ts-ignore, console.log)
+- **Analisa segurança** (XSS, SQL injection, vazamento de env vars)
+- **Sugere performance** (awaits paralelos, queries otimizadas)
+- **Faz code review** após cada edição com checklist contextual
+
+### 26.3 — Protocolo de pesquisa obrigatório
+
+**ANTES de usar qualquer lib/API que não tenha 100% de certeza da sintaxe:**
+
+1. Use MCP context7 para consultar documentação atualizada:
+   ```
+   mcp__context7__resolve-library-id("nome-da-lib")
+   mcp__context7__query-docs("library-id", "funcao ou conceito")
+   ```
+
+2. Libs que DEVEM ser consultadas antes de usar:
+   - **Prisma 7**: Sintaxe mudou muito desde v5. Consulte sempre.
+   - **Next.js 16**: App Router, Server Actions, Cache Components.
+   - **BullMQ**: Cuidado com funções Pro vs Free.
+   - **Framer Motion**: API muda entre versões.
+   - **@hello-pangea/dnd**: Fork do react-beautiful-dnd com API própria.
+   - **Zustand**: v5 tem breaking changes.
+
+3. Para libs que não estão no context7, faça WebSearch:
+   ```
+   WebSearch("nome-lib api-especifica site:docs.lib.com")
+   ```
+
+### 26.4 — Arquivos do Guardian
+
+```
+.claude/hooks/guardian.mjs      — Hook PreToolUse (proteção + mentoria)
+.claude/hooks/post-review.mjs   — Hook PostToolUse (code review)
+.claude/settings.local.json     — Registro dos hooks
+.claude/GUARDIAN.md              — Documentação do sistema
+```
+
+### 26.5 — Como desativar
+
+Remova o bloco `"hooks"` do `.claude/settings.local.json`.
+
+---
+
+*CLAUDE.md v8.2 (Guardian + QA Senior + Pesquisa Obrigatória) — Março 2026*
+*Inclui: Protocolo de auditoria, padrão de design, fases de implementação, protocolo de entrega, cascade IA, guardian automático*

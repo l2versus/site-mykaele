@@ -15,7 +15,7 @@ export default function AboutMykaele() {
                 <div className="aspect-[3/4] max-w-[420px] overflow-hidden bg-[#f0ebe5] relative">
                   <Image
                     src="/media/profissionais/mykaele-principal.png"
-                    alt="Mykaele Procópio — Diretora Clínica"
+                    alt="Mykaele Procópio — Fisioterapeuta Dermatofuncional"
                     fill
                     className="object-cover object-top"
                     loading="lazy"
@@ -26,7 +26,7 @@ export default function AboutMykaele() {
                 <div className="mt-6 flex items-center gap-4">
                   <div className="w-8 h-[1px] bg-[#b76e79]" />
                   <span className="text-xs font-medium tracking-[0.25em] uppercase text-[#6a6560]">
-                    Diretora Clínica e Fundadora
+                    Fisioterapeuta · Fundadora
                   </span>
                 </div>
               </div>

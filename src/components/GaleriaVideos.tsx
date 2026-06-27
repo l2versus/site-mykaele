@@ -8,8 +8,6 @@ const VIDEOS = [
   { id: 'v1', titulo: 'Procedimento em Ação', src: '/media/videos/procedimento-1.mp4', tag: 'Método' },
   { id: 'v2', titulo: 'Resultado Imediato', src: '/media/videos/procedimento-2.mp4', tag: 'Método' },
   { id: 'v3', titulo: 'Massagem Terapêutica', src: '/media/videos/procedimento-3.mp4', tag: 'Método' },
-  { id: 'v4', titulo: 'Ambiente Clínico', src: '/media/videos/clinica-tour.mp4', tag: 'Espaço' },
-  { id: 'v5', titulo: 'Estrutura Premium', src: '/media/videos/clinica-tour-2.mp4', tag: 'Espaço' },
 ]
 
 function VideoThumb({ video, onClick }: { video: typeof VIDEOS[0]; onClick: () => void }) {

@@ -83,7 +83,7 @@ export default function AgendarPage() {
   } | null>(null)
   const [serviceId, setServiceId] = useState('')
   const [type, setType] = useState<'FIRST' | 'RETURN'>('FIRST')
-  const [location, setLocation] = useState<'CLINIC' | 'HOME_SPA'>('CLINIC')
+  const [location, setLocation] = useState<'CLINIC' | 'HOME_SPA'>('HOME_SPA')
   const [address, setAddress] = useState('')
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
@@ -106,6 +106,32 @@ export default function AgendarPage() {
       setLoading(false)
     })()
   }, [fetchWithAuth])
+
+  // ── Pré-preenche a partir do funil da home (?serviceId&date&time) ──
+  // Evita repetição: serviço/data/hora já escolhidos na home não são pedidos de novo.
+  const [cameFromHome, setCameFromHome] = useState(false)
+  const [prefilled, setPrefilled] = useState(false)
+  useEffect(() => {
+    if (prefilled || services.length === 0) return
+    const params = new URLSearchParams(window.location.search)
+    const sid = params.get('serviceId')
+    if (!sid || !services.some(s => s.id === sid)) { setPrefilled(true); return }
+    const d = params.get('date')
+    const t = params.get('time')
+    setServiceId(sid)
+    if (d) setDate(d)
+    if (t) setTime(t)
+    if (d && t) {
+      setCameFromHome(true)
+      // pré-carrega os horários do dia escolhido (valida disponibilidade no fluxo real)
+      fetch(`/api/booking/availability?date=${d}&serviceId=${sid}`)
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => { if (data?.slots) setSlots(data.slots) })
+        .catch(() => {})
+    }
+    setStep(1) // serviço já escolhido na home → começa no "Tipo"
+    setPrefilled(true)
+  }, [services, prefilled])
 
   const loadSlots = useCallback(async (d: string) => {
     if (!serviceId || !d) return
@@ -307,10 +333,10 @@ export default function AgendarPage() {
       {step === 2 && (
         <div className="space-y-2.5">
           <p className="text-white/25 text-xs">Onde prefere ser atendida?</p>
-          {(['CLINIC', 'HOME_SPA'] as const).map((l) => (
+          {(['HOME_SPA'] as ('CLINIC' | 'HOME_SPA')[]).map((l) => (
             <button key={l} onClick={() => {
               setLocation(l)
-              if (l === 'CLINIC') { setAddress(''); setStep(3) }
+              if (l === 'CLINIC') { setAddress(''); setStep(cameFromHome ? 5 : 3) }
             }}
               className={`group w-full text-left relative overflow-hidden rounded-2xl transition-all duration-300 ${
                 location === l ? 'ring-1 ring-[#b76e79]/30' : ''
@@ -346,7 +372,7 @@ export default function AgendarPage() {
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-2xl px-4 py-3.5 text-white text-sm placeholder:text-white/15 focus:outline-none focus:border-[#b76e79]/30 focus:bg-white/[0.06] transition-all"
               />
               <button
-                onClick={() => { if (address.trim()) setStep(3) }}
+                onClick={() => { if (address.trim()) setStep(cameFromHome ? 5 : 3) }}
                 disabled={!address.trim()}
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#b76e79] to-[#c28a93] text-white text-sm font-medium shadow-lg shadow-[#b76e79]/15 hover:shadow-[#b76e79]/25 active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed">
                 Continuar

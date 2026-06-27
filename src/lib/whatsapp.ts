@@ -301,3 +301,24 @@ export async function sendCancellationNotification(data: {
 
   return dispatchNotification(message)
 }
+
+// Avisa a Mykaele NA HORA quando o bot/IA não soube responder e precisa de humano.
+export async function sendHandoffNotification(data: {
+  leadName: string
+  leadPhone?: string | null
+  lastMessage: string
+  agentName?: string
+}): Promise<{ sent: boolean; method: string }> {
+  const lines: string[] = [
+    '⚠️ *ATENDIMENTO PRECISA DE VOCÊ*',
+    '',
+    `A ${data.agentName || 'Luna'} não soube responder e te chamou.`,
+    '',
+    `*Cliente:* ${data.leadName}`,
+  ]
+  if (data.leadPhone) lines.push(`*WhatsApp:* ${data.leadPhone}`)
+  lines.push(`*Perguntou:* ${data.lastMessage}`)
+  lines.push('')
+  lines.push('Assuma a conversa no CRM para responder. O bot já foi pausado nessa conversa.')
+  return dispatchNotification(lines.join('\n'))
+}

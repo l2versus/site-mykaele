@@ -31,7 +31,8 @@ interface AiModelWrapper {
 
 // ─── Constantes ────────────────────────────────────────────────
 // Ordem fixa: grátis primeiro, pagos por último
-const CASCADE_ORDER = ['gemini', 'groq', 'openrouter', 'together', 'openai', 'claude'] as const
+// Ordem: provedores grátis confiáveis primeiro (Groq, OpenRouter), Claude por último (pago)
+const CASCADE_ORDER = ['groq', 'openrouter', 'gemini', 'together', 'openai', 'claude'] as const
 
 const DEFAULT_CASCADE_MODELS: Record<string, string> = {
   gemini: 'gemini-2.0-flash',
@@ -161,9 +162,21 @@ function isProviderAvailable(provider: string): boolean {
   return false
 }
 
-function markProviderDown(provider: string) {
-  providerCooldowns.set(provider, Date.now() + COOLDOWN_MS)
-  console.error(`[ai] ${provider} marcado como indisponível por 5 min`)
+function markProviderDown(provider: string, ms: number = COOLDOWN_MS) {
+  providerCooldowns.set(provider, Date.now() + ms)
+  console.error(`[ai] ${provider} marcado como indisponível por ${Math.round(ms / 60_000)} min`)
+}
+
+// Erro de autenticação = chave inválida/vencida. Não adianta retentar logo;
+// tira o provedor do cascade por mais tempo pra não queimar 1 chamada por request.
+const AUTH_COOLDOWN_MS = 30 * 60_000
+function isAuthError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase()
+  return msg.includes('401') || msg.includes('403') ||
+    msg.includes('unauthorized') || msg.includes('invalid api key') ||
+    msg.includes('invalid_api_key') || msg.includes('authentication') ||
+    msg.includes('invalid x-api-key') || msg.includes('expired') ||
+    msg.includes('permission_denied') || msg.includes('api key not valid')
 }
 
 function isQuotaOrServerError(err: unknown): boolean {
@@ -353,7 +366,9 @@ export async function createGeminiModel(opts?: {
           lastError = err as Error
           const errMsg = lastError.message?.slice(0, 120) ?? 'erro desconhecido'
 
-          if (isQuotaOrServerError(err)) {
+          if (isAuthError(err)) {
+            markProviderDown(p.name, AUTH_COOLDOWN_MS) // chave vencida → fora por 30 min
+          } else if (isQuotaOrServerError(err)) {
             markProviderDown(p.name)
           }
 
@@ -373,4 +388,39 @@ export async function createGeminiModel(opts?: {
   }
 
   return wrapper as AiModelWrapper & GenerativeModel
+}
+
+// ─── Diagnóstico: testa cada provedor com a chave configurada ───
+// Faz um "ping" real (1 token) e classifica: OK / inválida-vencida / rate-limit / erro.
+export async function diagnoseAiProviders(tenantId?: string): Promise<Array<{
+  provider: string; hasKey: boolean; ok: boolean; status: number | null; verdict: string; error?: string
+}>> {
+  const config = await getAiConfig(tenantId)
+  const keyMap: Record<string, string> = {
+    gemini: config?.geminiKey ?? '',
+    groq: config?.groqKey ?? '',
+    openrouter: config?.openrouterKey ?? '',
+    together: config?.togetherKey ?? '',
+    openai: config?.openaiKey ?? '',
+    claude: config?.claudeKey ?? '',
+  }
+
+  const out: Array<{ provider: string; hasKey: boolean; ok: boolean; status: number | null; verdict: string; error?: string }> = []
+  for (const name of CASCADE_ORDER) {
+    const key = keyMap[name]
+    if (!key) { out.push({ provider: name, hasKey: false, ok: false, status: null, verdict: 'sem chave' }); continue }
+    try {
+      await callProvider(name, key, DEFAULT_CASCADE_MODELS[name], undefined, 'oi', 0, 1)
+      out.push({ provider: name, hasKey: true, ok: true, status: 200, verdict: 'OK' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      const m = msg.match(/\b([45][0-9]{2})\b/)
+      const status = m ? Number(m[1]) : null
+      const verdict = isAuthError(err) ? 'inválida/vencida'
+        : (status === 429 || isQuotaOrServerError(err)) ? 'rate-limit/instável (chave válida)'
+        : 'erro'
+      out.push({ provider: name, hasKey: true, ok: false, status, verdict, error: msg.slice(0, 160) })
+    }
+  }
+  return out
 }
