@@ -81,7 +81,7 @@ export const metadata: Metadata = {
   },
   // Verification (adicionar IDs reais depois)
   verification: {
-    google: process.env.GOOGLE_SITE_VERIFICATION || '',
+    google: process.env.GOOGLE_SITE_VERIFICATION || 'GRGhpdaDLfr7QMFyeIXTgbhvgqozaR8-PnxZ7NNbz5o',
     // other: { 'facebook-domain-verification': process.env.FB_DOMAIN_VERIFICATION || '' },
   },
 };
