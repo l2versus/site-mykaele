@@ -1,6 +1,7 @@
 'use client'
 
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -216,7 +217,21 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const { onlineUsers } = usePresence(TENANT_ID, pathname)
   const [moreOpen, setMoreOpen] = useState(false)
+  const moreBtnRef = useRef<HTMLButtonElement>(null)
+  const [morePos, setMorePos] = useState<{ top: number; left: number } | null>(null)
   const moreActive = MORE_HREFS.some((h) => pathname === h || pathname.startsWith(h + '/'))
+
+  // O <nav> usa overflow-x-auto (scroll mobile), o que tbm clipa o eixo Y e cortaria o dropdown.
+  // Por isso medimos o botão e renderizamos o menu via portal (fixed) fora do container que corta.
+  function toggleMore() {
+    if (!moreOpen && moreBtnRef.current) {
+      const r = moreBtnRef.current.getBoundingClientRect()
+      const W = 260
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - W - 8))
+      setMorePos({ top: r.bottom + 4, left })
+    }
+    setMoreOpen((o) => !o)
+  }
 
   return (
     <div className="-m-4 lg:-m-6 min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)]" style={{ background: 'var(--crm-bg)' }}>
@@ -263,7 +278,8 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
           {/* "Mais" — agrupa o resto (NADA é removido, só organizado) */}
           <div className="relative shrink-0">
             <button
-              onClick={() => setMoreOpen((o) => !o)}
+              ref={moreBtnRef}
+              onClick={toggleMore}
               className="relative flex items-center gap-1.5 px-2.5 lg:px-3.5 py-2.5 lg:py-3 text-[12px] lg:text-[13px] font-medium whitespace-nowrap rounded-lg my-0.5 transition-all duration-200"
               style={{
                 color: (moreActive || moreOpen) ? 'var(--crm-gold)' : 'var(--crm-text-muted)',
@@ -275,10 +291,23 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
               <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" style={{ transform: moreOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><polyline points="6 9 12 15 18 9" /></svg>
               {moreActive && <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full" style={{ background: 'var(--crm-gold)' }} />}
             </button>
-            {moreOpen && (
+            {moreOpen && morePos && typeof document !== 'undefined' && createPortal(
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
-                <div className="absolute left-0 top-full mt-1 z-50 w-[260px] rounded-xl border p-2 shadow-2xl" style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)' }}>
+                <div className="fixed inset-0 z-[90]" onClick={() => setMoreOpen(false)} />
+                <div
+                  className="fixed z-[91] w-[260px] rounded-xl border p-2"
+                  style={{
+                    top: morePos.top,
+                    left: morePos.left,
+                    background: 'color-mix(in srgb, var(--crm-surface) 86%, transparent)',
+                    borderColor: 'var(--crm-border)',
+                    backdropFilter: 'blur(20px) saturate(1.2)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
+                    boxShadow: '0 18px 48px -12px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.04)',
+                    animation: 'crmMenuIn .16s cubic-bezier(.16,1,.3,1) both',
+                    transformOrigin: 'top left',
+                  }}
+                >
                   {MORE_GROUPS.map((group) => (
                     <div key={group.title} className="mb-1.5 last:mb-0">
                       <p className="px-2 pt-1.5 pb-1 text-[10px] uppercase tracking-wider font-semibold" style={{ color: 'var(--crm-text-muted)', opacity: 0.7 }}>{group.title}</p>
@@ -291,6 +320,8 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
                             onClick={() => setMoreOpen(false)}
                             className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-[13px] transition-colors"
                             style={{ color: active ? 'var(--crm-gold)' : 'var(--crm-text)', background: active ? 'var(--crm-gold-subtle)' : 'transparent' }}
+                            onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--crm-surface-2)' }}
+                            onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent' }}
                           >
                             <span className="opacity-70 [&>svg]:w-4 [&>svg]:h-4">{item.icon}</span>
                             {item.label}
@@ -300,7 +331,8 @@ export default function CrmLayout({ children }: { children: ReactNode }) {
                     </div>
                   ))}
                 </div>
-              </>
+              </>,
+              document.body
             )}
           </div>
           {/* Online users indicator */}
