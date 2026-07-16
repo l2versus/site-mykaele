@@ -27,14 +27,8 @@ export const metadata: Metadata = {
     template: '%s | Mykaele Procópio Home Spa',
   },
   description: 'Fisioterapeuta Dermatofuncional especializada em Arquitetura Corporal. Home spa de luxo a domicílio em Fortaleza-CE — Aldeota, Meireles, Cocó e região. Massagem modeladora, drenagem e protocolos personalizados com privacidade absoluta. Resultados desde a 1ª sessão. Agende online.',
-  keywords: [
-    'fisioterapeuta dermatofuncional fortaleza', 'estética avançada fortaleza', 'arquitetura corporal',
-    'home spa fortaleza', 'estética a domicílio fortaleza', 'home spa de luxo fortaleza',
-    'massagem modeladora fortaleza', 'drenagem linfática fortaleza', 'massagem relaxante fortaleza',
-    'tratamento de lipedema fortaleza', 'estética aldeota', 'estética meireles', 'estética cocó',
-    'mykaele procópio', 'gordura localizada', 'antes e depois estética',
-    'protocolo corporal personalizado', 'atendimento estético a domicílio',
-  ],
+  // `keywords` removido: o Google ignora desde 2009 e a lista entregava a estratégia
+  // de termos-alvo a qualquer concorrente que abrisse o código-fonte.
   authors: [{ name: 'Mykaele Procópio', url: SITE_URL }],
   creator: 'Mykaele Procópio Home Spa',
   publisher: 'Mykaele Procópio Home Spa',
@@ -114,11 +108,12 @@ const jsonLd = {
   openingHoursSpecification: [
     { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], opens: '08:00', closes: '18:00' },
   ],
-  priceRange: 'R$280 - R$300',
+  // priceRange removido: honorário não é divulgado fora do local da assistência
+  // (Res. COFFITO 424/2013, Art. 40, I). Custo aceito: perda da faixa de preço no knowledge panel.
   currenciesAccepted: 'BRL',
   paymentAccepted: 'Cash, Credit Card, PIX',
   areaServed: [
-    { '@type': 'City', name: 'Fortaleza', '@id': 'https://www.wikidata.org/wiki/Q171453' },
+    { '@type': 'City', name: 'Fortaleza', '@id': 'https://www.wikidata.org/wiki/Q43463' },
     { '@type': 'Place', name: 'Aldeota, Fortaleza' },
     { '@type': 'Place', name: 'Meireles, Fortaleza' },
     { '@type': 'Place', name: 'Mucuripe, Fortaleza' },
@@ -131,15 +126,15 @@ const jsonLd = {
   sameAs: [
     'https://www.instagram.com/mykaeleprocopio',
   ],
-  hasOfferCatalog: {
-    '@type': 'OfferCatalog',
-    name: 'Serviços a Domicílio',
-    itemListElement: [
-      { '@type': 'Offer', priceCurrency: 'BRL', price: '280', itemOffered: { '@type': 'Service', name: 'Massagem Relaxante', description: 'Imersão de 90 min com pressão lenta e firme — desconexão profunda, a domicílio.' } },
-      { '@type': 'Offer', priceCurrency: 'BRL', price: '280', itemOffered: { '@type': 'Service', name: 'Método Fluir by Mykaele', description: 'Protocolo exclusivo de 90 min de remodelagem corporal e leveza.' } },
-      { '@type': 'Offer', priceCurrency: 'BRL', price: '300', itemOffered: { '@type': 'Service', name: 'Despertar Sensorial', description: 'Protocolo especializado em lipedema, 90 min.' } },
-    ],
-  },
+  // Catálogo SEM `Offer`/`price`: honorário não é divulgado publicamente (COFFITO 424/2013, Art. 40, I).
+  // Não há perda de rich result — o Google não tem rich result para `Service`.
+  // Marcar preço aqui, invisível na página, violaria a política de dados estruturados do Google
+  // ("don't mark up content that is not visible to readers of the page").
+  makesOffer: [
+    { '@type': 'Service', name: 'Massagem Relaxante', description: 'Imersão de 90 min com pressão lenta e firme — desconexão profunda, a domicílio.' },
+    { '@type': 'Service', name: 'Método Fluir by Mykaele', description: 'Protocolo exclusivo de 90 min de remodelagem corporal e leveza.' },
+    { '@type': 'Service', name: 'Despertar Sensorial', description: 'Protocolo especializado em lipedema, 90 min.' },
+  ],
 }
 
 // FAQ Schema

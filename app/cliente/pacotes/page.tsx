@@ -55,7 +55,7 @@ export default function PacotesPage() {
       try {
         const [pkgRes, svcRes] = await Promise.all([
           fetchWithAuth('/api/patient/packages'),
-          fetch('/api/services'),
+          fetchWithAuth('/api/services'),
         ])
         if (pkgRes.ok) { const d = await pkgRes.json(); setPackages(d.packages || d || []) }
         if (svcRes.ok) {

@@ -58,7 +58,7 @@ export default function CreditosPage() {
       try {
         const [pkgRes, svcRes, settingsRes] = await Promise.all([
           fetchWithAuth('/api/patient/packages'),
-          fetch('/api/services'),
+          fetchWithAuth('/api/services'),
           fetch('/api/admin/settings'),
         ])
         if (pkgRes.ok) {

@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Galeria de Resultados | Antes e Depois',
-  description: 'Veja transformações reais de pacientes satisfeitos. Resultados comprovados de procedimentos de estética avançada, arquitetura corporal e tratamentos faciais por Mykaele Procópio em Fortaleza.',
+  title: 'Antes e Depois: Resultados Reais a Domicílio em Fortaleza',
+  description: 'Registros reais de antes e depois de atendimentos de fisioterapia dermatofuncional a domicílio em Fortaleza — Aldeota, Meireles, Cocó e região. Massagem, Método Fluir e protocolo para lipedema por Mykaele Procópio. Resultados variam de pessoa para pessoa.',
   openGraph: {
-    title: 'Galeria de Resultados — Mykaele Procópio Home Spa',
-    description: 'Transformações reais com fotos de antes e depois. Resultados comprovados de estética avançada em Fortaleza.',
+    title: 'Antes e Depois — Mykaele Procópio Home Spa Fortaleza',
+    description: 'Registros reais de atendimentos a domicílio em Fortaleza, sem filtros. Resultados variam de pessoa para pessoa.',
   },
   alternates: {
     canonical: 'https://mykaprocopio.com.br/galeria-resultados',

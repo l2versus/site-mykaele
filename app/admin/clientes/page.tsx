@@ -167,7 +167,7 @@ export default function ClientesPage() {
   // Carregar serviços disponíveis para inserir créditos
   const loadServices = async () => {
     try {
-      const res = await fetch('/api/services')
+      const res = await fetchWithAuth('/api/services')
       if (res.ok) {
         const data = await res.json()
         setServices(data || [])

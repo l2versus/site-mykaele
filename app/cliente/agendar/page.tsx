@@ -97,7 +97,8 @@ export default function AgendarPage() {
     (async () => {
       try {
         const [svcRes, pkgRes] = await Promise.all([
-          fetch('/api/services'),
+          // Autenticado: /api/services só devolve honorário com Bearer token.
+          fetchWithAuth('/api/services'),
           fetchWithAuth('/api/patient/packages')
         ])
         if (svcRes.ok) { const raw = await svcRes.json(); setServices(Array.isArray(raw) ? raw : (raw.services || [])) }

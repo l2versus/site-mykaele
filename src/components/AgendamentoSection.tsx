@@ -5,11 +5,13 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 
 // ===== TYPES =====
+// Sem `price`: esta é a etapa PÚBLICA do funil e honorário não é divulgado fora do local
+// da assistência (Res. COFFITO 424/2013, Art. 40, I). O valor é exibido no fluxo autenticado
+// (`/cliente/agendar`), sempre antes da confirmação.
 interface ServiceConfig {
   id: string
   name: string
   duration: number
-  price: number
   description?: string | null
 }
 
@@ -36,11 +38,6 @@ function formatPhone(value: string): string {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
 }
 
-function formatCurrency(value: number): string {
-  if (value === 0) return 'Gratuito'
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
-}
-
 export default function AgendamentoSection() {
   const [step, setStep] = useState<Step>('service')
   const [services, setServices] = useState<ServiceConfig[]>([])
@@ -61,7 +58,7 @@ export default function AgendamentoSection() {
       .then(data => {
         const svc = Array.isArray(data) ? data : (data.services || [])
         setServices(svc.filter((s: any) => !s.isAddon).map((s: any) => ({
-          id: s.id, name: s.name, duration: s.duration, price: s.price, description: s.description || ''
+          id: s.id, name: s.name, duration: s.duration, description: s.description || ''
         })))
       })
       .catch(() => {})
@@ -263,8 +260,8 @@ export default function AgendamentoSection() {
                         )}
                       </div>
                       <div className="text-right flex-shrink-0 ml-2">
-                        <p className="text-sm font-semibold text-[#b76e79] whitespace-nowrap">{formatCurrency(service.price)}</p>
-                        <p className="text-[10px] text-[#8a8580] uppercase tracking-wider whitespace-nowrap">{service.duration} min</p>
+                        <p className="text-sm font-semibold text-[#b76e79] whitespace-nowrap">{service.duration} min</p>
+                        <p className="text-[10px] text-[#8a8580] uppercase tracking-wider whitespace-nowrap">a domicílio</p>
                       </div>
                       <svg className="w-4 h-4 text-[#8a8580] group-hover:text-[#b76e79] group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -468,8 +465,8 @@ export default function AgendamentoSection() {
                       <p className="text-sm text-[#8a8580]">{selectedDate && formatDateDisplay(selectedDate)} às {selectedTime}</p>
                     </div>
                     <div className="ml-auto text-right">
-                      <p className="text-lg font-semibold text-[#b76e79]">{selectedService && formatCurrency(selectedService.price)}</p>
-                      <p className="text-[10px] text-[#8a8580] uppercase">{selectedService?.duration} min</p>
+                      <p className="text-lg font-semibold text-[#b76e79]">{selectedService?.duration} min</p>
+                      <p className="text-[10px] text-[#8a8580] uppercase">a domicílio</p>
                     </div>
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 // app/galeria-resultados/page.tsx
 'use client'
 
-import { ANTES_DEPOIS } from '@/lib/media-catalog'
+import Link from 'next/link'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import ResultadosReais from '@/components/ResultadosReais'
@@ -17,24 +17,17 @@ export default function GaleriaResultados() {
             Galeria de Resultados
           </h1>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">
-            Transformações reais de pacientes satisfeitos. Use o slider para comparar antes e depois.
+            Registros de atendimentos reais, feitos a domicílio em Fortaleza. Use o slider para
+            comparar antes e depois.
           </p>
-          
-          {/* Mini Stats */}
-          <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
-            <div>
-              <p className="text-3xl font-bold text-amber-600">{ANTES_DEPOIS.length}+</p>
-              <p className="text-sm text-slate-600">Resultados Exibidos</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-amber-600">100%</p>
-              <p className="text-sm text-slate-600">Satisfeitos</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-amber-600">Reais</p>
-              <p className="text-sm text-slate-600">Sem Filtros</p>
-            </div>
-          </div>
+
+          {/* Aviso obrigatório: Res. COFFITO 532/2021 (imagens autênticas, sem edição) e
+              CDC Art. 37 (vedada publicidade enganosa, inclusive por omissão). */}
+          <p className="text-sm text-slate-500 max-w-2xl mx-auto border border-slate-200 rounded-lg px-4 py-3">
+            Imagens divulgadas mediante autorização prévia e por escrito de cada cliente, sem filtros
+            ou edição. <strong>Resultados variam de pessoa para pessoa e não são garantidos</strong> —
+            dependem do quadro individual, da adesão ao protocolo e do número de sessões.
+          </p>
         </div>
       </div>
 
@@ -50,40 +43,40 @@ export default function GaleriaResultados() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                icon: '👨‍⚕️',
-                titulo: 'Profissionais Certificados',
+                icon: '🎓',
+                titulo: 'Fisioterapeuta Dermatofuncional',
                 descricao:
-                  'Médicos especializados com anos de experiência em estética avançada',
+                  'Atendimento conduzido pela própria Mykaele, fisioterapeuta inscrita no CREFITO — do início ao fim, sempre a mesma profissional',
               },
               {
-                icon: '🏥',
-                titulo: 'Equipamentos Premium',
+                icon: '🧳',
+                titulo: 'Estrutura Portátil Completa',
                 descricao:
-                  'Tecnologia de ponta para resultados seguros e eficientes',
+                  'Maca profissional e todos os materiais chegam com ela, montados no seu espaço',
               },
               {
                 icon: '✨',
-                titulo: 'Resultados Comprovados',
+                titulo: 'Sessões de 90 Minutos',
                 descricao:
-                  'Fotos reais de antes e depois dos nossos pacientes satisfeitos',
+                  'O tempo necessário para o protocolo completo, sem a pressa de uma agenda de clínica',
               },
               {
                 icon: '🛡️',
-                titulo: 'Segurança em Primeiro',
+                titulo: 'Higiene e Segurança',
                 descricao:
-                  'Protocolos rigorosos de segurança e higiene',
+                  'Materiais esterilizados e protocolos rigorosos, aplicados na sua casa',
               },
               {
                 icon: '💬',
-                titulo: 'Atendimento Personalizado',
+                titulo: 'Protocolo Individualizado',
                 descricao:
-                  'Consulta individual elaborando um plano customizado',
+                  'Cada corpo tem uma história — o protocolo é definido a partir da sua avaliação',
               },
               {
-                icon: '📍',
-                titulo: 'Localização Privilegiada',
+                icon: '🏠',
+                titulo: 'Você Não Precisa Sair de Casa',
                 descricao:
-                  'Clínica moderna e acessível no coração da cidade',
+                  'Atendimento a domicílio em Fortaleza — sem deslocamento, sem sala de espera, com privacidade total',
               },
             ].map((item, idx) => (
               <div key={idx} className="text-center">
@@ -105,11 +98,14 @@ export default function GaleriaResultados() {
             Pronto para Sua Transformação?
           </h2>
           <p className="text-xl text-amber-50 mb-8">
-            Agende uma consulta gratuita e descubra o procedimento ideal para você
+            Escolha o serviço, o dia e o horário. O spa vai até você, em Fortaleza.
           </p>
-          <button className="bg-white text-amber-600 hover:bg-amber-50 px-8 py-4 rounded-xl font-semibold transition-colors duration-300">
-            Agendar Consulta Agora
-          </button>
+          <Link
+            href="/#agendamento"
+            className="inline-block bg-white text-amber-600 hover:bg-amber-50 px-8 py-4 rounded-xl font-semibold transition-colors duration-300"
+          >
+            Agendar minha sessão
+          </Link>
         </div>
       </section>
 

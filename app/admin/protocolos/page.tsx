@@ -41,7 +41,7 @@ export default function ProtocolosPage() {
   // Carregar serviços disponíveis
   const loadServices = useCallback(async () => {
     try {
-      const res = await fetch('/api/services')
+      const res = await fetchWithAuth('/api/services')
       if (res.ok) {
         const data = await res.json()
         setServices(Array.isArray(data) ? data : [])

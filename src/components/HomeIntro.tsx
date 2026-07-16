@@ -1,9 +1,12 @@
 // src/components/HomeIntro.tsx
 // Método + Serviços reais + Marquee — design "Nude & Champagne"
+// Honorários NÃO são divulgados aqui: Res. COFFITO 424/2013, Art. 40, I veda ao fisioterapeuta
+// afixar/divulgar valor fora do local da assistência. O valor é apresentado no agendamento,
+// após identificação, e sempre ANTES da confirmação (CDC Art. 30).
 const SERVICOS = [
-  { idx: '01', nome: 'Massagem Relaxante', preco: 'R$ 280', dur: '90 min · na sua casa', desc: 'Imersão de 90 min com pressão lenta e firme — desconexão profunda para quem vive intensamente.' },
-  { idx: '02', nome: 'Método Fluir by Mykaele', preco: 'R$ 280', dur: '90 min · na sua casa', desc: 'Mais que contorno, um reencontro com sua leveza. Protocolo exclusivo de 90 min.' },
-  { idx: '03', nome: 'Despertar Sensorial', preco: 'R$ 300', dur: '90 min · na sua casa', desc: 'Especializado em lipedema — cada corpo carrega uma história; cada curva merece respeito.' },
+  { idx: '01', nome: 'Massagem Relaxante', dur: '90 min · na sua casa', desc: 'Imersão de 90 min com pressão lenta e firme — desconexão profunda para quem vive intensamente.' },
+  { idx: '02', nome: 'Método Fluir by Mykaele', dur: '90 min · na sua casa', desc: 'Mais que contorno, um reencontro com sua leveza. Protocolo exclusivo de 90 min.' },
+  { idx: '03', nome: 'Despertar Sensorial', dur: '90 min · na sua casa', desc: 'Especializado em lipedema — cada corpo carrega uma história; cada curva merece respeito.' },
 ]
 
 const PASSOS = [
@@ -70,7 +73,7 @@ export default function HomeIntro() {
                 <span className="font-[family-name:var(--font-display)] italic text-champagne text-[16px] min-w-[34px]">{s.idx}</span>
                 <span className="font-[family-name:var(--font-display)] font-semibold tracking-[-0.015em] leading-[1.05] text-espresso" style={{ fontSize: 'clamp(1.5rem,3vw,2.4rem)' }}>{s.nome}</span>
                 <span className="hidden md:block text-[15px] text-taupe max-w-[360px] leading-[1.65] font-[family-name:var(--font-body)]">{s.desc}</span>
-                <span className="hidden md:block text-right text-[16px] text-espresso font-semibold whitespace-nowrap font-[family-name:var(--font-body)]">{s.preco}<small className="block text-taupe font-normal text-[12px] mt-0.5">{s.dur}</small></span>
+                <span className="hidden md:block text-right text-[15px] text-espresso font-semibold whitespace-nowrap font-[family-name:var(--font-body)]">{s.dur}<small className="block text-taupe font-normal text-[12px] mt-0.5">Valor no agendamento</small></span>
                 <span className="w-11 h-11 border border-champagne/40 rounded-full grid place-items-center text-champagne transition-all duration-500 group-hover:bg-espresso group-hover:text-porcelain group-hover:border-espresso group-hover:-rotate-45">↗</span>
               </a>
             ))}
